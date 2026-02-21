@@ -6,29 +6,6 @@
     <title>Tienda | Love Arcade</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Ajustes profesionales para la sección de promos */
-        .promo-input-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        #promo-input:focus {
-            border-color: var(--accent) !important;
-            background: rgba(155, 89, 255, 0.05) !important;
-        }
-
-        @media (max-width: 480px) {
-            .promo-input-group {
-                flex-direction: column;
-            }
-            #btn-redeem {
-                width: 100%;
-                justify-content: center;
-                padding: 14px;
-            }
-        }
-    </style>
 </head>
 <body>
 
@@ -47,7 +24,8 @@
     </nav>
 
     <main class="container">
-        
+
+        <!-- HERO BALANCE -->
         <section class="shop-hero glass-panel">
             <div>
                 <span class="section-subtitle">Balance Disponible</span>
@@ -56,44 +34,108 @@
                 </div>
             </div>
             <div>
-                <p style="color:var(--text-med); max-width: 300px; text-align:right;">
-                    Canjea tus monedas ganadas en los juegos por recompensas reales.
+                <p style="color:var(--text-med); max-width:300px; text-align:right;">
+                    Canjea tus monedas por wallpapers y descárgalos al instante.
                 </p>
             </div>
         </section>
 
-        <section class="glass-panel" style="margin-bottom: 2.5rem; border-radius: var(--radius-lg); overflow: hidden; position: relative; border-left: 4px solid var(--accent);">
-            <div style="padding: 1.5rem;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.2rem;">
-                    <div style="background: var(--accent); padding: 8px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--accent-glow);">
-                        <i data-lucide="ticket-percent" color="white" size="20"></i>
-                    </div>
-                    <div>
-                        <h3 style="margin:0; font-size:1.1rem; font-weight: 700; letter-spacing: -0.3px;">¿Tienes un código secreto?</h3>
-                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
-                    </div>
+        <!-- CÓDIGO PROMO -->
+        <section class="glass-panel promo-section">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.2rem;">
+                <div class="promo-icon-wrap">
+                    <i data-lucide="ticket-percent" color="white" size="20"></i>
                 </div>
-                
-                <div class="promo-input-group">
-                    <input type="text" id="promo-input" placeholder="Ej: AMOR2024" 
-                           style="flex: 1; min-width: 0; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; outline: none; font-family: inherit; font-weight: 500; transition: border-color 0.2s;">
-                    
-                    <button id="btn-redeem" class="btn-primary" style="white-space: nowrap;">
-                        <span>Canjear</span>
-                        <i data-lucide="sparkles" size="16"></i>
-                    </button>
+                <div>
+                    <h3 style="margin:0; font-size:1.1rem; font-weight:700; letter-spacing:-0.3px;">¿Tienes un código secreto?</h3>
+                    <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
                 </div>
-                <p id="promo-msg" style="margin-top: 12px; font-size: 0.85rem; min-height: 1.2rem; font-weight: 500; display: flex; align-items: center; gap: 6px;"></p>
             </div>
+            <div class="promo-input-group">
+                <input type="text" id="promo-input" placeholder="Ej: AMOR2024"
+                       class="promo-input">
+                <button id="btn-redeem" class="btn-primary" style="white-space:nowrap;">
+                    <span>Canjear</span>
+                    <i data-lucide="sparkles" size="16"></i>
+                </button>
+            </div>
+            <p id="promo-msg" class="feedback-msg"></p>
         </section>
 
-        <section>
+        <!-- TABS -->
+        <div class="shop-tabs">
+            <button class="shop-tab active" data-tab="catalog">
+                <i data-lucide="layout-grid" size="16"></i> Catálogo
+            </button>
+            <button class="shop-tab" data-tab="library">
+                <i data-lucide="archive" size="16"></i> Mis Tesoros
+            </button>
+            <button class="shop-tab" data-tab="sync">
+                <i data-lucide="refresh-cw" size="16"></i> Sincronizar
+            </button>
+        </div>
+
+        <!-- ===== TAB: CATÁLOGO ===== -->
+        <section id="tab-catalog" class="tab-panel">
             <div class="section-header">
                 <h2 class="section-title">Catálogo de Premios</h2>
             </div>
-
             <div id="shop-container" class="shop-grid">
                 <p style="color:var(--text-med)">Cargando inventario...</p>
+            </div>
+        </section>
+
+        <!-- ===== TAB: MIS TESOROS ===== -->
+        <section id="tab-library" class="tab-panel hidden">
+            <div class="section-header">
+                <h2 class="section-title">Mis Tesoros</h2>
+                <p class="section-subtitle">Todos tus wallpapers desbloqueados</p>
+            </div>
+            <div id="library-container" class="shop-grid">
+                <p style="color:var(--text-med)">Cargando tu biblioteca...</p>
+            </div>
+        </section>
+
+        <!-- ===== TAB: SINCRONIZAR ===== -->
+        <section id="tab-sync" class="tab-panel hidden">
+            <div class="section-header">
+                <h2 class="section-title">Sincronizar Partida</h2>
+                <p class="section-subtitle">Transfiere tu progreso entre dispositivos</p>
+            </div>
+
+            <!-- Exportar -->
+            <div class="glass-panel sync-card" style="margin-bottom:1.5rem; border-left:4px solid var(--accent);">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap"><i data-lucide="upload" color="white" size="20"></i></div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Exportar partida</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Genera un código para copiar tu progreso</p>
+                    </div>
+                </div>
+                <button id="btn-export" class="btn-primary">
+                    <i data-lucide="copy" size="16"></i>
+                    <span>Generar código</span>
+                </button>
+                <textarea id="export-output" class="sync-textarea hidden" readonly
+                          placeholder="Tu código aparecerá aquí..."></textarea>
+                <p id="export-msg" class="feedback-msg"></p>
+            </div>
+
+            <!-- Importar -->
+            <div class="glass-panel sync-card" style="border-left:4px solid #4ade80;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap" style="background:#4ade80;"><i data-lucide="download" color="white" size="20"></i></div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Importar partida</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Pega un código para restaurar tu progreso</p>
+                    </div>
+                </div>
+                <textarea id="import-input" class="sync-textarea" placeholder="Pega tu código aquí..."></textarea>
+                <button id="btn-import" class="btn-primary" style="margin-top:12px; background:#4ade80; color:#000;">
+                    <i data-lucide="check" size="16"></i>
+                    <span>Importar progreso</span>
+                </button>
+                <p id="import-msg" class="feedback-msg"></p>
             </div>
         </section>
 
@@ -101,120 +143,231 @@
 
     <script src="js/app.js"></script>
     <script>
+        let allItems = [];
+
         document.addEventListener('DOMContentLoaded', () => {
-            // Carga original de datos
+            // Cargar catálogo
             fetch('data/shop.json')
                 .then(res => res.json())
-                .then(items => renderShop(items))
-                .catch(err => console.log(err));
+                .then(items => {
+                    allItems = items;
+                    renderShop(items);
+                    renderLibrary(items);
+                })
+                .catch(err => console.error(err));
 
-            // Escuchar el botón de canje
+            // Promo code
             document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
+            document.getElementById('promo-input').addEventListener('keydown', e => {
+                if (e.key === 'Enter') handleRedeem();
+            });
+
+            // Tabs
+            document.querySelectorAll('.shop-tab').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // Sync: Export
+            document.getElementById('btn-export').addEventListener('click', handleExport);
+
+            // Sync: Import
+            document.getElementById('btn-import').addEventListener('click', handleImport);
+
+            if (window.lucide) lucide.createIcons();
         });
 
-        // --- LÓGICA DE CÓDIGOS ACTUALIZADA ---
+        // ---- TABS ----
+        function switchTab(tabName) {
+            document.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            // Refresca la biblioteca al entrar
+            if (tabName === 'library' && allItems.length) renderLibrary(allItems);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ---- PROMO CODE ----
         function handleRedeem() {
             const input = document.getElementById('promo-input');
             const msg = document.getElementById('promo-msg');
             const btn = document.getElementById('btn-redeem');
             const code = input.value.trim();
-
-            if(!code) return;
-
-            if (!window.GameCenter || !window.GameCenter.redeemPromoCode) {
-                msg.innerHTML = `<i data-lucide="circle-alert" size="14"></i> Error: Actualiza app.js`;
-                msg.style.color = "#ff4757";
-                lucide.createIcons();
-                return;
-            }
+            if (!code) return;
 
             const result = window.GameCenter.redeemPromoCode(code);
-
             if (result.success) {
-                msg.innerHTML = `<i data-lucide="check-circle-2" size="14"></i> ${result.message}`;
-                msg.style.color = '#4ade80';
+                showMsg(msg, `✓ ${result.message}`, '#4ade80');
                 input.value = '';
-                input.style.borderColor = 'var(--glass-border)';
-                
-                // Actualizar todas las visualizaciones de monedas
-                document.querySelectorAll('.coin-display').forEach(el => {
-                    el.textContent = GameCenter.getBalance();
-                });
+                input.style.borderColor = '';
+                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
             } else {
-                msg.innerHTML = `<i data-lucide="circle-x" size="14"></i> ${result.message}`;
-                msg.style.color = '#ff4757';
+                showMsg(msg, `✗ ${result.message}`, '#ff4757');
                 input.style.borderColor = '#ff4757';
-                
-                // Feedback visual de sacudida
-                btn.style.transform = "translateX(5px)";
-                setTimeout(() => btn.style.transform = "translateX(0)", 100);
+                btn.style.transform = 'translateX(5px)';
+                setTimeout(() => btn.style.transform = '', 100);
             }
-            lucide.createIcons(); 
         }
 
-        // --- LÓGICA ORIGINAL DEL CATÁLOGO ---
+        // ---- CATÁLOGO ----
         function renderShop(items) {
             const container = document.getElementById('shop-container');
             container.innerHTML = '';
-            
+
             items.forEach(item => {
                 const bought = GameCenter.getBoughtCount(item.id);
                 const remaining = item.stock - bought;
-                const isSoldOut = remaining <= 0;
+                const isOwned = bought > 0;
+                const isSoldOut = remaining <= 0 && !isOwned;
 
+                const card = document.createElement('article');
+                card.className = 'glass-panel shop-card';
+
+                let actionHTML;
+                if (isOwned) {
+                    const url = GameCenter.getDownloadUrl(item.id, item.file);
+                    actionHTML = url
+                        ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center;">
+                               <i data-lucide="download" size="16"></i> Descargar
+                           </a>`
+                        : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6;" disabled>
+                               <i data-lucide="check" size="16"></i> Obtenido
+                           </button>`;
+                } else if (isSoldOut) {
+                    actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.5;" disabled>Sin Stock</button>`;
+                } else {
+                    actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center;"
+                                    onclick='initiatePurchase(${JSON.stringify(item)})'>
+                                    <i data-lucide="star" size="14" fill="#facc15"></i> Canjear
+                                  </button>`;
+                }
+
+                card.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="shop-img">
+                    ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>' : ''}
+                    <div style="width:100%">
+                        <h3 style="font-size:1.05rem; margin-bottom:5px;">${item.name}</h3>
+                        <p style="font-size:0.82rem; color:var(--text-med); height:40px; overflow:hidden;">${item.desc}</p>
+                        <div class="shop-price"><i data-lucide="star" size="14" fill="#facc15"></i> ${item.price}</div>
+                        <div style="margin:8px 0; font-size:0.78rem;">
+                            ${isOwned
+                                ? '<span style="color:#4ade80; font-weight:600;">✓ En tu biblioteca</span>'
+                                : isSoldOut
+                                    ? '<span style="color:#ef4444; font-weight:700;">AGOTADO</span>'
+                                    : `<span style="color:var(--text-low);">Disponibles: ${remaining}</span>`
+                            }
+                        </div>
+                        ${actionHTML}
+                    </div>`;
+                container.appendChild(card);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ---- MIS TESOROS (BIBLIOTECA) ----
+        function renderLibrary(items) {
+            const container = document.getElementById('library-container');
+            const inventory = GameCenter.getInventory();
+            const owned = items.filter(item => inventory[item.id] > 0);
+
+            if (owned.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-med);">
+                        <i data-lucide="archive" size="48" style="opacity:0.3; display:block; margin:0 auto 16px;"></i>
+                        <p style="font-size:1.1rem; font-weight:600;">Tu biblioteca está vacía</p>
+                        <p style="font-size:0.85rem; margin-top:8px;">Canjea items en el Catálogo para verlos aquí.</p>
+                    </div>`;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = '';
+            owned.forEach(item => {
+                const url = GameCenter.getDownloadUrl(item.id, item.file);
                 const card = document.createElement('article');
                 card.className = 'glass-panel shop-card';
                 card.innerHTML = `
                     <img src="${item.image}" alt="${item.name}" class="shop-img">
+                    <div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>
                     <div style="width:100%">
-                        <h3 style="font-size:1.1rem; margin-bottom:5px;">${item.name}</h3>
-                        <p style="font-size:0.85rem; color:var(--text-med); height:40px; overflow:hidden;">${item.desc}</p>
-                        
-                        <div class="shop-price">
-                            <i data-lucide="star" size="16" fill="#facc15"></i> ${item.price}
-                        </div>
-
-                        <div style="margin: 10px 0;">
-                            ${isSoldOut 
-                                ? '<span style="color:#ef4444; font-weight:bold; font-size:0.8rem;">AGOTADO</span>' 
-                                : `<span style="color:var(--text-low); font-size:0.8rem;">Disponibles: ${remaining}</span>`
-                            }
-                        </div>
-
-                        <button 
-                            class="btn-primary" 
-                            style="width:100%; justify-content:center; ${isSoldOut ? 'opacity:0.5; pointer-events:none;' : ''}"
-                            onclick='initiatePurchase(${JSON.stringify(item)})'>
-                            ${isSoldOut ? 'Sin Stock' : 'Canjear'}
-                        </button>
-                    </div>
-                `;
+                        <h3 style="font-size:1.05rem; margin-bottom:5px;">${item.name}</h3>
+                        <p style="font-size:0.82rem; color:var(--text-med); height:40px; overflow:hidden;">${item.desc}</p>
+                        ${url
+                            ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:12px; width:100%; justify-content:center;">
+                                   <i data-lucide="download" size="16"></i> Descargar Wallpaper
+                               </a>`
+                            : `<button class="btn-primary" style="margin-top:12px; width:100%; justify-content:center; opacity:0.6;" disabled>
+                                   <i data-lucide="check" size="16"></i> Descarga no disponible
+                               </button>`
+                        }
+                    </div>`;
                 container.appendChild(card);
             });
-            if(window.lucide) lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
+        // ---- COMPRA ----
         function initiatePurchase(item) {
             const bought = GameCenter.getBoughtCount(item.id);
-            if((item.stock - bought) <= 0) return;
-
-            if(!confirm(`¿Canjear "${item.name}" por ${item.price} monedas?`)) return;
+            if ((item.stock - bought) <= 0) return;
+            if (!confirm(`¿Canjear "${item.name}" por ${item.price} monedas?`)) return;
 
             const result = GameCenter.buyItem(item);
-
-            if(result.success) {
-                const subject = encodeURIComponent(`Canje: ${item.name}`);
-                const body = encodeURIComponent(
-                    `Hola! He canjeado: ${item.name}.\nCódigo: ${Math.random().toString(36).substring(7).toUpperCase()}\nFecha: ${new Date().toLocaleString()}`
-                );
-                
-                window.location.href = `mailto:lilithmorningstar468@gmail.com?subject=${subject}&body=${body}`;
-                alert("¡Canje exitoso!");
-                location.reload();
+            if (result.success) {
+                renderShop(allItems);
+                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+                // Micro-feedback visual
+                const toast = document.createElement('div');
+                toast.className = 'toast-success';
+                toast.innerHTML = `<i data-lucide="check-circle-2" size="16"></i> ¡"${item.name}" desbloqueado! Puedes descargarlo en <strong>Mis Tesoros</strong>.`;
+                document.body.appendChild(toast);
+                if (window.lucide) lucide.createIcons();
+                setTimeout(() => toast.classList.add('visible'), 50);
+                setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 400); }, 4000);
             } else {
-                if(result.reason === 'coins') alert("No tienes suficientes monedas.");
-                if(result.reason === 'stock') alert("¡Producto agotado!");
+                if (result.reason === 'coins') alert("No tienes suficientes monedas.");
+                if (result.reason === 'stock') alert("¡Producto agotado!");
             }
+        }
+
+        // ---- SYNC: EXPORT ----
+        function handleExport() {
+            const code = GameCenter.exportSave();
+            const output = document.getElementById('export-output');
+            const msg = document.getElementById('export-msg');
+            if (!code) { showMsg(msg, 'Error al generar el código.', '#ff4757'); return; }
+            output.value = code;
+            output.classList.remove('hidden');
+            output.select();
+            try {
+                document.execCommand('copy');
+                showMsg(msg, '✓ Código copiado al portapapeles. Pégalo en otro dispositivo.', '#4ade80');
+            } catch {
+                showMsg(msg, 'Código generado. Cópialo manualmente.', '#facc15');
+            }
+        }
+
+        // ---- SYNC: IMPORT ----
+        function handleImport() {
+            const code = document.getElementById('import-input').value.trim();
+            const msg = document.getElementById('import-msg');
+            if (!code) { showMsg(msg, 'Pega un código primero.', '#ff4757'); return; }
+            if (!confirm('¿Importar progreso? Esto reemplazará tu partida actual.')) return;
+            const result = GameCenter.importSave(code);
+            if (result.success) {
+                showMsg(msg, '✓ Progreso importado. Recargando...', '#4ade80');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showMsg(msg, `✗ ${result.message}`, '#ff4757');
+            }
+        }
+
+        // ---- UTIL ----
+        function showMsg(el, text, color) {
+            el.textContent = text;
+            el.style.color = color;
+            el.style.opacity = '1';
         }
     </script>
 </body>
