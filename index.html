@@ -55,10 +55,19 @@
 
     <main class="container">
         
-        <header class="section-header">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:16px;">
             <div>
-                <h1 class="section-title">Bienvenido de vuelta</h1>
+                <h1 class="section-title">Bienvenida de vuelta</h1>
                 <p class="section-subtitle">¿Qué vamos a jugar hoy?</p>
+            </div>
+
+            <!-- BONO DIARIO -->
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <button id="btn-daily" class="btn-primary daily-btn">
+                    <i data-lucide="gift" size="16"></i>
+                    <span>Bono Diario (+20)</span>
+                </button>
+                <p id="daily-msg" class="daily-msg"></p>
             </div>
         </header>
 
@@ -75,7 +84,7 @@
                         <i data-lucide="play"></i> Jugar Ahora
                     </a>
                 </div>
-        </article>
+            </article>
             
             <article class="game-card">
                 <div class="card-cover" style="background-image: url('https://lilithnml.github.io/love_arcade/assets/cover/wordhunt_cover_art.webp');">
@@ -87,7 +96,7 @@
                         <i data-lucide="play"></i> Jugar Ahora
                     </a>
                 </div>
-        </article>
+            </article>
             
             <article class="game-card">
                 <div class="card-cover" style="background-image: url('https://lilithnml.github.io/love_arcade/assets/cover/pixeldrop_cover_art.webp');">
@@ -113,7 +122,7 @@
                 </div>
             </article>
 
-        <article class="game-card">
+            <article class="game-card">
                 <div class="card-cover" style="background-image: url('https://lilithnml.github.io/love_arcade/assets/cover/rompecabezas_cover_art.webp');">
                 </div>
                 <div class="card-info">
@@ -137,18 +146,17 @@
                 </div>
             </article>
 
-        <article class="game-card">
+            <article class="game-card">
                 <div class="card-cover" style="background-image: url('https://lilithnml.github.io/love_arcade/assets/cover/lovebreaker_cover_art.webp');">
                 </div>
                 <div class="card-info">
                     <h3 class="card-title">LoveBreaker</h3>
-                    <p class="card-desc">Rompe todos los bloques. </p>
+                    <p class="card-desc">Rompe todos los bloques.</p>
                     <a href="games/LoveBreaker" class="btn-primary w-full">
                         <i data-lucide="play"></i> Jugar Ahora
                     </a>
                 </div>
-        </article>
-            
+            </article>
 
         </section>
 
@@ -161,19 +169,25 @@
                 <details class="glass-panel">
                     <summary>¿Cómo gano monedas?</summary>
                     <div class="faq-content">
-                        Ganas monedas completando niveles en el Laberinto, encontrando palabras en Word Hunt, completando niveles en Pixel Drop, uniendo piezas en el Rompecabezas, esquivando asteroides en Dodger, rompiendo bloques en LoveBreaker, eliminando naves enemigas en Vortex o canjeando códigos promocionales en la tienda.
+                        Ganas monedas completando niveles en los juegos, canjeando códigos promocionales en la tienda, y reclamando el Bono Diario (+20 monedas cada 24 horas) desde la pantalla de inicio.
                     </div>
                 </details>
                 <details class="glass-panel">
-                    <summary>¿Qué pasa si pierdo mis datos?</summary>
+                    <summary>¿Cómo descargo mis wallpapers?</summary>
                     <div class="faq-content">
-                        El progreso se guarda en tu navegador (LocalStorage). Si borras el caché o cambias de dispositivo, el progreso se reiniciará.
+                        Al canjear un item en la Tienda, el botón cambia a "Descargar" automáticamente. También puedes ir a la pestaña "Mis Tesoros" para ver y descargar todos tus wallpapers en cualquier momento.
+                    </div>
+                </details>
+                <details class="glass-panel">
+                    <summary>¿Qué pasa si cambio de dispositivo?</summary>
+                    <div class="faq-content">
+                        Usa la función "Sincronizar" en la Tienda. Exporta tu partida desde este dispositivo (genera un código), y pégalo en el otro dispositivo usando la opción "Importar". Tu progreso, monedas y wallpapers desbloqueados se transferirán al instante.
                     </div>
                 </details>
                 <details class="glass-panel">
                     <summary>¿Cómo funciona la tienda?</summary>
                     <div class="faq-content">
-                        Puedes canjear tus monedas por vales virtuales. Al comprar, se generará un código único que se enviará por correo.
+                        Canjea tus monedas por wallpapers en el Catálogo. Al comprar, el archivo queda guardado en tu biblioteca ("Mis Tesoros") y puedes descargarlo directamente cuando quieras, sin límite de veces.
                     </div>
                 </details>
             </div>
