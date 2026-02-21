@@ -129,7 +129,7 @@
 
             <p id="search-results-count" class="search-count hidden"></p>
 
-            <!-- Grid real (sin skeleton, mostrado desde el inicio) -->
+            <!-- Grid real -->
             <div id="shop-container" class="shop-grid"></div>
 
             <div id="filter-empty" class="filter-empty hidden">
@@ -168,13 +168,15 @@
                         <i data-lucide="upload-cloud" color="white" size="20"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Exportar Partida</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Guarda tu progreso completo (monedas, wallpapers, racha) para transferirlo a otro dispositivo</p>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Exportar partida</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">
+                            Copia el código al portapapeles y descarga un archivo .txt de respaldo
+                        </p>
                     </div>
                 </div>
-                <button id="btn-export" class="btn-primary" style="width:100%;">
-                    <i data-lucide="upload-cloud" size="15"></i>
-                    <span>Exportar y Copiar</span>
+                <button id="btn-export" class="btn-primary">
+                    <i data-lucide="download-cloud" size="16"></i>
+                    <span>Exportar y descargar</span>
                 </button>
                 <p id="export-msg" class="feedback-msg"></p>
             </div>
@@ -182,33 +184,36 @@
             <!-- IMPORTAR -->
             <div class="glass-panel sync-card" style="border-left:4px solid #4ade80;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background: linear-gradient(135deg, #4ade80, #2dd85a);">
-                        <i data-lucide="download-cloud" color="white" size="20"></i>
+                    <div class="promo-icon-wrap" style="background:#4ade80;">
+                        <i data-lucide="upload-cloud" color="white" size="20"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Importar Partida</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Restaura tu progreso desde un código de backup</p>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Importar partida</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">
+                            Carga tu archivo .txt de respaldo o pega el código manualmente
+                        </p>
                     </div>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <!-- Input manual -->
-                    <textarea
-                        id="import-input"
-                        placeholder="Pega aquí tu código de partida..."
-                        style="width:100%; min-height:80px; background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:var(--radius-md); color:var(--text-high); padding:10px; font-family:monospace; font-size:0.8rem; resize:none; outline:none;"
-                    ></textarea>
-                    <!-- Botón para cargar archivo -->
-                    <label for="import-file-input" class="btn-ghost" style="justify-content:center; cursor:pointer; width:100%;">
-                        <i data-lucide="file-text" size="15"></i>
-                        <span>Cargar desde archivo</span>
-                    </label>
-                    <input type="file" id="import-file-input" accept=".txt" style="display:none;">
-                    <!-- Botón principal de importar -->
-                    <button id="btn-import" class="btn-primary" style="width:100%;">
-                        <i data-lucide="download-cloud" size="15"></i>
-                        <span>Importar Partida</span>
-                    </button>
-                </div>
+
+                <!-- Carga por archivo (FileReader — sin bloqueo de hilo) -->
+                <label for="import-file" class="btn-ghost file-label">
+                    <i data-lucide="file-up" size="15"></i> Cargar archivo .txt
+                </label>
+                <input type="file" id="import-file" accept=".txt" hidden>
+                <span id="import-file-name" class="file-name-display">Ningún archivo seleccionado</span>
+
+                <div class="sync-separator">o pega el código manualmente</div>
+
+                <textarea
+                    id="import-input"
+                    class="sync-textarea"
+                    placeholder="Pega tu código aquí..."
+                ></textarea>
+
+                <button id="btn-import" class="btn-primary" style="margin-top:12px; background:#4ade80; color:#000; width:100%; justify-content:center;">
+                    <i data-lucide="check" size="16"></i>
+                    <span>Importar progreso</span>
+                </button>
                 <p id="import-msg" class="feedback-msg"></p>
             </div>
         </section>
@@ -222,689 +227,703 @@
                 <p class="section-subtitle">Personaliza tu experiencia</p>
             </div>
 
-            <!-- TEMA -->
-            <div class="glass-panel settings-card" style="margin-bottom:1.25rem;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+            <!-- Tema de color -->
+            <div class="glass-panel settings-card">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.25rem;">
                     <div class="promo-icon-wrap">
                         <i data-lucide="palette" color="white" size="20"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Tema de Color</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Elige el estilo visual de tu tienda</p>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Tema de color</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
                     </div>
                 </div>
                 <div class="theme-grid">
-                    <button class="theme-btn" data-theme="purple" aria-label="Tema Morado Arcade">
-                        <span style="background:#9b59ff;"></span>
-                        Morado
+                    <button class="theme-btn" data-theme="violet">
+                        <span class="theme-swatch" style="background:#9b59ff;"></span>
+                        <span class="theme-name">Violeta</span>
+                        <i data-lucide="check" size="13" class="theme-check"></i>
                     </button>
-                    <button class="theme-btn" data-theme="pink" aria-label="Tema Rosa Neón">
-                        <span style="background:#ff59b4;"></span>
-                        Rosa Neón
+                    <button class="theme-btn" data-theme="pink">
+                        <span class="theme-swatch" style="background:#ff59b4;"></span>
+                        <span class="theme-name">Rosa Neón</span>
+                        <i data-lucide="check" size="13" class="theme-check"></i>
                     </button>
-                    <button class="theme-btn" data-theme="cyan" aria-label="Tema Cyan Arcade">
-                        <span style="background:#00d4ff;"></span>
-                        Cyan
+                    <button class="theme-btn" data-theme="cyan">
+                        <span class="theme-swatch" style="background:#00d4ff;"></span>
+                        <span class="theme-name">Cyan Arcade</span>
+                        <i data-lucide="check" size="13" class="theme-check"></i>
                     </button>
-                    <button class="theme-btn" data-theme="orange" aria-label="Tema Naranja Sunset">
-                        <span style="background:#ff7043;"></span>
-                        Sunset
+                    <button class="theme-btn" data-theme="gold">
+                        <span class="theme-swatch" style="background:#f59e0b;"></span>
+                        <span class="theme-name">Dorado</span>
+                        <i data-lucide="check" size="13" class="theme-check"></i>
                     </button>
-                    <button class="theme-btn" data-theme="green" aria-label="Tema Verde Matrix">
-                        <span style="background:#4ade80;"></span>
-                        Matrix
-                    </button>
-                    <button class="theme-btn" data-theme="gold" aria-label="Tema Dorado Royale">
-                        <span style="background:#facc15;"></span>
-                        Royale
+                    <button class="theme-btn" data-theme="crimson">
+                        <span class="theme-swatch" style="background:#e11d48;"></span>
+                        <span class="theme-name">Carmesí</span>
+                        <i data-lucide="check" size="13" class="theme-check"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- ECONOMÍA INFO -->
-            <div class="glass-panel settings-card" style="margin-bottom:1.25rem;">
+            <!-- Bendición Lunar -->
+            <div class="glass-panel settings-card" style="margin-top:1.25rem; border-left:4px solid #c084fc;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap">
-                        <i data-lucide="coins" color="white" size="20"></i>
+                    <div class="promo-icon-wrap moon-icon-wrap">
+                        <i data-lucide="moon" color="white" size="20"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Sistema Económico</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Estado actual de las bonificaciones</p>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Bendición Lunar</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">+90 monedas extra en cada bono diario durante 7 días</p>
                     </div>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--glass-border);">
-                        <span style="color:var(--text-med); font-size:0.85rem;">Venta activa</span>
+                <div class="economy-info" style="margin-bottom:1rem;">
+                    <div class="economy-row">
+                        <span>Estado</span>
+                        <span id="moon-blessing-status" class="eco-badge">Cargando…</span>
+                    </div>
+                    <div class="economy-row">
+                        <span>Costo</span>
+                        <span class="eco-badge eco-badge--gold">100 monedas</span>
+                    </div>
+                    <div class="economy-row">
+                        <span>Efecto</span>
+                        <span class="eco-badge eco-badge--moon">+90 por día</span>
+                    </div>
+                </div>
+                <button id="btn-moon-blessing" class="btn-primary moon-btn" style="width:100%; justify-content:center;">
+                    <i data-lucide="moon" size="15"></i>
+                    <span>Activar Bendición Lunar (100 monedas)</span>
+                </button>
+                <p id="moon-blessing-msg" class="feedback-msg"></p>
+            </div>
+
+            <!-- Estado de economía -->
+            <div class="glass-panel settings-card" style="margin-top:1.25rem;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap" style="background:#facc15;">
+                        <i data-lucide="trending-up" color="#000" size="20"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Estado de la economía</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Configuración actual de descuentos y cashback</p>
+                    </div>
+                </div>
+                <div class="economy-info">
+                    <div class="economy-row">
+                        <span>Descuento global</span>
                         <span id="eco-sale-status" class="eco-badge">—</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--glass-border);">
-                        <span style="color:var(--text-med); font-size:0.85rem;">Cashback</span>
-                        <span id="eco-cashback" class="eco-badge">—</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0;">
-                        <span style="color:var(--text-med); font-size:0.85rem;">Bendición Lunar</span>
-                        <span id="moon-blessing-status" class="eco-badge">—</span>
+                    <div class="economy-row">
+                        <span>Cashback por compra</span>
+                        <span id="eco-cashback" class="eco-badge eco-badge--green">—</span>
                     </div>
                 </div>
             </div>
 
-            <!-- RESET -->
-            <div class="glass-panel settings-card" style="border-left:4px solid #ff4757;">
+            <!-- Historial de transacciones -->
+            <div class="glass-panel settings-card" style="margin-top:1.25rem;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background: linear-gradient(135deg, #ff4757, #ff3838);">
-                        <i data-lucide="alert-triangle" color="white" size="20"></i>
+                    <div class="promo-icon-wrap" style="background:rgba(148,163,184,0.3);">
+                        <i data-lucide="scroll-text" color="white" size="20"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Zona de Peligro</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Borra todos tus datos locales</p>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Historial de transacciones</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Últimos movimientos de tu saldo</p>
                     </div>
                 </div>
-                <button id="btn-reset" class="btn-ghost" style="width:100%; color:#ff4757; border-color:#ff4757; justify-content:center;">
-                    <i data-lucide="trash-2" size="15"></i>
-                    <span>Resetear Progreso</span>
-                </button>
+                <div id="history-list" class="history-list">
+                    <p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Cargando historial…</p>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- MODAL DE CONFIRMACIÓN -->
-    <div id="confirm-modal" class="modal-overlay hidden">
+    <!-- CUSTOM CONFIRM MODAL -->
+    <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-box">
-            <h2 id="confirm-title" class="modal-title">Confirmar acción</h2>
-            <div id="confirm-body" class="modal-body">¿Estás seguro?</div>
+            <h3 id="modal-title" class="modal-title"></h3>
+            <div id="modal-body" class="modal-body"></div>
+            <p id="modal-error" class="modal-error"></p>
             <div class="modal-actions">
-                <button id="confirm-cancel" class="btn-ghost">Cancelar</button>
-                <button id="confirm-ok" class="btn-primary">Confirmar</button>
+                <button id="modal-cancel" class="btn-ghost">Cancelar</button>
+                <button id="modal-confirm" class="btn-primary">Confirmar</button>
             </div>
-            <p id="confirm-error" class="modal-error"></p>
         </div>
     </div>
 
+    <script src="js/app.js"></script>
     <script>
     // ================================================
-    // SYSTEM — Importación de Shop Data & App (GameCenter)
+    // ESTADO LOCAL DEL CATÁLOGO
     // ================================================
-    let SHOP_DATA = [];
-
-    fetch('shop.json')
-        .then(r => r.json())
-        .then(data => {
-            SHOP_DATA = data;
-            initShop();
-        })
-        .catch(() => {
-            document.getElementById('shop-container').innerHTML = '<p style="color:#ff4757; text-align:center;">Error al cargar el catálogo.</p>';
-        });
+    let allItems     = [];
+    let activeFilter = 'Todos';
+    let searchQuery  = '';
 
     // ================================================
-    // INICIALIZACIÓN
+    // CUSTOM CONFIRM MODAL
     // ================================================
-    function initShop() {
-        renderCatalog();
-        renderLibrary();
+    let _modalResolve = null;
+
+    function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-body').innerHTML = bodyHTML;
+        document.getElementById('modal-confirm').textContent = confirmText;
+        document.getElementById('modal-error').textContent = '';
+        const overlay = document.getElementById('confirm-modal');
+        overlay.classList.remove('hidden');
+        // Defer focus so animation is visible first
+        requestAnimationFrame(() => document.getElementById('modal-confirm').focus());
+        return new Promise(resolve => { _modalResolve = resolve; });
+    }
+
+    function _closeModal(value) {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        if (_modalResolve) { _modalResolve(value); _modalResolve = null; }
+    }
+
+    // ================================================
+    // INIT
+    // ================================================
+    document.addEventListener('DOMContentLoaded', () => {
+
         initSaleBanner();
         initEconomyInfo();
         renderMoonBlessingStatus();
-        initTheme();
-        initSearch();
-        initPromoToggle();
-        initEventListeners();
-        updateBalance();
-        updateMoonBadge();
+
+        // Modal buttons
+        document.getElementById('modal-cancel').addEventListener('click',  () => _closeModal(false));
+        document.getElementById('modal-confirm').addEventListener('click', () => _closeModal(true));
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) _closeModal(false);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('confirm-modal').classList.contains('hidden')) {
+                _closeModal(false);
+            }
+        });
+
+        // Promo toggle
+        document.getElementById('btn-promo-toggle').addEventListener('click', () => {
+            const toggleBtn = document.getElementById('btn-promo-toggle');
+            const section   = document.getElementById('promo-section');
+            const expanded  = toggleBtn.getAttribute('aria-expanded') === 'true';
+            toggleBtn.setAttribute('aria-expanded', String(!expanded));
+            section.setAttribute('aria-hidden',    String(expanded));
+            section.classList.toggle('promo-section--collapsed', expanded);
+            section.classList.toggle('promo-section--open', !expanded);
+            if (!expanded) setTimeout(() => document.getElementById('promo-input').focus(), 50);
+            if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
+        });
+
+        // Cargar catálogo
+        fetch('data/shop.json')
+            .then(r => r.json())
+            .then(items => {
+                allItems = items;
+                filterItems();
+                renderLibrary(items);
+                updateWishlistCost();
+            })
+            .catch(err => {
+                console.error('Error cargando shop.json:', err);
+                const container = document.getElementById('shop-container');
+                container.innerHTML = '<p style="color:#ff4757; grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo. Recarga la página.</p>';
+            });
+
+        // Promo code
+        document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
+        document.getElementById('promo-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleRedeem();
+        });
+
+        // Tabs
+        document.querySelectorAll('.shop-tab').forEach(btn =>
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+        );
+
+        // Búsqueda con debounce
+        const searchInput = document.getElementById('search-input');
+        const clearBtn    = document.getElementById('search-clear');
+        const debouncedFilter = debounce(() => {
+            searchQuery = searchInput.value.trim().toLowerCase();
+            filterItems();
+        }, 300);
+
+        searchInput.addEventListener('input', () => {
+            clearBtn.classList.toggle('hidden', !searchInput.value);
+            debouncedFilter();
+        });
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearBtn.classList.add('hidden');
+            filterItems();
+            searchInput.focus();
+        });
+
+        // Filter pills (solo Todos, PC, Mobile, Wishlist)
+        document.querySelectorAll('.pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                activeFilter = pill.dataset.filter;
+                filterItems();
+            });
+        });
+
+        // Sync buttons
+        document.getElementById('btn-export')?.addEventListener('click', handleExport);
+        document.getElementById('btn-import')?.addEventListener('click', handleImport);
+
+        // Import por archivo (FileReader — evita el bloqueo de hilo con texto masivo)
+        document.getElementById('import-file')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const nameEl = document.getElementById('import-file-name');
+            if (nameEl) nameEl.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const textarea = document.getElementById('import-input');
+                if (textarea) textarea.value = evt.target.result.trim();
+                showMsg(
+                    document.getElementById('import-msg'),
+                    `Archivo "${file.name}" cargado. Haz clic en "Importar progreso" para aplicarlo.`,
+                    'var(--text-med)'
+                );
+            };
+            reader.onerror = () => {
+                showMsg(document.getElementById('import-msg'), 'Error al leer el archivo.', '#ff4757');
+            };
+            reader.readAsText(file);
+        });
+
+        if (window.lucide) lucide.createIcons();
+    });
+
+    // ================================================
+    // TABS
+    // ================================================
+    function switchTab(tab) {
+        document.querySelectorAll('.shop-tab').forEach(b =>
+            b.classList.toggle('active', b.dataset.tab === tab)
+        );
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+        if (tab === 'settings') {
+            renderHistory();
+            renderMoonBlessingStatus();
+        }
         if (window.lucide) lucide.createIcons();
     }
 
     // ================================================
-    // RENDERIZADO DE CATÁLOGO (sin skeleton)
+    // FILTROS + BÚSQUEDA
+    // Solo categorías: Todos / PC / Mobile / Wishlist (v8.0)
+    // Los ítems en Wishlist aparecen siempre al principio.
     // ================================================
-    function renderCatalog() {
+    function filterItems() {
+        if (!allItems.length) return;
+
+        const filtered = allItems.filter(item => {
+            // Filtro de categoría
+            let matchesFilter;
+            if (activeFilter === 'Todos') {
+                matchesFilter = true;
+            } else if (activeFilter === 'Wishlist') {
+                matchesFilter = GameCenter.isWishlisted(item.id);
+            } else {
+                // Solo PC / Mobile
+                matchesFilter = Array.isArray(item.tags) && item.tags.includes(activeFilter);
+            }
+
+            // Filtro de búsqueda de texto
+            const matchesSearch = !searchQuery ||
+                item.name.toLowerCase().includes(searchQuery) ||
+                item.desc.toLowerCase().includes(searchQuery) ||
+                (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
+
+            return matchesFilter && matchesSearch;
+        });
+
+        // Wishlist al principio de los resultados
+        const wishlisted = filtered.filter(item => GameCenter.isWishlisted(item.id));
+        const others     = filtered.filter(item => !GameCenter.isWishlisted(item.id));
+        const sorted     = [...wishlisted, ...others];
+
+        renderShop(sorted);
+
+        const countEl = document.getElementById('search-results-count');
+        const emptyEl = document.getElementById('filter-empty');
+        const gridEl  = document.getElementById('shop-container');
+
+        if (sorted.length === 0) {
+            gridEl.classList.add('hidden');
+            emptyEl.classList.remove('hidden');
+            countEl.classList.add('hidden');
+        } else {
+            gridEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            const isFiltered = activeFilter !== 'Todos' || searchQuery;
+            countEl.textContent = isFiltered
+                ? `${sorted.length} resultado${sorted.length !== 1 ? 's' : ''}`
+                : '';
+            countEl.classList.toggle('hidden', !isFiltered);
+        }
+
+        updateWishlistCost();
+    }
+
+    function resetFilters() {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        document.querySelector('[data-filter="Todos"]').classList.add('active');
+        activeFilter = 'Todos';
+        searchQuery  = '';
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-clear').classList.add('hidden');
+        filterItems();
+    }
+
+    // ================================================
+    // WISHLIST COST INDICATOR
+    // ================================================
+    function updateWishlistCost() {
+        const banner = document.getElementById('wishlist-cost-banner');
+        const textEl = document.getElementById('wishlist-cost-text');
+        if (!banner || !textEl || !allItems.length) return;
+
+        const unwownedWishlisted = allItems.filter(item =>
+            GameCenter.isWishlisted(item.id) && GameCenter.getBoughtCount(item.id) === 0
+        );
+
+        if (unwownedWishlisted.length === 0) {
+            banner.classList.add('hidden');
+            return;
+        }
+
+        const eco   = window.ECONOMY;
+        const total = unwownedWishlisted.reduce((sum, item) => {
+            const price = eco.isSaleActive
+                ? Math.floor(item.price * eco.saleMultiplier)
+                : item.price;
+            return sum + price;
+        }, 0);
+
+        const balance = GameCenter.getBalance();
+        const needed  = Math.max(0, total - balance);
+        const count   = unwownedWishlisted.length;
+        const plural  = count !== 1 ? 's' : '';
+
+        textEl.innerHTML = needed > 0
+            ? `Necesitas <strong>${needed}</strong> monedas más para comprar toda tu lista (<strong>${count}</strong> ítem${plural})`
+            : `¡Tienes saldo suficiente para comprar toda tu lista! (<strong>${count}</strong> ítem${plural})`;
+
+        banner.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons({ nodes: [banner] });
+    }
+
+    // ================================================
+    // RENDER CATÁLOGO
+    // ================================================
+    function renderShop(items) {
         const container = document.getElementById('shop-container');
         container.innerHTML = '';
 
-        SHOP_DATA.forEach(item => {
-            const card = createShopCard(item);
+        if (!items.length) { renderShop([]); return; }
+
+        items.forEach(item => {
+            const bought    = GameCenter.getBoughtCount(item.id);
+            const remaining = item.stock - bought;
+            const isOwned   = bought > 0;
+            const isSoldOut = remaining <= 0 && !isOwned;
+            const isWished  = GameCenter.isWishlisted(item.id);
+
+            const eco        = window.ECONOMY;
+            const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+
+            const priceHTML = eco.isSaleActive && !isOwned
+                ? `<div class="shop-price">
+                       <span class="price-original">${item.price}</span>
+                       <i data-lucide="star" size="12" fill="#facc15"></i>
+                       <span class="price-sale">${finalPrice}</span>
+                       <span class="sale-pill">${eco.saleLabel}</span>
+                   </div>`
+                : `<div class="shop-price">
+                       <i data-lucide="star" size="12" fill="#facc15"></i> ${item.price}
+                   </div>`;
+
+            let actionHTML;
+            if (isOwned) {
+                const url = GameCenter.getDownloadUrl(item.id, item.file);
+                actionHTML = url
+                    ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center; font-size:0.82rem; padding:8px;">
+                           <i data-lucide="download" size="14"></i> Descargar
+                       </a>`
+                    : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6; font-size:0.82rem; padding:8px;" disabled>
+                           <i data-lucide="check" size="14"></i> Obtenido
+                       </button>`;
+            } else if (isSoldOut) {
+                actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.45; cursor:not-allowed; font-size:0.82rem; padding:8px;" disabled>Sin Stock</button>`;
+            } else {
+                actionHTML = `<button class="btn-primary shop-buy-btn" style="width:100%; justify-content:center; font-size:0.82rem; padding:8px;"
+                                data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                                <i data-lucide="star" size="12" fill="#facc15"></i> Canjear
+                              </button>`;
+            }
+
+            const card = document.createElement('article');
+            card.className = 'glass-panel shop-card';
+            card.innerHTML = `
+                ${!isOwned ? `
+                <button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
+                        data-id="${item.id}"
+                        title="${isWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos'}">
+                    <i data-lucide="heart" size="13"></i>
+                </button>` : ''}
+
+                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>' : ''}
+                ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="10" fill="currentColor"></i> OFERTA</div>' : ''}
+
+                <div style="width:100%">
+                    <h3 class="card-name">${item.name}</h3>
+                    ${priceHTML}
+                    ${actionHTML}
+                </div>`;
             container.appendChild(card);
+        });
+
+        // Wishlist listeners
+        container.querySelectorAll('.wishlist-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id          = parseInt(btn.dataset.id, 10);
+                const isNowWished = GameCenter.toggleWishlist(id);
+                btn.classList.toggle('wishlist-btn--active', isNowWished);
+                btn.title = isNowWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos';
+                btn.innerHTML = '<i data-lucide="heart" size="13"></i>';
+                if (window.lucide) lucide.createIcons({ nodes: [btn] });
+                updateWishlistCost();
+            });
+        });
+
+        // Buy listeners
+        container.querySelectorAll('.shop-buy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    const item = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
+                    await initiatePurchase(item, btn);
+                } catch(e) { console.error('Error parsing item data', e); }
+            });
         });
 
         if (window.lucide) lucide.createIcons();
     }
 
     // ================================================
-    // SHOP CARD BUILDER
+    // RENDER BIBLIOTECA
     // ================================================
-    function createShopCard(item) {
-        const owned   = GameCenter.isWallpaperOwned(item.id);
-        const eco     = window.ECONOMY;
-        const isSale  = eco.isSaleActive;
-        const saleMultiplier = eco.saleMultiplier;
+    function renderLibrary(items) {
+        const container = document.getElementById('library-container');
+        const inventory = GameCenter.getInventory();
+        const owned     = items.filter(item => inventory[item.id] > 0);
 
-        let finalPrice = item.price;
-        let displayPrice = finalPrice;
-
-        if (!owned && isSale) {
-            finalPrice = Math.floor(item.price * saleMultiplier);
-            displayPrice = finalPrice;
-        }
-
-        const card = document.createElement('div');
-        card.className = 'shop-card glass-panel';
-        card.setAttribute('data-id', item.id);
-        card.setAttribute('data-category', item.category);
-        card.setAttribute('data-display-price', displayPrice);
-
-        // Wishlist button
-        const isInWishlist = GameCenter.isInWishlist(item.id);
-        const wlBtn = document.createElement('button');
-        wlBtn.className = 'wishlist-btn' + (isInWishlist ? ' wishlist-btn--active' : '');
-        wlBtn.innerHTML = `<i data-lucide="heart" size="12"></i>`;
-        wlBtn.onclick = (e) => {
-            e.stopPropagation();
-            const nowIn = GameCenter.toggleWishlist(item.id);
-            wlBtn.classList.toggle('wishlist-btn--active', nowIn);
+        if (owned.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-med);">
+                    <i data-lucide="archive" size="44" style="opacity:0.3; display:block; margin:0 auto 14px;"></i>
+                    <p style="font-size:1rem; font-weight:600;">Tu biblioteca está vacía</p>
+                    <p style="font-size:0.82rem; margin-top:6px;">Canjea items en el Catálogo para verlos aquí.</p>
+                </div>`;
             if (window.lucide) lucide.createIcons();
-            updateWishlistCostBanner();
-            filterCards();
-        };
-        card.appendChild(wlBtn);
-
-        // Sale badge
-        if (!owned && isSale) {
-            const saleBadge = document.createElement('div');
-            saleBadge.className = 'sale-card-badge';
-            saleBadge.innerHTML = `<i data-lucide="zap" size="8" fill="currentColor"></i> OFERTA`;
-            card.appendChild(saleBadge);
+            return;
         }
 
-        // Owned badge
-        if (owned) {
-            const ownedBadge = document.createElement('div');
-            ownedBadge.className = 'owned-badge';
-            ownedBadge.innerHTML = `<i data-lucide="check-circle" size="10" fill="currentColor"></i> Desbloqueado`;
-            card.appendChild(ownedBadge);
+        container.innerHTML = '';
+        owned.forEach(item => {
+            const url  = GameCenter.getDownloadUrl(item.id, item.file);
+            const card = document.createElement('article');
+            card.className = 'glass-panel shop-card';
+            card.innerHTML = `
+                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                <div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>
+                <div style="width:100%">
+                    <h3 class="card-name">${item.name}</h3>
+                    <p class="card-desc-text">${item.desc}</p>
+                    ${url
+                        ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:10px; width:100%; justify-content:center; font-size:0.82rem; padding:8px;">
+                               <i data-lucide="download" size="14"></i> Descargar
+                           </a>`
+                        : `<button class="btn-primary" style="margin-top:10px; width:100%; justify-content:center; opacity:0.6; font-size:0.82rem; padding:8px;" disabled>
+                               <i data-lucide="check" size="14"></i> Sin archivo
+                           </button>`
+                    }
+                </div>`;
+            container.appendChild(card);
+        });
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // ================================================
+    // RENDER HISTORIAL
+    // ================================================
+    function renderHistory() {
+        const container = document.getElementById('history-list');
+        if (!container) return;
+        const history = GameCenter.getHistory();
+
+        if (!history.length) {
+            container.innerHTML = '<p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Aún no hay transacciones registradas.</p>';
+            return;
         }
 
-        // Imagen
-        const img = document.createElement('img');
-        img.src = item.preview_url;
-        img.alt = item.name;
-        img.className = 'shop-img';
-        img.loading = 'lazy';
-        card.appendChild(img);
-
-        // Nombre
-        const nameEl = document.createElement('div');
-        nameEl.className = 'card-name';
-        nameEl.textContent = item.name;
-        card.appendChild(nameEl);
-
-        // Descripción
-        const descWrapper = document.createElement('div');
-        descWrapper.className = 'card-desc';
-        const descText = document.createElement('div');
-        descText.className = 'card-desc-text';
-        descText.textContent = item.description;
-        descWrapper.appendChild(descText);
-        card.appendChild(descWrapper);
-
-        // Precio
-        if (!owned) {
-            const priceEl = document.createElement('div');
-            priceEl.className = 'shop-price';
-
-            if (isSale && finalPrice < item.price) {
-                const origPrice = document.createElement('span');
-                origPrice.className = 'price-original';
-                origPrice.innerHTML = `<i data-lucide="star" size="11" fill="#8a8a95"></i> ${item.price}`;
-                priceEl.appendChild(origPrice);
-
-                const salePrice = document.createElement('span');
-                salePrice.className = 'price-sale';
-                salePrice.innerHTML = `<i data-lucide="star" size="13" fill="#4ade80"></i> ${finalPrice}`;
-                priceEl.appendChild(salePrice);
+        container.innerHTML = history.slice(0, 50).map(entry => {
+            if (entry.tipo) {
+                const isIngreso = entry.tipo === 'ingreso';
+                const fecha = new Date(entry.fecha).toLocaleString('es-MX', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                return `
+                    <div class="history-entry">
+                        <span class="history-icon ${isIngreso ? 'history-icon--in' : 'history-icon--out'}">
+                            ${isIngreso ? '+' : '-'}
+                        </span>
+                        <div class="history-detail">
+                            <span class="history-motivo">${entry.motivo}</span>
+                            <span class="history-fecha">${fecha}</span>
+                        </div>
+                        <span class="history-amount ${isIngreso ? 'history-amount--in' : 'history-amount--out'}">
+                            ${isIngreso ? '+' : '-'}${entry.cantidad}
+                        </span>
+                    </div>`;
             } else {
-                priceEl.innerHTML = `<i data-lucide="star" size="13" fill="#facc15"></i> ${finalPrice}`;
+                // Formato legado
+                const fecha = entry.date
+                    ? new Date(entry.date).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                    : '—';
+                const isCode = entry.itemId === 'promo_code';
+                return `
+                    <div class="history-entry">
+                        <span class="history-icon ${isCode ? 'history-icon--in' : 'history-icon--out'}">
+                            ${isCode ? '+' : '-'}
+                        </span>
+                        <div class="history-detail">
+                            <span class="history-motivo">${entry.name || 'Transacción'}</span>
+                            <span class="history-fecha">${fecha}</span>
+                        </div>
+                        <span class="history-amount ${isCode ? 'history-amount--in' : 'history-amount--out'}">
+                            ${isCode ? `+${entry.price || '?'}` : `-${entry.price || '?'}`}
+                        </span>
+                    </div>`;
             }
-
-            card.appendChild(priceEl);
-        }
-
-        // Botón comprar/descargar
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'shop-card-actions';
-        const btn = document.createElement('button');
-        btn.className = 'shop-card-btn' + (owned ? ' shop-card-btn--owned' : '');
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            owned ? handleDownload(item) : handlePurchase(item, card);
-        };
-        btn.innerHTML = owned
-            ? `<i data-lucide="download" size="14"></i> <span>Descargar</span>`
-            : `<i data-lucide="shopping-cart" size="14"></i> <span>Comprar</span>`;
-        btnContainer.appendChild(btn);
-        card.appendChild(btnContainer);
-
-        return card;
+        }).join('');
     }
 
     // ================================================
     // COMPRA
     // ================================================
-    async function handlePurchase(item, cardEl) {
-        const eco      = window.ECONOMY;
-        const isSale   = eco.isSaleActive;
-        const saleMult = eco.saleMultiplier;
+    async function initiatePurchase(item, btn) {
+        const bought = GameCenter.getBoughtCount(item.id);
+        if ((item.stock - bought) <= 0) return;
 
-        let finalPrice = item.price;
-        if (isSale) finalPrice = Math.floor(item.price * saleMult);
+        const eco        = window.ECONOMY;
+        const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+        const cashback   = Math.floor(finalPrice * eco.cashbackRate);
+        const netCost    = finalPrice - cashback;
 
-        const balance  = GameCenter.getBalance();
-        const cashback = Math.floor(finalPrice * eco.cashbackRate);
-
-        if (balance < finalPrice) {
-            showToast('Monedas insuficientes', 'error');
-            shakeElement(cardEl.querySelector('.shop-card-btn'));
-            return;
-        }
+        const bodyHTML = `
+            <div class="modal-product-row">
+                <span class="modal-label">Wallpaper</span>
+                <span class="modal-value" style="color:white;">${item.name}</span>
+            </div>
+            ${eco.isSaleActive ? `
+            <div class="modal-product-row">
+                <span class="modal-label">Precio original</span>
+                <span class="modal-strikethrough">${item.price} ⭐</span>
+            </div>
+            <div class="modal-product-row">
+                <span class="modal-label">Precio con oferta</span>
+                <span class="modal-value--sale">${finalPrice} ⭐</span>
+            </div>` : `
+            <div class="modal-product-row">
+                <span class="modal-label">Precio</span>
+                <span class="modal-value">${item.price} ⭐</span>
+            </div>`}
+            ${cashback > 0 ? `
+            <div class="modal-product-row">
+                <span class="modal-label">Cashback recibido</span>
+                <span class="modal-value--cashback">+${cashback} ⭐</span>
+            </div>` : ''}
+            <div class="modal-product-row modal-product-row--total">
+                <span class="modal-label">Costo neto</span>
+                <span class="modal-value--total">${netCost} ⭐</span>
+            </div>`;
 
         const confirmed = await openConfirmModal({
-            title: 'Confirmar compra',
-            bodyHTML: `
-                <div class="modal-product-row">
-                    <span class="modal-label">${item.name}</span>
-                    ${isSale && finalPrice < item.price
-                        ? `<span class="modal-value"><span class="modal-strikethrough">${item.price}</span> → <span class="modal-value--sale">${finalPrice}</span></span>`
-                        : `<span class="modal-value">${finalPrice}</span>`
-                    }
-                </div>
-                ${cashback > 0
-                    ? `<div class="modal-product-row">
-                        <span class="modal-label">Cashback</span>
-                        <span class="modal-value modal-value--cashback">+${cashback}</span>
-                    </div>`
-                    : ''
-                }
-                <div class="modal-product-row modal-product-row--total">
-                    <span class="modal-label">Total</span>
-                    <span class="modal-value modal-value--total">${finalPrice - cashback}</span>
-                </div>
-            `,
-            confirmText: 'Comprar'
+            title: '¿Canjear wallpaper?',
+            bodyHTML,
+            confirmText: `Canjear · ${finalPrice} ⭐`
         });
-
         if (!confirmed) return;
 
-        const result = GameCenter.purchaseWallpaper(item.id, item.price);
+        const result = GameCenter.buyItem(item);
+
         if (result.success) {
-            showToast(`¡${item.name} desbloqueado!`, 'success');
-            confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
-            updateBalance();
-            updateMoonBadge();
-            renderCatalog();
-            renderLibrary();
-            filterCards();
+            filterItems();
+            document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+            fireConfetti();
+            const cashbackNote = result.cashback > 0
+                ? ` <strong>+${result.cashback} cashback</strong> devueltas.`
+                : '';
+            showToast(`"${item.name}" desbloqueado.${cashbackNote} Ve a <strong>Mis Tesoros</strong> para descargar.`, 'success');
+            updateWishlistCost();
         } else {
-            showToast(result.message, 'error');
-        }
-    }
-
-    // ================================================
-    // DESCARGA
-    // ================================================
-    function handleDownload(item) {
-        const a = document.createElement('a');
-        a.href = item.full_url;
-        a.download = `${item.name}.jpg`;
-        a.click();
-        showToast('Descargando...', 'success');
-    }
-
-    // ================================================
-    // BIBLIOTECA
-    // ================================================
-    function renderLibrary() {
-        const container = document.getElementById('library-container');
-        const owned = GameCenter.getOwnedWallpapers();
-        const ownedIds = new Set(owned);
-        const items = SHOP_DATA.filter(x => ownedIds.has(x.id));
-
-        if (items.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-med); grid-column:1/-1; text-align:center; margin:30px 0;">Aún no tienes wallpapers. ¡Visita el catálogo!</p>';
-            return;
-        }
-
-        container.innerHTML = '';
-        items.forEach(item => {
-            const card = createLibraryCard(item);
-            container.appendChild(card);
-        });
-        if (window.lucide) lucide.createIcons();
-    }
-
-    function createLibraryCard(item) {
-        const card = document.createElement('div');
-        card.className = 'shop-card glass-panel';
-
-        const img = document.createElement('img');
-        img.src = item.preview_url;
-        img.alt = item.name;
-        img.className = 'shop-img';
-        img.loading = 'lazy';
-        card.appendChild(img);
-
-        const nameEl = document.createElement('div');
-        nameEl.className = 'card-name';
-        nameEl.textContent = item.name;
-        card.appendChild(nameEl);
-
-        const descWrapper = document.createElement('div');
-        descWrapper.className = 'card-desc';
-        const descText = document.createElement('div');
-        descText.className = 'card-desc-text';
-        descText.textContent = item.description;
-        descWrapper.appendChild(descText);
-        card.appendChild(descWrapper);
-
-        const btnContainer = document.createElement('div');
-        btnContainer.className = 'shop-card-actions';
-        const btn = document.createElement('button');
-        btn.className = 'shop-card-btn shop-card-btn--owned';
-        btn.onclick = () => handleDownload(item);
-        btn.innerHTML = `<i data-lucide="download" size="14"></i> <span>Descargar</span>`;
-        btnContainer.appendChild(btn);
-        card.appendChild(btnContainer);
-
-        return card;
-    }
-
-    // ================================================
-    // BÚSQUEDA Y FILTROS
-    // ================================================
-    function initSearch() {
-        const input = document.getElementById('search-input');
-        const clear = document.getElementById('search-clear');
-
-        input.addEventListener('input', () => {
-            clear.classList.toggle('hidden', !input.value);
-            filterCards();
-        });
-
-        clear.addEventListener('click', () => {
-            input.value = '';
-            clear.classList.add('hidden');
-            filterCards();
-        });
-    }
-
-    function filterCards() {
-        const query = document.getElementById('search-input').value.toLowerCase();
-        const activeFilter = document.querySelector('.pill.active')?.dataset.filter || 'Todos';
-        const cards = document.querySelectorAll('#shop-container .shop-card');
-        const wishlistIds = GameCenter.getWishlist();
-        const wishlistSet = new Set(wishlistIds);
-
-        let visibleCount = 0;
-
-        cards.forEach(card => {
-            const id = card.dataset.id;
-            const cat = card.dataset.category;
-            const name = card.querySelector('.card-name').textContent.toLowerCase();
-
-            const matchesSearch = name.includes(query);
-            const matchesCategory = activeFilter === 'Todos'
-                || (activeFilter === 'PC' && cat === 'PC')
-                || (activeFilter === 'Mobile' && cat === 'Mobile')
-                || (activeFilter === 'Wishlist' && wishlistSet.has(id));
-
-            const show = matchesSearch && matchesCategory;
-            card.style.display = show ? 'flex' : 'none';
-            if (show) visibleCount++;
-        });
-
-        const countEl = document.getElementById('search-results-count');
-        const emptyEl = document.getElementById('filter-empty');
-
-        if (query && visibleCount > 0) {
-            countEl.textContent = `${visibleCount} resultado${visibleCount > 1 ? 's' : ''} encontrado${visibleCount > 1 ? 's' : ''}`;
-            countEl.classList.remove('hidden');
-        } else {
-            countEl.classList.add('hidden');
-        }
-
-        emptyEl.classList.toggle('hidden', visibleCount > 0);
-    }
-
-    function resetFilters() {
-        document.getElementById('search-input').value = '';
-        document.getElementById('search-clear').classList.add('hidden');
-        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-        document.querySelector('.pill[data-filter="Todos"]').classList.add('active');
-        filterCards();
-    }
-
-    // ================================================
-    // WISHLIST COST BANNER
-    // ================================================
-    function updateWishlistCostBanner() {
-        const wishlistIds = GameCenter.getWishlist();
-        const banner = document.getElementById('wishlist-cost-banner');
-        const textEl = document.getElementById('wishlist-cost-text');
-
-        if (wishlistIds.length === 0) {
-            banner.classList.add('hidden');
-            return;
-        }
-
-        const eco = window.ECONOMY;
-        let totalCost = 0;
-        wishlistIds.forEach(id => {
-            const item = SHOP_DATA.find(x => x.id === id);
-            if (item && !GameCenter.isWallpaperOwned(id)) {
-                let price = item.price;
-                if (eco.isSaleActive) price = Math.floor(price * eco.saleMultiplier);
-                totalCost += price;
+            if (result.reason === 'coins') {
+                if (btn) shakeElement(btn);
+                const priceEl = btn?.closest('.shop-card')?.querySelector('.shop-price');
+                if (priceEl) shakeElement(priceEl);
+                showToast('No tienes suficientes monedas para este wallpaper.', 'error');
             }
-        });
-
-        if (totalCost === 0) {
-            banner.classList.add('hidden');
-            return;
+            if (result.reason === 'stock') showToast('Producto agotado.', 'error');
         }
+    }
 
-        textEl.innerHTML = `Coste total: <strong>${totalCost}</strong> monedas`;
-        banner.classList.remove('hidden');
+    function shakeElement(el) {
+        el.classList.remove('anim-shake');
+        void el.offsetWidth;
+        el.classList.add('anim-shake');
+        el.addEventListener('animationend', () => el.classList.remove('anim-shake'), { once: true });
     }
 
     // ================================================
-    // TABS
+    // CONFETTI
     // ================================================
-    document.querySelectorAll('.shop-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.tab;
-            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-            document.getElementById(`tab-${target}`).classList.remove('hidden');
-
-            if (target === 'library') renderLibrary();
-            if (target === 'settings') {
-                initEconomyInfo();
-                renderMoonBlessingStatus();
-            }
-
-            if (window.lucide) lucide.createIcons();
-        });
-    });
-
-    // ================================================
-    // FILTROS — Pills
-    // ================================================
-    document.querySelectorAll('.pill').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            filterCards();
-            updateWishlistCostBanner();
-        });
-    });
-
-    // ================================================
-    // THEME
-    // ================================================
-    function initTheme() {
-        const saved = localStorage.getItem('love-arcade-theme') || 'purple';
-        applyTheme(saved);
-
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const theme = btn.dataset.theme;
-                applyTheme(theme);
-                localStorage.setItem('love-arcade-theme', theme);
-            });
-        });
+    function fireConfetti() {
+        confetti({ particleCount: 60, angle: 60,  spread: 70, origin: { x: 0, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
+        confetti({ particleCount: 60, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
     }
-
-    function applyTheme(theme) {
-        const themeMap = {
-            purple: '#9b59ff',
-            pink:   '#ff59b4',
-            cyan:   '#00d4ff',
-            orange: '#ff7043',
-            green:  '#4ade80',
-            gold:   '#facc15'
-        };
-        const color = themeMap[theme] || '#9b59ff';
-        document.documentElement.style.setProperty('--accent', color);
-        document.documentElement.style.setProperty('--accent-hover', color + 'cc');
-        document.documentElement.setAttribute('data-theme', theme);
-
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.theme === theme);
-        });
-    }
-
-    // ================================================
-    // BALANCE + MOON BADGE UI
-    // ================================================
-    function updateBalance() {
-        document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-    }
-    function updateMoonBadge() {
-        const status = GameCenter.getMoonBlessingStatus();
-        document.querySelectorAll('.moon-blessing-badge').forEach(badge => {
-            badge.classList.toggle('hidden', !status.active);
-        });
-    }
-
-    // ================================================
-    // RESET
-    // ================================================
-    document.getElementById('btn-reset')?.addEventListener('click', async () => {
-        const confirmed = await openConfirmModal({
-            title: 'Resetear progreso',
-            bodyHTML: `<div class="modal-warning">
-                Esto <strong>eliminará todos tus datos locales</strong>: monedas, wallpapers desbloqueados, racha, ajustes, etc.<br><br>
-                Esta acción no se puede deshacer.
-            </div>`,
-            confirmText: 'Sí, borrar todo'
-        });
-        if (!confirmed) return;
-        GameCenter.resetProgress();
-        showToast('Progreso reseteado', 'success');
-        setTimeout(() => location.reload(), 800);
-    });
 
     // ================================================
     // TOAST
     // ================================================
-    function showToast(text, type = 'info') {
+    function showToast(html, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `toast toast--${type}`;
-        toast.textContent = text;
+        toast.innerHTML = html;
         document.body.appendChild(toast);
-        setTimeout(() => toast.classList.add('toast--show'), 50);
+        requestAnimationFrame(() => toast.classList.add('toast--visible'));
         setTimeout(() => {
-            toast.classList.remove('toast--show');
-            setTimeout(() => toast.remove(), 300);
-        }, 2500);
+            toast.classList.remove('toast--visible');
+            setTimeout(() => toast.remove(), 400);
+        }, 4500);
     }
 
     // ================================================
-    // SHAKE ANIMATION
-    // ================================================
-    function shakeElement(el) {
-        if (!el) return;
-        el.classList.add('anim-shake');
-        setTimeout(() => el.classList.remove('anim-shake'), 500);
-    }
-
-    // ================================================
-    // MODAL DE CONFIRMACIÓN
-    // ================================================
-    function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
-        return new Promise(resolve => {
-            const modal = document.getElementById('confirm-modal');
-            const titleEl = document.getElementById('confirm-title');
-            const bodyEl  = document.getElementById('confirm-body');
-            const okBtn   = document.getElementById('confirm-ok');
-            const cancelBtn = document.getElementById('confirm-cancel');
-            const errorEl = document.getElementById('confirm-error');
-
-            titleEl.textContent = title;
-            bodyEl.innerHTML = bodyHTML;
-            okBtn.textContent = confirmText;
-            errorEl.textContent = '';
-            modal.classList.remove('hidden');
-
-            const cleanup = () => {
-                modal.classList.add('hidden');
-                okBtn.onclick = null;
-                cancelBtn.onclick = null;
-            };
-
-            okBtn.onclick = () => { cleanup(); resolve(true); };
-            cancelBtn.onclick = () => { cleanup(); resolve(false); };
-        });
-    }
-
-    // ================================================
-    // PROMO TOGGLE
-    // ================================================
-    function initPromoToggle() {
-        const btn = document.getElementById('btn-promo-toggle');
-        const section = document.getElementById('promo-section');
-        btn?.addEventListener('click', () => {
-            const isOpen = btn.getAttribute('aria-expanded') === 'true';
-            btn.setAttribute('aria-expanded', !isOpen);
-            section.setAttribute('aria-hidden', isOpen);
-            section.classList.toggle('promo-section--collapsed', isOpen);
-            section.classList.toggle('promo-section--open', !isOpen);
-        });
-    }
-
-    // ================================================
-    // EVENT LISTENERS GENERALES
-    // ================================================
-    function initEventListeners() {
-        document.getElementById('btn-redeem')?.addEventListener('click', handleRedeem);
-        document.getElementById('btn-export')?.addEventListener('click', handleExport);
-        document.getElementById('btn-import')?.addEventListener('click', handleImport);
-        document.getElementById('import-file-input')?.addEventListener('change', handleFileSelect);
-    }
-
-    // FileReader para importar archivo
-    function handleFileSelect(e) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            document.getElementById('import-input').value = ev.target.result;
-        };
-        reader.readAsText(file);
-    }
-
-    // ================================================
-    // PROMO CODE
+    // PROMO CODE (async — SHA-256)
     // ================================================
     async function handleRedeem() {
         const input = document.getElementById('promo-input');
