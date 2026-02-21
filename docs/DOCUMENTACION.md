@@ -1,35 +1,26 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v7.5 · Phase 3: Security & Gamification
+### Plataforma de Recompensas · v8.0 · Phase 4: Mobile-First & UX Optimization
 
 ---
 
 ## Tabla de Contenidos
 
 1. [Visión General](#1-visión-general)
-2. [Novedades en v7.5](#2-novedades-en-v75)
+2. [Novedades en v8.0](#2-novedades-en-v80)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
-   - [Configuración global](#configuración-global)
-   - [Migración silenciosa](#migración-silenciosa)
-   - [El Store (estado)](#el-store-estado)
-   - [API pública: window.GameCenter](#api-pública-windowgamecenter)
-   - [Sistema de temas](#sistema-de-temas)
-   - [Sistema de economía](#sistema-de-economía)
 6. [sync-worker.js — Web Worker](#6-sync-workerjs--web-worker)
 7. [shop.json — El Catálogo](#7-shopjson--el-catálogo)
 8. [index.html — Dashboard](#8-indexhtml--dashboard)
 9. [shop.html — Tienda](#9-shophtml--tienda)
-10. [styles.css — Sistema de Diseño](#10-stylescss--sistema-de-diseño)
+10. [styles.css — Sistema de Diseño Mobile-First](#10-stylescss--sistema-de-diseño-mobile-first)
 11. [Códigos Promocionales (SHA-256)](#11-códigos-promocionales-sha-256)
-    - [Cómo funcionan ahora](#cómo-funcionan-ahora)
-    - [Agregar un código nuevo](#agregar-un-código-nuevo)
-    - [Lista de hashes actuales](#lista-de-hashes-actuales)
 12. [Sistema de Racha (Streaks)](#12-sistema-de-racha-streaks)
 13. [Bendición Lunar](#13-bendición-lunar)
-14. [Historial de Transacciones](#14-historial-de-transacciones)
-15. [Wishlist](#15-wishlist)
-16. [Sincronización con Checksum](#16-sincronización-con-checksum)
+14. [Wishlist — Funcionalidad Completa](#14-wishlist--funcionalidad-completa)
+15. [Sincronización con Archivo .txt](#15-sincronización-con-archivo-txt)
+16. [Historial de Transacciones](#16-historial-de-transacciones)
 17. [Flujos de Usuario](#17-flujos-de-usuario)
 18. [Guía de Mantenimiento](#18-guía-de-mantenimiento)
 19. [Seguridad y Limitaciones](#19-seguridad-y-limitaciones)
@@ -45,30 +36,29 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 **Principios de diseño:**
 
 - **Sin servidor.** Todo el estado vive en `localStorage`. No hay llamadas a APIs externas.
+- **Mobile-First.** Los estilos base en `styles.css` corresponden a pantallas móviles. Los overrides para desktop se definen con `@media (min-width: 768px)`.
 - **Arquitectura de isla única.** `app.js` es el único archivo de lógica compartida.
 - **Compatibilidad retroactiva.** La función `migrateState()` garantiza que ningún usuario pierda datos al actualizar.
 - **Configuración centralizada.** `ECONOMY`, `THEMES`, `CONFIG` y `PROMO_CODES_HASHED` están al inicio de `app.js`.
 
 ---
 
-## 2. Novedades en v7.5
+## 2. Novedades en v8.0
 
 | Área | Cambio |
 |---|---|
-| **Seguridad** | Los códigos promocionales se comparan por hash SHA-256. El texto plano ya no es legible en el código fuente. |
-| **Seguridad** | La exportación de partida incluye un checksum SHA-256. Cualquier edición manual invalida el código. |
-| **Rendimiento** | Las operaciones de exportación/importación se delegan a un Web Worker (`sync-worker.js`) para no bloquear el hilo principal. |
-| **Rendimiento** | La búsqueda en el catálogo usa `debounce(300ms)` para reducir operaciones de DOM en móvil. |
-| **Rendimiento** | Skeleton screens visibles mientras se carga `shop.json`, eliminando el parpadeo de "Cargando...". |
-| **Gamificación** | Sistema de racha de bono diario con premios escalonados (+5 monedas por día, tope 60). |
-| **Gamificación** | Bendición Lunar: buff temporal de +90 monedas por reclamo diario, activo 7 días por 100 monedas. |
-| **Datos** | Wishlist persistente por ítem con icono de corazón en las cards. |
-| **Datos** | Historial de transacciones estructurado `{tipo, cantidad, motivo, fecha}` visible en Ajustes. |
-| **UI/UX** | Nuevo tema "Carmesí Arcade" (`#e11d48`). |
-| **UI/UX** | Animación `shake` en el botón y precio cuando el saldo es insuficiente. |
-| **UI/UX** | Icono de luna 🌙 animado junto al saldo cuando la Bendición Lunar está activa. |
-| **Accesibilidad** | Contraste `--text-med` elevado en temas Rosa Neón y Cyan para cumplir WCAG AA (ratio ≥ 4.5:1). |
-| **Migración** | `migrateState()` convierte automáticamente `lastDaily` (string) → `daily.lastClaim` (timestamp). |
+| **CSS** | Reescrito con arquitectura Mobile-First. Los estilos base aplican a móvil; los overrides de desktop usan `@media (min-width: 768px)`. |
+| **UI Móvil** | El "Hero Balance" (banner grande de monedas) se oculta en móvil mediante `display: none` en el CSS base. El saldo ya es visible en la Navbar superior. |
+| **UI Móvil** | La grilla de productos en la tienda usa `repeat(2, 1fr)` como base (2 columnas en móvil), en lugar de 1 columna. |
+| **Iconografía** | Todos los emojis funcionales (`🌙`, `⚡`, `♥`) han sido reemplazados por nodos `<i data-lucide="...">` de la librería Lucide ya integrada. |
+| **Filtros** | Los filtros del catálogo se simplifican a: Todos, PC, Mobile y Mis Lista. Se eliminan Anime, Gaming, Sonic, DragonBall y Genshin. |
+| **Wishlist** | Nuevo filtro "Mis Lista" para ver solo los ítems marcados con el corazón. |
+| **Wishlist** | Indicador de coste: muestra cuántas monedas faltan para comprar toda la lista. |
+| **Wishlist** | Los ítems en Wishlist aparecen siempre al principio de los resultados de búsqueda. |
+| **Sync** | Exportación: el código se copia al portapapeles **y** se descarga automáticamente como archivo `.txt`. No se muestra en un `<textarea>`. |
+| **Sync** | Importación: se añade `<input type="file">` con `FileReader` para cargar el archivo `.txt` sin pegar texto masivo, evitando el error de memoria en móvil. |
+| **Economía** | Sin cambios. `saleMultiplier` y `cashbackRate` se mantienen intactos. |
+| **LocalStorage** | Sin cambios. La clave `gamecenter_v6_promos` permanece igual. |
 
 ---
 
@@ -85,10 +75,10 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 │                   │                                             │
 │              js/app.js                                          │
 │          (Motor / API pública)                                  │
-│                   │                           │                 │
-│            localStorage              js/sync-worker.js         │
-│       "gamecenter_v6_promos"         (Web Worker: Base64        │
-│                   │                  + SHA-256 checksum)        │
+│                   │                              │              │
+│            localStorage                 js/sync-worker.js      │
+│       "gamecenter_v6_promos"            (Web Worker: Base64     │
+│                   │                     + SHA-256 checksum)     │
 │        data/shop.json                                           │
 │        wallpapers/ (archivos)                                   │
 └─────────────────────────────────────────────────────────────────┘
@@ -102,15 +92,15 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 love_arcade/
 │
 ├── index.html              # Dashboard principal
-├── shop.html               # Tienda completa
-├── styles.css              # Hoja de estilos global
+├── shop.html               # Tienda completa (v8.0 Mobile-First)
+├── styles.css              # Hoja de estilos global — Mobile-First (v8.0)
 │
 ├── js/
-│   ├── app.js              # Motor principal — GameCenter API v7.5
-│   └── sync-worker.js      # Web Worker — Base64 + checksum SHA-256
+│   ├── app.js              # Motor principal — GameCenter API v7.5 (actualizado v8.0)
+│   └── sync-worker.js      # Web Worker — Base64 + checksum SHA-256 (sin cambios)
 │
 ├── data/
-│   └── shop.json           # Catálogo de wallpapers
+│   └── shop.json           # Catálogo de wallpapers (sin cambios)
 │
 ├── wallpapers/             # Archivos descargables
 ├── assets/
@@ -132,293 +122,307 @@ love_arcade/
 
 ## 5. app.js — El Motor
 
-### Configuración global
+Sin cambios en la lógica de negocio. Las únicas modificaciones en v8.0 son:
 
-```javascript
-const CONFIG = {
-    stateKey:       'gamecenter_v6_promos', // ← NO modificar jamás
-    initialCoins:   0,
-    dailyReward:    20,      // Monedas base (día 1 de racha)
-    dailyStreakCap: 60,      // Máximo de monedas por bono diario
-    dailyStreakStep: 5,      // Incremento por día de racha consecutivo
-    wallpapersPath: 'wallpapers/'
-};
-```
+**Emojis eliminados de strings internos:**
 
-> ⚠️ `stateKey` nunca debe modificarse. Cambiarla haría que todos los usuarios pierdan su progreso.
+| Antes (v7.5) | Después (v8.0) |
+|---|---|
+| `'🌙 Bendición Lunar activada (7 días)'` | `'Bendición Lunar activada (7 días)'` |
+| `Racha: ${n} 🔥` | `Racha: ${n}` |
+| `' + 🌙 Bendición Lunar'` | `' + Bendición Lunar'` |
+| `'+🌙'` en moonNote | `'+Luna'` |
+| `'Activar Bendición Lunar (100 🪙)'` | `'Activar Bendición Lunar (100 monedas)'` |
+| Badge title: `'🌙 Bendición Lunar activa hasta…'` | `'Bendición Lunar activa hasta…'` |
 
----
+La representación visual de la luna es ahora responsabilidad exclusiva del icono Lucide `<i data-lucide="moon">` en el HTML.
 
-### Migración silenciosa
-
-La función `migrateState(loadedStore)` se ejecuta **siempre** al inicializar el store, antes de cualquier otra operación. Garantiza que los datos de versiones anteriores sean compatibles sin sobrescribir nada:
-
-```javascript
-function migrateState(loadedStore) {
-    const defaults = {
-        coins:          0,
-        progress:       { maze: [], wordsearch: [], secretWordsFound: [] },
-        inventory:      {},
-        redeemedCodes:  [],    // Legado (v6-v7.2): lista de códigos en texto
-        redeemedHashes: [],    // v7.5: hashes SHA-256 de códigos canjeados
-        history:        [],
-        userAvatar:     null,
-        theme:          'violet',
-        wishlist:       [],
-        daily:          { lastClaim: 0, streak: 0 },
-        buffs:          { moonBlessingExpiry: 0 }
-    };
-    const merged = { ...defaults, ...loadedStore };
-    // Convierte lastDaily (v7.2) → daily.lastClaim (v7.5)
-    if (merged.lastDaily && merged.daily.lastClaim === 0) { ... }
-    return merged;
-}
-```
-
----
-
-### El Store (estado)
-
-Estructura completa del store v7.5:
-
-```javascript
-{
-    // ── Core ────────────────────────────────────────────────
-    coins:   450,
-    progress: { maze: ['level_1'], wordsearch: ['word_set_1'] },
-    inventory: { 1: 1, 15: 1 },
-
-    // ── Códigos promo ────────────────────────────────────────
-    redeemedCodes:  ['FEB14'],          // Legado: texto plano (historial)
-    redeemedHashes: ['79de29d2...'],    // v7.5: hashes SHA-256
-
-    // ── Historial (v7.5 formato estructurado) ────────────────
-    history: [
-        { tipo: 'ingreso', cantidad: 500, motivo: 'Código canjeado',      fecha: 1708000000000 },
-        { tipo: 'gasto',   cantidad: 110, motivo: 'Compra: Rouge the Bat', fecha: 1708001000000 },
-        { tipo: 'ingreso', cantidad: 11,  motivo: 'Cashback: Rouge the Bat', fecha: 1708001000001 }
-    ],
-
-    // ── Perfil ───────────────────────────────────────────────
-    userAvatar: 'data:image/png;base64,...',
-    theme: 'violet',   // 'violet' | 'pink' | 'cyan' | 'gold' | 'crimson'
-
-    // ── Wishlist (v7.5) ──────────────────────────────────────
-    wishlist: [3, 7, 21],
-
-    // ── Bono diario con racha (v7.5) ─────────────────────────
-    daily: {
-        lastClaim: 1708000000000,  // Timestamp del último reclamo
-        streak:    5               // Días consecutivos
-    },
-
-    // ── Buffs (v7.5) ─────────────────────────────────────────
-    buffs: {
-        moonBlessingExpiry: 1708604800000  // Timestamp de vencimiento
-    }
-}
-```
-
----
-
-### API pública: window.GameCenter
-
-#### `GameCenter.completeLevel(gameId, levelId, rewardAmount)`
-Sin cambios respecto a v7.2. Registra un nivel y otorga monedas. Idempotente.
-
-#### `GameCenter.buyItem(itemData)` → `{success, finalPrice, cashback}`
-Sin cambios. Ahora también registra una entrada en `store.history` con formato estructurado.
-
-#### `GameCenter.redeemPromoCode(inputCode)` → `Promise<{success, reward?, message}>`
-**Ahora es asíncrona (retorna una Promise).** Internamente hashea el código con SHA-256 antes de comparar. Los llamadores deben usar `await`.
-
-```javascript
-// Uso correcto en shop.html
-const result = await GameCenter.redeemPromoCode('FEB14');
-```
-
-#### `GameCenter.claimDaily()` → `{success, reward, baseReward, moonBonus, streak, message}`
-Implementa la lógica de racha. Devuelve información detallada del reclamo.
-
-#### `GameCenter.getStreakInfo()` → `{streak, nextReward, canClaim}`
-Devuelve el estado de la racha actual sin consumirla.
-
-#### `GameCenter.buyMoonBlessing()` → `{success, expiresAt?, reason?}`
-Activa la Bendición Lunar por 100 monedas durante 7 días. Si ya está activa, extiende su vigencia.
-
-#### `GameCenter.getMoonBlessingStatus()` → `{active, expiresAt, remainingMs}`
-Consulta el estado del buff sin modificarlo.
-
-#### `GameCenter.toggleWishlist(itemId)` → `boolean`
-Añade o quita un ítem de la wishlist. Devuelve `true` si quedó en favoritos.
-
-#### `GameCenter.isWishlisted(itemId)` → `boolean`
-Consulta si un ítem está en la wishlist.
-
-#### `GameCenter.getHistory()` → `Array`
-Devuelve el historial de transacciones en orden cronológico inverso (máx. 50 entradas).
-
-#### `GameCenter.exportSave()` → `Promise<string>`
-**Ahora es asíncrona.** Genera un código Base64 con checksum SHA-256. Delega al Web Worker cuando está disponible.
-
-#### `GameCenter.importSave(code)` → `Promise<{success, message?}>`
-**Ahora es asíncrona.** Valida el checksum antes de aplicar el estado. Rechaza códigos editados manualmente.
-
----
-
-### Sistema de temas
-
-Se añade el tema **Carmesí Arcade** al objeto `THEMES`:
-
-```javascript
-const THEMES = {
-    violet:  { accent: '#9b59ff', glow: 'rgba(155, 89, 255, 0.4)',  name: 'Violeta' },
-    pink:    { accent: '#ff59b4', glow: 'rgba(255, 89, 180, 0.4)',  name: 'Rosa Neón' },
-    cyan:    { accent: '#00d4ff', glow: 'rgba(0, 212, 255, 0.4)',   name: 'Cyan Arcade' },
-    gold:    { accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)',  name: 'Dorado' },
-    crimson: { accent: '#e11d48', glow: 'rgba(225, 29, 72, 0.4)',   name: 'Carmesí Arcade' }  // ← NUEVO
-};
-```
+La función `updateMoonBlessingUI()` actualiza el `<span class="moon-blessing-badge">` (que ya contiene el icono SVG) mostrándolo u ocultándolo con la clase `hidden`. Ya no modifica el `textContent` del badge porque ese contenido es el icono SVG.
 
 ---
 
 ## 6. sync-worker.js — Web Worker
 
-El archivo `js/sync-worker.js` maneja las operaciones pesadas de sincronización en un hilo separado para no bloquear la UI.
+**Sin cambios en v8.0.**
 
-**Mensajes soportados:**
+El worker sigue manejando el checksum SHA-256 para los archivos `.txt` importados, garantizando que cualquier archivo cargado sea validado antes de aplicarse. El flujo completo es:
 
-| `action`   | Payload requerido          | Resultado devuelto                          |
-|------------|---------------------------|---------------------------------------------|
-| `'export'` | `{ store, salt }`          | `string` — código Base64 con checksum       |
-| `'import'` | `{ code, salt }`           | `{ data, valid, legacy }` — store + validez |
-
-**Ejemplo de uso desde `app.js`:**
-
-```javascript
-// Exportar (usado internamente por GameCenter.exportSave)
-const code = await workerTask({ action: 'export', store, salt: SYNC_SALT });
-
-// Importar (usado internamente por GameCenter.importSave)
-const result = await workerTask({ action: 'import', code, salt: SYNC_SALT });
-if (!result.valid) { /* rechazar */ }
+```
+Usuario carga archivo .txt  →  FileReader lee el texto  →
+textarea recibe el contenido  →  handleImport() llama a
+GameCenter.importSave(code)  →  workerTask({action:'import', code, salt})
+→  sync-worker.js verifica el checksum SHA-256  →
+¿válido? → store = migrateState(data) → saveState()
+¿inválido? → rechazado con mensaje de error
 ```
 
-El worker tiene un fallback: si `new Worker(...)` falla (p. ej., por restricciones del servidor), las operaciones se ejecutan en el hilo principal usando `sha256()` directamente.
+Los mensajes soportados son los mismos que en v7.5:
+
+| `action`   | Payload requerido       | Resultado devuelto                        |
+|---|---|---|
+| `'export'` | `{ store, salt }`       | `string` — código Base64 con checksum     |
+| `'import'` | `{ code, salt }`        | `{ data, valid, legacy }` — store + validez |
 
 ---
 
 ## 7. shop.json — El Catálogo
 
-Sin cambios estructurales. Cada ítem tiene:
+**Sin cambios estructurales en v8.0.** Cada ítem mantiene su estructura con el campo `tags` que contiene etiquetas como `"PC"`, `"Mobile"`, `"Anime"`, etc. Sin embargo, **solo se renderizan los tags `PC` y `Mobile`** en las cards del catálogo (v8.0: simplificación de UI).
 
-```json
-{
-    "id":    1,
-    "name":  "Rouge the Bat",
-    "desc":  "La espía de G.U.N. para que le de estilo a tu teléfono.",
-    "price": 110,
-    "stock": 1,
-    "image": "assets/product-thumbs/rouge_the_bat_a94a3cca_thumbs.webp",
-    "file":  "rouge_the_bat_a94a3cca.webp",
-    "tags":  ["Mobile", "Gaming", "Sonic"]
-}
-```
+Los filtros del catálogo también se reducen a `Todos`, `PC`, `Mobile` y `Wishlist`. Las etiquetas adicionales (`Anime`, `Gaming`, `Sonic`, etc.) se mantienen en el JSON para uso futuro, pero no se muestran como pills ni se usan en los filtros.
 
 ---
 
 ## 8. index.html — Dashboard
 
-**Cambios en v7.5:**
+**Cambio en v8.0:** El `<span class="moon-blessing-badge">` que anteriormente contenía el emoji `🌙` ahora contiene un icono Lucide:
 
-- El `.coin-badge` incluye un elemento `<span class="moon-blessing-badge hidden">🌙</span>` que `app.js` hace visible cuando la Bendición Lunar está activa.
-- El botón de bono diario ahora muestra la racha actual cuando está bloqueado (ej. "Vuelve mañana · Racha: 5 🔥") y la recompensa esperada cuando está disponible.
-- Las FAQ se actualizaron para documentar la racha, la Bendición Lunar y el checksum de sincronización.
+```html
+<!-- v7.5 (anterior) -->
+<span class="moon-blessing-badge hidden" title="Bendición Lunar activa">🌙</span>
+
+<!-- v8.0 (actual) -->
+<span class="moon-blessing-badge hidden" title="Bendición Lunar activa">
+    <i data-lucide="moon" size="14" color="#c084fc"></i>
+</span>
+```
+
+El icono SVG ya se renderiza al inicio por `lucide.createIcons()` en el DOMContentLoaded. La función `updateMoonBlessingUI()` solo muestra/oculta el `<span>` mediante la clase `hidden`, sin modificar su contenido.
 
 ---
 
 ## 9. shop.html — Tienda
 
-**Cambios en v7.5:**
+### Cambios en v8.0
 
-- **Skeleton screens** — Seis `.skeleton-card` se muestran mientras `shop.json` carga y se ocultan al renderizar el grid real.
-- **Debounce en búsqueda** — El listener de `#search-input` usa `debounce(filterItems, 300)` en lugar de llamar a `filterItems()` en cada keystroke.
-- **Wishlist** — Cada card incluye un botón `.wishlist-btn` con icono ♡/♥. El estado se sincroniza con `GameCenter.toggleWishlist()`.
-- **Shake en error** — Cuando `buyItem()` falla por saldo insuficiente, se aplica la clase `.anim-shake` al botón y al elemento de precio.
-- **Promo code async** — `handleRedeem()` es `async` y usa `await GameCenter.redeemPromoCode()`. El botón se deshabilita durante el proceso.
-- **Sync async** — `handleExport()` y `handleImport()` son `async` y muestran estado de carga ("Generando código…", "Verificando integridad…") mientras trabajan.
-- **Ajustes ampliados** — La pestaña Ajustes incluye tres nuevos paneles: Bendición Lunar, y el Historial de Transacciones.
-- **Tema Carmesí** — Nuevo botón en el selector de tema (`data-theme="crimson"`).
-- **Moon Blessing badge** — El `.coin-badge` de la navbar incluye el badge de luna.
+**Filtros de categoría simplificados:**
+
+```html
+<!-- v8.0: solo Todos / PC / Mobile / Mis Lista -->
+<button class="pill active" data-filter="Todos">Todos</button>
+<button class="pill" data-filter="PC">
+    <i data-lucide="monitor" size="11"></i> PC
+</button>
+<button class="pill" data-filter="Mobile">
+    <i data-lucide="smartphone" size="11"></i> Mobile
+</button>
+<button class="pill pill--wishlist" data-filter="Wishlist">
+    <i data-lucide="heart" size="11"></i> Mis Lista
+</button>
+```
+
+**Indicador de coste de Wishlist:**
+
+```html
+<div id="wishlist-cost-banner" class="wishlist-cost-banner hidden">
+    <i data-lucide="heart" size="13" fill="currentColor" style="color:#ff4f7a;"></i>
+    <span id="wishlist-cost-text"></span>
+</div>
+```
+
+Se actualiza automáticamente al cargar el catálogo y cada vez que el usuario modifica su Wishlist.
+
+**Wishlist button (icono Lucide):**
+
+```html
+<!-- v7.5 (anterior) -->
+<button class="wishlist-btn">♥</button>
+
+<!-- v8.0 (actual) -->
+<button class="wishlist-btn wishlist-btn--active">
+    <i data-lucide="heart" size="13"></i>
+</button>
+```
+
+El relleno del corazón se controla por CSS:
+```css
+.wishlist-btn--active svg path { fill: currentColor !important; }
+```
+
+**Sección de Sincronización (exportar):**
+
+El `<textarea id="export-output">` fue eliminado. El flujo es ahora:
+1. Clic en "Exportar y descargar" → `handleExport()` async.
+2. `navigator.clipboard.writeText(code)` — copia al portapapeles.
+3. `new Blob([code], {type:'text/plain'})` → `URL.createObjectURL()` → descarga automática del archivo `love-arcade-backup-YYYY-MM-DD.txt`.
+
+**Sección de Sincronización (importar):**
+
+```html
+<!-- Carga por archivo (sin bloqueo de hilo) -->
+<label for="import-file" class="btn-ghost file-label">
+    <i data-lucide="file-up" size="15"></i> Cargar archivo .txt
+</label>
+<input type="file" id="import-file" accept=".txt" hidden>
+<span id="import-file-name" class="file-name-display">Ningún archivo seleccionado</span>
+
+<!-- Separador -->
+<div class="sync-separator">o pega el código manualmente</div>
+
+<!-- Textarea como fallback manual -->
+<textarea id="import-input" class="sync-textarea"></textarea>
+```
+
+El listener de `#import-file` usa `FileReader.readAsText()` para leer el archivo en el hilo principal de forma no bloqueante y vuelca el contenido en el `<textarea>`.
+
+**Emojis reemplazados:**
+
+| Elemento | v7.5 | v8.0 |
+|---|---|---|
+| Moon badge en navbar | `🌙` en `<span>` | `<i data-lucide="moon">` |
+| Moon badge en hero | `🌙` en `<span>` | `<i data-lucide="moon">` |
+| Icono del panel "Bendición Lunar" | `<span>🌙</span>` | `<i data-lucide="moon">` |
+| Botón moon blessing | `'Activar Bendición Lunar (100 🪙)'` | `<i data-lucide="moon"> + <span>` |
+| Wishlist button | `♥` / `♡` texto | `<i data-lucide="heart">` |
+| Monedas en economy row | `100 🪙` | `100 monedas` (texto plano) |
 
 ---
 
-## 10. styles.css — Sistema de Diseño
+## 10. styles.css — Sistema de Diseño Mobile-First
 
-**Cambios en v7.5:**
+### Principio Mobile-First
 
-### Nuevo tema: Carmesí Arcade
-El tema usa variables CSS `--accent: #e11d48` y `--accent-glow: rgba(225, 29, 72, 0.4)`. Se activa con `data-theme="crimson"` y se aplica vía `applyTheme()`.
+A partir de v8.0, los estilos base en `styles.css` corresponden al viewport más pequeño (pantalla de teléfono). Las expansiones para pantallas más grandes se definen con media queries de tipo `min-width`.
 
-### Corrección de contraste WCAG AA
-Los temas Rosa Neón y Cyan Arcade ahora eleva `--text-med` a `#d8d8e0` (ratio ≈ 5.2:1) y `--text-low` a `#a0a0ae` (ratio ≈ 4.6:1) mediante el selector `[data-theme="pink"], [data-theme="cyan"]`. Esto cumple el estándar WCAG AA de 4.5:1 sobre fondos oscuros de vidrio.
-
-> **Nota:** El atributo `data-theme` se aplica al `<html>` para que el selector CSS funcione correctamente. Actualmente `applyTheme()` cambia variables CSS en `:root` pero no escribe el atributo. Para activar los overrides de contraste, añadir `document.documentElement.setAttribute('data-theme', key)` dentro de `applyTheme()` en `app.js` si se desea usar esta funcionalidad.
-
-### Skeleton screens
 ```css
-@keyframes skeleton-loading {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+/* ANTES (v7.5): Desktop como base, mobile como excepción */
+.shop-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+@media (max-width: 768px) {
+    /* overrides de mobile */
+}
+
+/* AHORA (v8.0): Mobile como base, desktop como expansión */
+.shop-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+@media (min-width: 768px) {
+    .shop-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 }
 ```
-Las clases `.skeleton-card`, `.skeleton-img` y `.skeleton-line` imitan la estructura de una card real con animación de pulso.
 
-### Shake animation
+### Breakpoints
+
+| Breakpoint | Valor | Descripción |
+|---|---|---|
+| Base (mobile) | — | Teléfonos (< 768px) |
+| Desktop | `min-width: 768px` | Tablets y escritorios |
+| Desktop wide | `min-width: 1024px` | Escritorios grandes |
+
+### Cambios clave por componente
+
+**Body:**
+- Mobile base: `padding-bottom: var(--bottom-nav-height)` (espacio para bottom nav)
+- Desktop: `padding-bottom: 0`
+
+**Bottom Nav:**
+- Mobile base: `display: flex` (visible)
+- Desktop: `display: none` (oculto)
+
+**Nav Links (top):**
+- Mobile base: `display: none`
+- Desktop: `display: flex`
+
+**`.shop-hero` (Hero Balance):**
+- Mobile base: `display: none` — eliminado visualmente en móvil porque el saldo ya está en la Navbar superior
+- Desktop: `display: flex`
+
+**`.shop-grid`:**
+- Mobile base: `repeat(2, 1fr); gap: 12px` — 2 columnas compactas
+- Desktop: `repeat(auto-fill, minmax(220px, 1fr)); gap: 20px`
+
+**`.shop-card`:**
+- Mobile base: `padding: 12px`
+- Desktop: `padding: 18px`
+
+**`.shop-img`:**
+- Mobile base: `height: 120px`
+- Desktop: `height: 170px`
+
+**`.section-title`:**
+- Mobile base: `font-size: 1.4rem`
+- Desktop: `font-size: 1.8rem`
+
+**`.shop-tab`:**
+- Mobile base: `padding: 8px 10px; font-size: 0.78rem`
+- Desktop: `padding: 10px 18px; font-size: 0.88rem`
+
+**`.promo-input-group`:**
+- Mobile base: `flex-direction: column` (apilado)
+- Desktop: `flex-direction: row`
+
+**`.theme-grid`:**
+- Mobile base: `grid-template-columns: 1fr 1fr` (2 columnas)
+- Desktop: `repeat(auto-fill, minmax(150px, 1fr))`
+
+**`.faq-grid`:**
+- Mobile base: `grid-template-columns: 1fr`
+- Desktop: `repeat(auto-fill, minmax(340px, 1fr))`
+
+**`.toast`:**
+- Mobile base: `bottom: calc(var(--bottom-nav-height) + 10px)` — sobre la bottom nav
+- Desktop: `bottom: 30px`
+
+### Clases nuevas en v8.0
+
+**`.wishlist-cost-banner`** — Contenedor del indicador de coste de Wishlist:
 ```css
-@keyframes shake { /* 7 keyframes, duración 0.45s */ }
-.anim-shake { animation: shake 0.45s ease-in-out; }
+.wishlist-cost-banner {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(255,79,122,0.08); border: 1px solid rgba(255,79,122,0.25);
+    font-size: 0.82rem; color: var(--text-med);
+}
+.wishlist-cost-banner strong { color: #ff4f7a; }
 ```
 
-### Wishlist
-`.wishlist-btn` — botón circular posicionado en la esquina superior derecha de cada card.
-`.wishlist-btn--active` — estado activo (corazón lleno, color rosa).
+**`.pill--wishlist`** — Pill de filtro con color rosa diferenciado:
+```css
+.pill--wishlist.active { background: #ff4f7a; border-color: #ff4f7a; }
+```
 
-### Bendición Lunar
-`.moon-btn` — gradiente morado→rosa.
-`.eco-badge--moon` — badge morado para mostrar el estado del buff.
-`.moon-blessing-badge` — icono 🌙 con animación de pulso.
+**`.wishlist-btn--active svg path`** — Rellena el corazón SVG de Lucide vía CSS:
+```css
+.wishlist-btn--active svg path,
+.wishlist-btn--active svg circle { fill: currentColor !important; }
+```
 
-### Historial
-`.history-list`, `.history-entry`, `.history-icon`, `.history-detail`, `.history-amount` — componentes para la tabla de transacciones con scroll vertical.
+**`.sync-separator`** — Separador visual entre métodos de importación:
+```css
+.sync-separator { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 0.78rem; color: var(--text-low); }
+.sync-separator::before, .sync-separator::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
+```
+
+**`.file-label`** — Label del input de archivo estilizado como botón ghost:
+```css
+.file-label { cursor: pointer; width: 100%; justify-content: center; padding: 10px; }
+```
+
+**`.card-name` y `.card-desc-text`** — Clases CSS para los textos de cards (v8.0 reemplaza inline styles para facilitar overrides responsive):
+```css
+.shop-card .card-name { font-size: 0.9rem; font-weight: 700; /* desktop: 1.02rem */ }
+.shop-card .card-desc-text { font-size: 0.76rem; -webkit-line-clamp: 2; /* desktop: 0.82rem, clamp 3 */ }
+```
+
+**`.moon-blessing-badge`** — Actualizado para ser compatible con el icono SVG Lucide:
+```css
+.moon-blessing-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.8));
+    animation: moonPulse 2.5s ease-in-out infinite;
+}
+```
 
 ---
 
 ## 11. Códigos Promocionales (SHA-256)
 
-### Cómo funcionan ahora
+### Cómo funcionan
 
-En v7.2 y anteriores, `PROMO_CODES` almacenaba pares `{ 'CODIGO': monedas }` en texto plano. Cualquier usuario con acceso a las DevTools podía ver todos los códigos válidos inspeccionando el JavaScript.
-
-En v7.5, `PROMO_CODES_HASHED` almacena el **hash SHA-256 del código** como clave. El flujo es:
-
-```
-Usuario escribe "FEB14"
-       ↓
-sha256("FEB14") → "79de29d2..."
-       ↓
-PROMO_CODES_HASHED["79de29d2..."] === 500 ✅
-       ↓
-Se otorgan 500 monedas. El hash se guarda en store.redeemedHashes.
-```
-
-Un usuario que inspeccione el código fuente solo verá hashes hexadecimales de 64 caracteres, sin poder deducir el texto original a partir de ellos.
-
----
+Los códigos promocionales se almacenan en `PROMO_CODES_HASHED` como hashes SHA-256. El usuario escribe el código, se hashea en el cliente y se compara contra el diccionario. El texto plano nunca se almacena ni se compara directamente.
 
 ### Agregar un código nuevo
 
-**Paso 1 — Calcular el hash SHA-256 del código en MAYÚSCULAS:**
+**Paso 1 — Calcular el hash SHA-256 (siempre en MAYÚSCULAS, sin espacios):**
 
 ```bash
 # Linux / macOS
@@ -433,13 +437,11 @@ python3 -c "import hashlib; print(hashlib.sha256(b'MICODIGO').hexdigest())"
 ```javascript
 const PROMO_CODES_HASHED = {
     // ... entradas existentes ...
-    'HASH_DE_64_CARACTERES_AQUI': 150,   // MICODIGO → 150 monedas
+    'HASH_DE_64_CARACTERES': 150,   // MICODIGO → 150 monedas
 };
 ```
 
-> ⚠️ El código que el usuario escribe siempre se normaliza con `.trim().toUpperCase()`. El hash debe calcularse del texto **exactamente en mayúsculas y sin espacios**.
-
----
+> ⚠️ El código que el usuario escribe se normaliza con `.trim().toUpperCase()`. El hash debe calcularse del texto **exactamente en mayúsculas y sin espacios**.
 
 ### Lista de hashes actuales
 
@@ -473,19 +475,15 @@ const PROMO_CODES_HASHED = {
 | `724dd40fbeb9e3d5` | 300 | SOFYEK300 |
 | `07d2dde1b4c1fe43` | 200 | ERRORRC |
 
-> Los hashes completos se encuentran en `app.js` dentro de `PROMO_CODES_HASHED`.
+> Los hashes completos (64 caracteres) se encuentran en `PROMO_CODES_HASHED` dentro de `app.js`.
 
 ---
 
 ## 12. Sistema de Racha (Streaks)
 
-El bono diario ya no es una cantidad fija de 20 monedas. Ahora escala según los días consecutivos de reclamo:
+Sin cambios en v8.0. El bono diario escala según los días consecutivos de reclamo.
 
-**Fórmula:**
-```
-recompensa = min(dailyReward + (streak - 1) × dailyStreakStep, dailyStreakCap)
-           = min(20 + (streak - 1) × 5, 60)
-```
+**Fórmula:** `recompensa = min(20 + (streak - 1) × 5, 60)`
 
 | Día de racha | Recompensa base |
 |---|---|
@@ -497,80 +495,69 @@ recompensa = min(dailyReward + (streak - 1) × dailyStreakStep, dailyStreakCap)
 | 6 | 45 |
 | 7+ | 60 (tope) |
 
-**Reglas de mantenimiento de racha:**
-
-- **< 24h** desde el último reclamo → Bloqueado.
-- **Entre 24h y 48h** → La racha continúa (`streak + 1`).
-- **> 48h** → La racha se reinicia a 1 (`streak = 1`).
-
-**Almacenamiento:**
-
-```javascript
-store.daily = {
-    lastClaim: 1708000000000,  // Timestamp ms del último reclamo exitoso
-    streak:    5               // Días consecutivos acumulados
-}
-```
-
 ---
 
 ## 13. Bendición Lunar
 
-La Bendición Lunar es un buff temporal de pago que amplifica el bono diario.
-
-**Especificaciones:**
+Sin cambios funcionales en v8.0. La representación visual migra de emoji a icono Lucide.
 
 | Parámetro | Valor |
 |---|---|
 | Costo de activación | 100 monedas |
 | Efecto | +90 monedas por cada reclamo diario |
 | Vigencia | 7 días reales desde la activación |
-| Extensión | Si ya está activa, la nueva duración se añade desde el vencimiento actual |
-| Indicador UI | Icono 🌙 animado junto al saldo en navbar y hero de tienda |
+| Indicador UI | Icono `<i data-lucide="moon">` animado junto al saldo |
 
-**API:**
+---
 
-```javascript
-// Activar (o extender)
-const result = GameCenter.buyMoonBlessing();
-// { success: true, expiresAt: '27 de febrero de 2026' }
+## 14. Wishlist — Funcionalidad Completa
 
-// Consultar estado
-const status = GameCenter.getMoonBlessingStatus();
-// { active: true, expiresAt: '27 de febrero de 2026', remainingMs: 604800000 }
-```
+A partir de v8.0, la Wishlist tiene tres funcionalidades activas:
 
-**Almacenamiento:**
+### 14.1 Filtro "Mis Lista"
+
+La pill `[data-filter="Wishlist"]` en la barra de filtros muestra únicamente los ítems marcados con el corazón:
 
 ```javascript
-store.buffs = {
-    moonBlessingExpiry: 1708604800000  // Timestamp de vencimiento. 0 = inactiva.
+// En filterItems()
+} else if (activeFilter === 'Wishlist') {
+    matchesFilter = GameCenter.isWishlisted(item.id);
 }
 ```
 
----
+### 14.2 Prioridad en búsqueda
 
-## 14. Historial de Transacciones
-
-Cada operación que modifica el saldo genera una entrada en `store.history`:
+Al listar resultados, los ítems en Wishlist siempre aparecen antes, sin importar el filtro activo:
 
 ```javascript
-// Formato v7.5 (nuevo)
-{ tipo: 'ingreso', cantidad: 500, motivo: 'Código canjeado',       fecha: 1708001000000 }
-{ tipo: 'gasto',   cantidad: 88,  motivo: 'Compra: Rouge the Bat',  fecha: 1708002000000 }
-{ tipo: 'ingreso', cantidad: 9,   motivo: 'Cashback: Rouge the Bat', fecha: 1708002000001 }
-{ tipo: 'ingreso', cantidad: 35,  motivo: 'Bono diario · racha 4',   fecha: 1708003000000 }
+const wishlisted = filtered.filter(item => GameCenter.isWishlisted(item.id));
+const others     = filtered.filter(item => !GameCenter.isWishlisted(item.id));
+renderShop([...wishlisted, ...others]);
 ```
 
-El historial se renderiza en la pestaña Ajustes de `shop.html` con hasta 50 entradas visibles y scroll vertical. El store mantiene un máximo de 150 entradas para no inflar el `localStorage`.
+### 14.3 Indicador de coste
 
----
+El banner `#wishlist-cost-banner` muestra en tiempo real cuántas monedas faltan para comprar todos los ítems de la lista que aún no se poseen:
 
-## 15. Wishlist
+```javascript
+function updateWishlistCost() {
+    const unwownedWishlisted = allItems.filter(item =>
+        GameCenter.isWishlisted(item.id) && GameCenter.getBoughtCount(item.id) === 0
+    );
+    const total = unwownedWishlisted.reduce((sum, item) => {
+        const price = eco.isSaleActive
+            ? Math.floor(item.price * eco.saleMultiplier)
+            : item.price;
+        return sum + price;
+    }, 0);
+    const needed = Math.max(0, total - GameCenter.getBalance());
+    // Actualizar banner...
+}
+```
 
-Los usuarios pueden marcar ítems como favoritos con el icono ♡/♥ en cada card del catálogo.
+`updateWishlistCost()` se llama en: carga inicial del catálogo, toggle de Wishlist, y tras completar una compra.
 
-**API:**
+### API de Wishlist (sin cambios)
 
 ```javascript
 GameCenter.toggleWishlist(itemId)  // → true si quedó en wishlist
@@ -583,117 +570,122 @@ GameCenter.isWishlisted(itemId)    // → boolean
 store.wishlist = [3, 7, 21]  // Array de IDs numéricos
 ```
 
-La wishlist se persiste en `localStorage` y sobrevive recarga. No tiene límite de ítems.
+---
+
+## 15. Sincronización con Archivo .txt
+
+### Flujo de exportación (v8.0)
+
+```
+Clic "Exportar y descargar"  →  handleExport() async
+    │
+    ▼
+GameCenter.exportSave()  →  workerTask({action:'export', store, salt})
+    │
+    ▼  [sync-worker.js calcula checksum SHA-256]
+checksum = sha256(JSON.stringify(store) + SYNC_SALT)
+código = btoa(encodeURIComponent(JSON.stringify({data: store, checksum})))
+    │
+    ▼
+1. navigator.clipboard.writeText(código)  → copiado al portapapeles
+2. new Blob([código]) → URL.createObjectURL() → descarga love-arcade-backup-YYYY-MM-DD.txt
+    │
+    ▼
+Mensaje: "Código copiado al portapapeles y archivo .txt descargado."
+```
+
+> **Sin textarea.** En v7.5 el código se mostraba en un `<textarea>` que podía copiarse. Esto bloqueaba el hilo principal con strings muy largos. En v8.0, la operación de copia y la descarga ocurren directamente en memoria.
+
+### Flujo de importación (v8.0)
+
+**Opción A — Cargar archivo:**
+
+```
+Usuario selecciona archivo .txt  →  evento 'change' en #import-file
+    │
+    ▼
+FileReader.readAsText(file)  →  onload: textarea.value = contenido
+    │
+    ▼
+Usuario hace clic en "Importar progreso"  →  handleImport() async
+    │
+    ▼  [igual que antes]
+GameCenter.importSave(code)  →  workerTask({action:'import', code, salt})
+    │
+    ▼  [sync-worker.js verifica checksum SHA-256]
+¿checksum válido? → store = migrateState(data) → saveState() → reload
+¿inválido?        → rechazado con mensaje de error
+```
+
+**Opción B — Pegar código manualmente:**
+
+El `<textarea id="import-input">` sigue disponible como alternativa. El botón "Importar progreso" lee su contenido y llama a `handleImport()`.
 
 ---
 
-## 16. Sincronización con Checksum
+## 16. Historial de Transacciones
 
-A partir de v7.5, los códigos de exportación incluyen un checksum SHA-256 para detectar ediciones manuales:
+Sin cambios en v8.0. Cada operación que modifica el saldo genera una entrada en `store.history`:
 
-**Formato del payload (antes de codificar en Base64):**
-
-```json
-{
-    "data":     { /* store completo */ },
-    "checksum": "b7f3a2...64 chars"
-}
+```javascript
+{ tipo: 'ingreso', cantidad: 500, motivo: 'Código canjeado',       fecha: timestamp }
+{ tipo: 'gasto',   cantidad: 88,  motivo: 'Compra: Rouge the Bat',  fecha: timestamp }
+{ tipo: 'ingreso', cantidad: 9,   motivo: 'Cashback: Rouge the Bat', fecha: timestamp }
 ```
 
-El checksum se calcula como `sha256(JSON.stringify(store) + SYNC_SALT)` donde `SYNC_SALT` es una constante interna.
-
-**En la importación:** Si el hash del `data` recibido no coincide con el `checksum` del payload, la importación se rechaza con el mensaje "El código fue modificado manualmente. Importación rechazada."
-
-**Compatibilidad con v7.2:** Si el código no tiene campo `checksum` (formato legado), se acepta de todas formas pero con aviso de formato heredado. Esto permite que usuarios con partidas antiguas migren sin perder datos.
+El store mantiene un máximo de 150 entradas. La pestaña Ajustes muestra las 50 más recientes con scroll.
 
 ---
 
 ## 17. Flujos de Usuario
 
-### Flujo de bono diario (v7.5)
+### Flujo de Wishlist y compra
 
 ```
-Usuaria hace clic en "Bono Diario"
-           │
-           ▼
-GameCenter.claimDaily()
-           │
-           ├─ ¿msSince < 24h?  → Rechazado + mensaje "Vuelve mañana"
-           │
-           ├─ ¿msSince < 48h?  → streak++
-           └─ ¿msSince ≥ 48h?  → streak = 1
-                       │
-                       ▼
-           baseReward = min(20 + (streak-1)×5, 60)
-                       │
-                       ▼
-           ¿moonBlessingExpiry > now?
-               Sí → totalReward = baseReward + 90
-               No → totalReward = baseReward
-                       │
-                       ▼
-           store.coins += totalReward
-           store.daily = { lastClaim: now, streak }
-           logTransaction('ingreso', totalReward, ...)
-                       │
-                       ▼
-           updateUI() → contador animado
+Usuario toca el corazón en una card
+    │
+    ▼
+GameCenter.toggleWishlist(id)  →  store.wishlist actualizado  →  saveState()
+    │
+    ▼
+CSS: .wishlist-btn--active → svg path { fill: currentColor }  [corazón lleno]
+    │
+    ▼
+updateWishlistCost()  →  Banner: "Necesitas X monedas para tu lista"
+    │
+    ▼  [usuario activa filtro "Mis Lista"]
+filterItems() → solo ítems en wishlist → wishlisted primero
+    │
+    ▼  [usuario canjea un ítem de la lista]
+GameCenter.buyItem(item)  →  resultado exitoso
+filterItems() + updateWishlistCost()  →  banner actualizado
 ```
 
-### Flujo de código promo (v7.5)
-
-```
-Usuaria escribe código → hace clic en "Canjear"
-            │
-            ▼
-handleRedeem() — async
-            │
-            ▼
-GameCenter.redeemPromoCode(code) — await
-            │
-            ├─ sha256(code.trim().toUpperCase())
-            │
-            ├─ hash en PROMO_CODES_HASHED? No → "Código inválido"
-            │
-            ├─ hash en redeemedHashes?    Sí → "Ya canjeaste este código"
-            │
-            └─ Otorgar reward → push hash → logTransaction → saveState
-                        │
-                        ▼
-             Toast + confetti + animación de contador
-```
-
-### Flujo de sincronización con checksum (v7.5)
+### Flujo de sincronización (v8.0)
 
 ```
 EXPORTAR
 ────────
-Clic en "Generar código" → handleExport() async
+Clic "Exportar y descargar"
     │
-    ▼
-GameCenter.exportSave() → workerTask({action:'export', store, salt})
-    │
-    ▼  [en sync-worker.js]
-json = JSON.stringify(store)
-checksum = sha256(json + salt)
-payload = {data: store, checksum}
-encoded = btoa(encodeURIComponent(JSON.stringify(payload)))
-    │
-    ▼
-Mostrar código + copiar al portapapeles
+    ├── clipboard.writeText(code)  →  código en portapapeles
+    └── Blob → download  →  love-arcade-backup-2026-02-21.txt
 
 IMPORTAR
 ────────
-Pegar código → clic en "Importar"
+Opción A: Cargar archivo .txt
     │
-    ▼
-GameCenter.importSave(code) → workerTask({action:'import', code, salt})
+    FileReader.readAsText() → textarea.value = código
+    └── Clic "Importar progreso" → handleImport() → importSave(code)
+
+Opción B: Pegar código en textarea
+    └── Clic "Importar progreso" → handleImport() → importSave(code)
+
+importSave(code)
     │
-    ▼  [en sync-worker.js]
-json = atob(code) → JSON.parse()
-expected = sha256(JSON.stringify(data) + salt)
-payload.checksum === expected? No → rechazar
-                               Sí → store = migrateState(data) → saveState()
+    ├── workerTask({action:'import', code, salt})
+    ├── ¿checksum válido? → migrateState(data) → saveState() → reload
+    └── ¿inválido?        → "El código fue modificado manualmente."
 ```
 
 ---
@@ -703,48 +695,53 @@ payload.checksum === expected? No → rechazar
 ### Agregar un wallpaper nuevo
 
 1. Preparar archivos: `assets/product-thumbs/{nombre}_{hash8}_thumbs.webp` y `wallpapers/{nombre}_{hash8}.webp`.
-2. Añadir entrada en `data/shop.json` con ID consecutivo único.
+2. Añadir entrada en `data/shop.json` con ID consecutivo único y tags que incluyan al menos `"PC"` o `"Mobile"`.
 3. Subir el commit. No es necesario tocar JS ni HTML.
 
 ### Activar una oferta especial
 
-En `app.js`, editar el objeto `ECONOMY`. Ver `ECONOMIA.md` para referencia completa.
+Editar el objeto `ECONOMY` en `app.js`. Ver `ECONOMIA.md` para referencia completa.
 
 ### Agregar un código promo nuevo
 
 1. Calcular hash: `python3 -c "import hashlib; print(hashlib.sha256(b'MICODIGO').hexdigest())"`.
 2. Añadir `'<hash>': <monedas>` en `PROMO_CODES_HASHED` dentro de `app.js`.
 
-### Cambiar el bono diario base
+### Volver a los filtros completos (Anime, Gaming, etc.)
 
-Modificar `CONFIG.dailyReward`. El texto del botón se actualiza automáticamente via `updateDailyButton()`.
+Si se decide restaurar los filtros eliminados en v8.0, agregar las pills en `shop.html`:
 
-### Cambiar el tope o el paso de racha
-
-```javascript
-const CONFIG = {
-    dailyStreakCap:  60,  // ← Máximo de monedas por día
-    dailyStreakStep:  5,  // ← Incremento por día de racha
-};
+```html
+<button class="pill" data-filter="Anime"><i data-lucide="sparkles" size="11"></i> Anime</button>
+<button class="pill" data-filter="Gaming"><i data-lucide="gamepad-2" size="11"></i> Gaming</button>
+<!-- etc. -->
 ```
 
-### Agregar un juego nuevo
+Y actualizar `filterItems()` para aceptar los nuevos filtros (el código base ya los soporta, solo se eliminaron del HTML).
 
-1. Crear portada: `assets/cover/{nombre}_cover_art.webp`.
-2. Añadir card en `index.html`.
-3. Integrar GameCenter en el juego con `window.GameCenter.completeLevel(gameId, levelId, coins)`.
+### Restaurar tags en cards de producto
+
+En `renderShop()`, cambiar el filtro de tags:
+
+```javascript
+// v8.0 (actual): solo PC y Mobile
+const filteredTags = item.tags.filter(t => t === 'PC' || t === 'Mobile');
+
+// Para mostrar todos los tags:
+const filteredTags = item.tags;
+```
 
 ---
 
 ## 19. Seguridad y Limitaciones
 
-| Aspecto | Estado v7.5 | Detalle |
+| Aspecto | Estado v8.0 | Detalle |
 |---|---|---|
-| **Códigos promo** | ✅ Protegidos | Se comparan por hash SHA-256. El texto plano no es visible en el código fuente. |
-| **Integridad de sync** | ✅ Checksum | Partidas editadas manualmente son rechazadas al importar. |
-| **Manipulación del saldo** | ⚠️ Posible | Un usuario puede editar `localStorage` directamente. Por diseño, esto es aceptable en una plataforma de confianza. |
-| **Links de descarga** | ✅ Protegidos en UI | `getDownloadUrl()` no expone el link sin inventario. Los archivos físicos son accesibles por URL directa. |
-| **Exportar/Importar** | ✅ Validado | Checksum + `migrateState()` garantizan estructura correcta. |
+| **Códigos promo** | ✅ Protegidos | Hash SHA-256. El texto plano no es visible en el código fuente. |
+| **Integridad de sync** | ✅ Checksum | Partidas editadas manualmente son rechazadas al importar (incluyendo archivos .txt). |
+| **Manipulación del saldo** | ⚠️ Posible | Un usuario puede editar `localStorage` directamente. Aceptable por diseño en plataforma de confianza. |
+| **Importación de archivos** | ✅ Validado | FileReader solo lee el contenido; sync-worker.js verifica el checksum SHA-256 antes de aplicar. |
+| **LocalStorage key** | ✅ Intocable | `'gamecenter_v6_promos'` no debe modificarse jamás para no perder el progreso de usuarios existentes. |
 
 ---
 
@@ -752,15 +749,15 @@ const CONFIG = {
 
 | Tecnología | Versión mínima |
 |---|---|
-| Chrome | 89+ (SubtleCrypto + Workers) |
+| Chrome | 89+ (SubtleCrypto, Workers, Clipboard API, FileReader) |
 | Firefox | 87+ |
 | Safari | 15+ |
 | Edge | 89+ |
 | Hosting | Cualquier servidor estático (GitHub Pages, Netlify) |
-| Backend | ❌ Ninguno |
+| Backend | Ninguno |
 | Dependencias | Lucide Icons (CDN), canvas-confetti (CDN) |
 
-> Los Web Workers requieren que los archivos se sirvan desde un servidor HTTP (no funciona con `file://`). En desarrollo local se recomienda usar `npx serve .` o la extensión Live Server de VS Code.
+> La `Clipboard API` (`navigator.clipboard.writeText`) requiere HTTPS o localhost. En entornos sin HTTPS, `handleExport()` tiene un fallback con `document.execCommand('copy')`. Si ambos fallan, el archivo `.txt` igualmente se descarga.
 
 ---
 
@@ -770,20 +767,22 @@ const CONFIG = {
 |---|---|
 | **Store** | El objeto JavaScript en memoria que contiene todo el estado del usuario. Se persiste en `localStorage`. |
 | **GameCenter** | La API pública (`window.GameCenter`) con todos los métodos del motor. |
-| **Checksum** | Hash SHA-256 del store exportado, incluido en el código de sincronización para detectar edición manual. |
+| **Checksum** | Hash SHA-256 del store exportado, incluido en el código/archivo de sincronización para detectar edición manual. |
+| **Mobile-First** | Estrategia de CSS donde los estilos base aplican a pantallas pequeñas y los overrides se definen con `@media (min-width: ...)`. |
+| **Hero Balance** | El banner grande de monedas en la parte superior de la tienda. Oculto en móvil (v8.0). |
+| **Wishlist** | Lista de ítems marcados como favoritos. Ahora con filtro activo, indicador de coste y prioridad en búsqueda. |
 | **Racha / Streak** | Días consecutivos en que se reclama el bono diario. Determina la recompensa escalonada. |
 | **Bendición Lunar** | Buff temporal de +90 monedas por reclamo diario. Costo 100 monedas, vigencia 7 días. |
-| **Wishlist** | Lista de ítems marcados como favoritos con el icono ♥. |
 | **Skeleton Screen** | Placeholder visual con animación de pulso que imita la estructura de las cards mientras carga el JSON. |
 | **Debounce** | Técnica que retrasa la ejecución de una función hasta que el usuario deja de interactuar. Usado en la búsqueda. |
-| **Bóveda** | El sistema que valida el inventario antes de entregar un link de descarga. |
 | **Cashback** | Devolución automática de un porcentaje de monedas tras cada compra. |
 | **SYNC_SALT** | Constante interna usada para calcular checksums de sincronización. |
 | **migrateState** | Función que fusiona el store cargado con los defaults de la versión actual sin sobrescribir datos. |
 | **stateKey** | La clave de `localStorage`: `'gamecenter_v6_promos'`. No debe modificarse jamás. |
-| **Phase 3** | Versión v7.5: Seguridad SHA-256, Web Workers, racha, Bendición Lunar, wishlist, historial, Carmesí. |
+| **FileReader** | API nativa del navegador para leer archivos locales de forma asíncrona y no bloqueante. Usada en la importación de partidas. |
+| **Blob** | Objeto de datos binarios utilizado para generar el archivo `.txt` de exportación sin necesidad de un servidor. |
 
 ---
 
-*Love Arcade · Documentación técnica v7.5 · Phase 3: Security & Gamification*
+*Love Arcade · Documentación técnica v8.0 · Phase 4: Mobile-First & UX Optimization*
 *Arquitectura: vanilla JS + localStorage · Sin backend · Compatible con GitHub Pages*
