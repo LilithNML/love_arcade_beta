@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tienda | Love Arcade</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
 
@@ -24,6 +27,16 @@
     </nav>
 
     <main class="container">
+
+        <!-- SALE BANNER (oculto por defecto, se muestra via JS si ECONOMY.isSaleActive) -->
+        <div id="sale-banner" class="sale-banner hidden">
+            <div class="sale-banner__inner">
+                <i data-lucide="zap" size="18" fill="currentColor"></i>
+                <strong id="sale-label-text">¡OFERTA ESPECIAL!</strong>
+                <span id="sale-desc-text">Descuento activo en toda la tienda.</span>
+                <i data-lucide="zap" size="18" fill="currentColor"></i>
+            </div>
+        </div>
 
         <!-- HERO BALANCE -->
         <section class="shop-hero glass-panel">
@@ -52,8 +65,7 @@
                 </div>
             </div>
             <div class="promo-input-group">
-                <input type="text" id="promo-input" placeholder="Ej: AMOR2024"
-                       class="promo-input">
+                <input type="text" id="promo-input" placeholder="Ej: AMOR2024" class="promo-input">
                 <button id="btn-redeem" class="btn-primary" style="white-space:nowrap;">
                     <span>Canjear</span>
                     <i data-lucide="sparkles" size="16"></i>
@@ -73,19 +85,79 @@
             <button class="shop-tab" data-tab="sync">
                 <i data-lucide="refresh-cw" size="16"></i> Sincronizar
             </button>
+            <button class="shop-tab" data-tab="settings">
+                <i data-lucide="settings-2" size="16"></i> Ajustes
+            </button>
         </div>
 
-        <!-- ===== TAB: CATÁLOGO ===== -->
+        <!-- ===========================
+             TAB: CATÁLOGO
+        ============================ -->
         <section id="tab-catalog" class="tab-panel">
-            <div class="section-header">
-                <h2 class="section-title">Catálogo de Premios</h2>
+
+            <!-- BARRA DE HERRAMIENTAS: Búsqueda + Filtros -->
+            <div class="shop-toolbar">
+                <!-- Search -->
+                <div class="search-wrap">
+                    <i data-lucide="search" size="16" class="search-icon"></i>
+                    <input
+                        type="text"
+                        id="search-input"
+                        class="search-input"
+                        placeholder="Buscar wallpaper..."
+                        autocomplete="off"
+                    >
+                    <button id="search-clear" class="search-clear hidden" aria-label="Limpiar">
+                        <i data-lucide="x" size="14"></i>
+                    </button>
+                </div>
+
+                <!-- Filter pills -->
+                <div class="filter-pills" id="filter-pills">
+                    <button class="pill active" data-filter="Todos">Todos</button>
+                    <button class="pill" data-filter="PC">
+                        <i data-lucide="monitor" size="12"></i> PC
+                    </button>
+                    <button class="pill" data-filter="Mobile">
+                        <i data-lucide="smartphone" size="12"></i> Mobile
+                    </button>
+                    <button class="pill" data-filter="Anime">
+                        <i data-lucide="sparkles" size="12"></i> Anime
+                    </button>
+                    <button class="pill" data-filter="Gaming">
+                        <i data-lucide="gamepad-2" size="12"></i> Gaming
+                    </button>
+                    <button class="pill" data-filter="Sonic">
+                        <i data-lucide="wind" size="12"></i> Sonic
+                    </button>
+                    <button class="pill" data-filter="DragonBall">
+                        <i data-lucide="flame" size="12"></i> Dragon Ball
+                    </button>
+                    <button class="pill" data-filter="Genshin">
+                        <i data-lucide="star" size="12"></i> Genshin
+                    </button>
+                </div>
             </div>
+
+            <!-- Resultado de búsqueda -->
+            <p id="search-results-count" class="search-count hidden"></p>
+
+            <!-- Grid -->
             <div id="shop-container" class="shop-grid">
                 <p style="color:var(--text-med)">Cargando inventario...</p>
             </div>
+
+            <!-- Empty state de filtrado -->
+            <div id="filter-empty" class="filter-empty hidden">
+                <i data-lucide="search-x" size="48"></i>
+                <p>Sin resultados para tu búsqueda.</p>
+                <button class="btn-ghost" onclick="resetFilters()">Ver todo el catálogo</button>
+            </div>
         </section>
 
-        <!-- ===== TAB: MIS TESOROS ===== -->
+        <!-- ===========================
+             TAB: MIS TESOROS
+        ============================ -->
         <section id="tab-library" class="tab-panel hidden">
             <div class="section-header">
                 <h2 class="section-title">Mis Tesoros</h2>
@@ -96,7 +168,9 @@
             </div>
         </section>
 
-        <!-- ===== TAB: SINCRONIZAR ===== -->
+        <!-- ===========================
+             TAB: SINCRONIZAR
+        ============================ -->
         <section id="tab-sync" class="tab-panel hidden">
             <div class="section-header">
                 <h2 class="section-title">Sincronizar Partida</h2>
@@ -113,18 +187,18 @@
                     </div>
                 </div>
                 <button id="btn-export" class="btn-primary">
-                    <i data-lucide="copy" size="16"></i>
-                    <span>Generar código</span>
+                    <i data-lucide="copy" size="16"></i><span>Generar código</span>
                 </button>
-                <textarea id="export-output" class="sync-textarea hidden" readonly
-                          placeholder="Tu código aparecerá aquí..."></textarea>
+                <textarea id="export-output" class="sync-textarea hidden" readonly></textarea>
                 <p id="export-msg" class="feedback-msg"></p>
             </div>
 
             <!-- Importar -->
             <div class="glass-panel sync-card" style="border-left:4px solid #4ade80;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background:#4ade80;"><i data-lucide="download" color="white" size="20"></i></div>
+                    <div class="promo-icon-wrap" style="background:#4ade80;">
+                        <i data-lucide="download" color="white" size="20"></i>
+                    </div>
                     <div>
                         <h3 style="margin:0; font-size:1rem; font-weight:700;">Importar partida</h3>
                         <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Pega un código para restaurar tu progreso</p>
@@ -132,243 +206,513 @@
                 </div>
                 <textarea id="import-input" class="sync-textarea" placeholder="Pega tu código aquí..."></textarea>
                 <button id="btn-import" class="btn-primary" style="margin-top:12px; background:#4ade80; color:#000;">
-                    <i data-lucide="check" size="16"></i>
-                    <span>Importar progreso</span>
+                    <i data-lucide="check" size="16"></i><span>Importar progreso</span>
                 </button>
                 <p id="import-msg" class="feedback-msg"></p>
             </div>
         </section>
 
+        <!-- ===========================
+             TAB: AJUSTES
+        ============================ -->
+        <section id="tab-settings" class="tab-panel hidden">
+            <div class="section-header">
+                <h2 class="section-title">Ajustes</h2>
+                <p class="section-subtitle">Personaliza tu experiencia</p>
+            </div>
+
+            <!-- Tema de color -->
+            <div class="glass-panel settings-card">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem;">
+                    <div class="promo-icon-wrap"><i data-lucide="palette" color="white" size="20"></i></div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Tema de color</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
+                    </div>
+                </div>
+
+                <div class="theme-grid">
+                    <button class="theme-btn" data-theme="violet">
+                        <span class="theme-swatch" style="background:#9b59ff;"></span>
+                        <span class="theme-name">Violeta</span>
+                        <i data-lucide="check" size="14" class="theme-check"></i>
+                    </button>
+                    <button class="theme-btn" data-theme="pink">
+                        <span class="theme-swatch" style="background:#ff59b4;"></span>
+                        <span class="theme-name">Rosa Neón</span>
+                        <i data-lucide="check" size="14" class="theme-check"></i>
+                    </button>
+                    <button class="theme-btn" data-theme="cyan">
+                        <span class="theme-swatch" style="background:#00d4ff;"></span>
+                        <span class="theme-name">Cyan Arcade</span>
+                        <i data-lucide="check" size="14" class="theme-check"></i>
+                    </button>
+                    <button class="theme-btn" data-theme="gold">
+                        <span class="theme-swatch" style="background:#f59e0b;"></span>
+                        <span class="theme-name">Dorado</span>
+                        <i data-lucide="check" size="14" class="theme-check"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Info de economía (readonly, para referencia) -->
+            <div class="glass-panel settings-card" style="margin-top:1.5rem;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap" style="background:#facc15;">
+                        <i data-lucide="trending-up" color="#000" size="20"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Estado de la economía</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Configuración actual de descuentos y cashback</p>
+                    </div>
+                </div>
+                <div class="economy-info">
+                    <div class="economy-row">
+                        <span>Descuento global</span>
+                        <span id="eco-sale-status" class="eco-badge">—</span>
+                    </div>
+                    <div class="economy-row">
+                        <span>Cashback por compra</span>
+                        <span id="eco-cashback" class="eco-badge eco-badge--green">—</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
+    <!-- ===========================
+         SCRIPTS
+    ============================ -->
     <script src="js/app.js"></script>
     <script>
-        let allItems = [];
+    // ================================================
+    // ESTADO LOCAL DEL CATÁLOGO
+    // ================================================
+    let allItems     = [];
+    let activeFilter = 'Todos';
+    let searchQuery  = '';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Cargar catálogo
-            fetch('data/shop.json')
-                .then(res => res.json())
-                .then(items => {
-                    allItems = items;
-                    renderShop(items);
-                    renderLibrary(items);
-                })
-                .catch(err => console.error(err));
+    // ================================================
+    // INIT
+    // ================================================
+    document.addEventListener('DOMContentLoaded', () => {
 
-            // Promo code
-            document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
-            document.getElementById('promo-input').addEventListener('keydown', e => {
-                if (e.key === 'Enter') handleRedeem();
-            });
+        // Banner de oferta
+        initSaleBanner();
 
-            // Tabs
-            document.querySelectorAll('.shop-tab').forEach(btn => {
-                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-            });
+        // Economía info en Ajustes
+        initEconomyInfo();
 
-            // Sync: Export
-            document.getElementById('btn-export').addEventListener('click', handleExport);
+        // Cargar catálogo
+        fetch('data/shop.json')
+            .then(r => r.json())
+            .then(items => {
+                allItems = items;
+                filterItems();          // Primer render
+                renderLibrary(items);
+            })
+            .catch(err => console.error('Error cargando shop.json:', err));
 
-            // Sync: Import
-            document.getElementById('btn-import').addEventListener('click', handleImport);
-
-            if (window.lucide) lucide.createIcons();
+        // Promo code
+        document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
+        document.getElementById('promo-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleRedeem();
         });
 
-        // ---- TABS ----
-        function switchTab(tabName) {
-            document.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        // Tabs
+        document.querySelectorAll('.shop-tab').forEach(btn =>
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+        );
 
-            // Refresca la biblioteca al entrar
-            if (tabName === 'library' && allItems.length) renderLibrary(allItems);
-            if (window.lucide) lucide.createIcons();
-        }
+        // Búsqueda
+        const searchInput = document.getElementById('search-input');
+        const clearBtn    = document.getElementById('search-clear');
 
-        // ---- PROMO CODE ----
-        function handleRedeem() {
-            const input = document.getElementById('promo-input');
-            const msg = document.getElementById('promo-msg');
-            const btn = document.getElementById('btn-redeem');
-            const code = input.value.trim();
-            if (!code) return;
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value.trim().toLowerCase();
+            clearBtn.classList.toggle('hidden', !searchQuery);
+            filterItems();
+        });
 
-            const result = window.GameCenter.redeemPromoCode(code);
-            if (result.success) {
-                showMsg(msg, `✓ ${result.message}`, '#4ade80');
-                input.value = '';
-                input.style.borderColor = '';
-                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-            } else {
-                showMsg(msg, `✗ ${result.message}`, '#ff4757');
-                input.style.borderColor = '#ff4757';
-                btn.style.transform = 'translateX(5px)';
-                setTimeout(() => btn.style.transform = '', 100);
-            }
-        }
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearBtn.classList.add('hidden');
+            filterItems();
+            searchInput.focus();
+        });
 
-        // ---- CATÁLOGO ----
-        function renderShop(items) {
-            const container = document.getElementById('shop-container');
-            container.innerHTML = '';
-
-            items.forEach(item => {
-                const bought = GameCenter.getBoughtCount(item.id);
-                const remaining = item.stock - bought;
-                const isOwned = bought > 0;
-                const isSoldOut = remaining <= 0 && !isOwned;
-
-                const card = document.createElement('article');
-                card.className = 'glass-panel shop-card';
-
-                let actionHTML;
-                if (isOwned) {
-                    const url = GameCenter.getDownloadUrl(item.id, item.file);
-                    actionHTML = url
-                        ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center;">
-                               <i data-lucide="download" size="16"></i> Descargar
-                           </a>`
-                        : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6;" disabled>
-                               <i data-lucide="check" size="16"></i> Obtenido
-                           </button>`;
-                } else if (isSoldOut) {
-                    actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.5;" disabled>Sin Stock</button>`;
-                } else {
-                    actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center;"
-                                    onclick='initiatePurchase(${JSON.stringify(item)})'>
-                                    <i data-lucide="star" size="14" fill="#facc15"></i> Canjear
-                                  </button>`;
-                }
-
-                card.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" class="shop-img">
-                    ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>' : ''}
-                    <div style="width:100%">
-                        <h3 style="font-size:1.05rem; margin-bottom:5px;">${item.name}</h3>
-                        <p style="font-size:0.82rem; color:var(--text-med); height:40px; overflow:hidden;">${item.desc}</p>
-                        <div class="shop-price"><i data-lucide="star" size="14" fill="#facc15"></i> ${item.price}</div>
-                        <div style="margin:8px 0; font-size:0.78rem;">
-                            ${isOwned
-                                ? '<span style="color:#4ade80; font-weight:600;">✓ En tu biblioteca</span>'
-                                : isSoldOut
-                                    ? '<span style="color:#ef4444; font-weight:700;">AGOTADO</span>'
-                                    : `<span style="color:var(--text-low);">Disponibles: ${remaining}</span>`
-                            }
-                        </div>
-                        ${actionHTML}
-                    </div>`;
-                container.appendChild(card);
+        // Filter pills
+        document.querySelectorAll('.pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                activeFilter = pill.dataset.filter;
+                filterItems();
             });
-            if (window.lucide) lucide.createIcons();
+        });
+
+        // Sync
+        document.getElementById('btn-export').addEventListener('click', handleExport);
+        document.getElementById('btn-import').addEventListener('click', handleImport);
+
+        if (window.lucide) lucide.createIcons();
+    });
+
+    // ================================================
+    // TABS
+    // ================================================
+    function switchTab(name) {
+        document.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+        document.getElementById(`tab-${name}`).classList.remove('hidden');
+        if (name === 'library' && allItems.length) renderLibrary(allItems);
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // ================================================
+    // FILTROS + BÚSQUEDA
+    // ================================================
+    function filterItems() {
+        if (!allItems.length) return;
+
+        const filtered = allItems.filter(item => {
+            const matchesFilter = activeFilter === 'Todos' ||
+                (Array.isArray(item.tags) && item.tags.includes(activeFilter));
+
+            const matchesSearch = !searchQuery ||
+                item.name.toLowerCase().includes(searchQuery) ||
+                item.desc.toLowerCase().includes(searchQuery) ||
+                (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
+
+            return matchesFilter && matchesSearch;
+        });
+
+        renderShop(filtered);
+
+        const countEl  = document.getElementById('search-results-count');
+        const emptyEl  = document.getElementById('filter-empty');
+        const gridEl   = document.getElementById('shop-container');
+
+        if (filtered.length === 0) {
+            gridEl.classList.add('hidden');
+            emptyEl.classList.remove('hidden');
+            countEl.classList.add('hidden');
+        } else {
+            gridEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            const isFiltered = activeFilter !== 'Todos' || searchQuery;
+            countEl.textContent = isFiltered
+                ? `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`
+                : '';
+            countEl.classList.toggle('hidden', !isFiltered);
         }
+    }
 
-        // ---- MIS TESOROS (BIBLIOTECA) ----
-        function renderLibrary(items) {
-            const container = document.getElementById('library-container');
-            const inventory = GameCenter.getInventory();
-            const owned = items.filter(item => inventory[item.id] > 0);
+    function resetFilters() {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        document.querySelector('[data-filter="Todos"]').classList.add('active');
+        activeFilter = 'Todos';
+        searchQuery  = '';
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-clear').classList.add('hidden');
+        filterItems();
+    }
 
-            if (owned.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-med);">
-                        <i data-lucide="archive" size="48" style="opacity:0.3; display:block; margin:0 auto 16px;"></i>
-                        <p style="font-size:1.1rem; font-weight:600;">Tu biblioteca está vacía</p>
-                        <p style="font-size:0.85rem; margin-top:8px;">Canjea items en el Catálogo para verlos aquí.</p>
-                    </div>`;
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
+    // ================================================
+    // RENDER CATÁLOGO
+    // ================================================
+    function renderShop(items) {
+        const container = document.getElementById('shop-container');
+        container.innerHTML = '';
 
-            container.innerHTML = '';
-            owned.forEach(item => {
+        items.forEach(item => {
+            const bought    = GameCenter.getBoughtCount(item.id);
+            const remaining = item.stock - bought;
+            const isOwned   = bought > 0;
+            const isSoldOut = remaining <= 0 && !isOwned;
+
+            // Precio con descuento
+            const eco        = window.ECONOMY;
+            const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+            const priceHTML  = eco.isSaleActive && !isOwned
+                ? `<div class="shop-price">
+                       <span class="price-original">${item.price}</span>
+                       <i data-lucide="star" size="14" fill="#facc15"></i>
+                       <span class="price-sale">${finalPrice}</span>
+                       <span class="sale-pill">${eco.saleLabel}</span>
+                   </div>`
+                : `<div class="shop-price">
+                       <i data-lucide="star" size="14" fill="#facc15"></i> ${item.price}
+                   </div>`;
+
+            // Tags HTML
+            const tagsHTML = Array.isArray(item.tags)
+                ? `<div class="card-tags">${item.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}</div>`
+                : '';
+
+            // Acción
+            let actionHTML;
+            if (isOwned) {
                 const url = GameCenter.getDownloadUrl(item.id, item.file);
-                const card = document.createElement('article');
-                card.className = 'glass-panel shop-card';
-                card.innerHTML = `
-                    <img src="${item.image}" alt="${item.name}" class="shop-img">
-                    <div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>
-                    <div style="width:100%">
-                        <h3 style="font-size:1.05rem; margin-bottom:5px;">${item.name}</h3>
-                        <p style="font-size:0.82rem; color:var(--text-med); height:40px; overflow:hidden;">${item.desc}</p>
-                        ${url
-                            ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:12px; width:100%; justify-content:center;">
-                                   <i data-lucide="download" size="16"></i> Descargar Wallpaper
-                               </a>`
-                            : `<button class="btn-primary" style="margin-top:12px; width:100%; justify-content:center; opacity:0.6;" disabled>
-                                   <i data-lucide="check" size="16"></i> Descarga no disponible
-                               </button>`
+                actionHTML = url
+                    ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center;">
+                           <i data-lucide="download" size="16"></i> Descargar
+                       </a>`
+                    : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6;" disabled>
+                           <i data-lucide="check" size="16"></i> Obtenido
+                       </button>`;
+            } else if (isSoldOut) {
+                actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.45; cursor:not-allowed;" disabled>Sin Stock</button>`;
+            } else {
+                actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center;"
+                                onclick='initiatePurchase(${JSON.stringify(item)})'>
+                                <i data-lucide="star" size="14" fill="#facc15"></i> Canjear
+                              </button>`;
+            }
+
+            const card = document.createElement('article');
+            card.className = 'glass-panel shop-card';
+            card.innerHTML = `
+                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>' : ''}
+                ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="11" fill="currentColor"></i> OFERTA</div>' : ''}
+                <div style="width:100%">
+                    <h3 style="font-size:1.05rem; margin-bottom:4px;">${item.name}</h3>
+                    <p style="font-size:0.82rem; color:var(--text-med); min-height:36px; overflow:hidden; margin-bottom:6px;">${item.desc}</p>
+                    ${tagsHTML}
+                    ${priceHTML}
+                    <div style="margin:6px 0; font-size:0.78rem;">
+                        ${isOwned
+                            ? '<span style="color:#4ade80; font-weight:600;">✓ En tu biblioteca</span>'
+                            : isSoldOut
+                                ? '<span style="color:#ef4444; font-weight:700;">AGOTADO</span>'
+                                : `<span style="color:var(--text-low);">Disponibles: ${remaining}</span>`
                         }
-                    </div>`;
-                container.appendChild(card);
-            });
+                    </div>
+                    ${actionHTML}
+                </div>`;
+            container.appendChild(card);
+        });
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // ================================================
+    // RENDER BIBLIOTECA
+    // ================================================
+    function renderLibrary(items) {
+        const container = document.getElementById('library-container');
+        const inventory = GameCenter.getInventory();
+        const owned     = items.filter(item => inventory[item.id] > 0);
+
+        if (owned.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-med);">
+                    <i data-lucide="archive" size="48" style="opacity:0.3; display:block; margin:0 auto 16px;"></i>
+                    <p style="font-size:1.1rem; font-weight:600;">Tu biblioteca está vacía</p>
+                    <p style="font-size:0.85rem; margin-top:8px;">Canjea items en el Catálogo para verlos aquí.</p>
+                </div>`;
             if (window.lucide) lucide.createIcons();
+            return;
         }
 
-        // ---- COMPRA ----
-        function initiatePurchase(item) {
-            const bought = GameCenter.getBoughtCount(item.id);
-            if ((item.stock - bought) <= 0) return;
-            if (!confirm(`¿Canjear "${item.name}" por ${item.price} monedas?`)) return;
+        container.innerHTML = '';
+        owned.forEach(item => {
+            const url  = GameCenter.getDownloadUrl(item.id, item.file);
+            const card = document.createElement('article');
+            card.className = 'glass-panel shop-card';
+            card.innerHTML = `
+                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                <div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>
+                <div style="width:100%">
+                    <h3 style="font-size:1.05rem; margin-bottom:4px;">${item.name}</h3>
+                    <p style="font-size:0.82rem; color:var(--text-med); min-height:36px; overflow:hidden;">${item.desc}</p>
+                    ${url
+                        ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:14px; width:100%; justify-content:center;">
+                               <i data-lucide="download" size="16"></i> Descargar Wallpaper
+                           </a>`
+                        : `<button class="btn-primary" style="margin-top:14px; width:100%; justify-content:center; opacity:0.6;" disabled>
+                               <i data-lucide="check" size="16"></i> Sin archivo
+                           </button>`
+                    }
+                </div>`;
+            container.appendChild(card);
+        });
+        if (window.lucide) lucide.createIcons();
+    }
 
-            const result = GameCenter.buyItem(item);
-            if (result.success) {
-                renderShop(allItems);
-                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-                // Micro-feedback visual
-                const toast = document.createElement('div');
-                toast.className = 'toast-success';
-                toast.innerHTML = `<i data-lucide="check-circle-2" size="16"></i> ¡"${item.name}" desbloqueado! Puedes descargarlo en <strong>Mis Tesoros</strong>.`;
-                document.body.appendChild(toast);
-                if (window.lucide) lucide.createIcons();
-                setTimeout(() => toast.classList.add('visible'), 50);
-                setTimeout(() => { toast.classList.remove('visible'); setTimeout(() => toast.remove(), 400); }, 4000);
-            } else {
-                if (result.reason === 'coins') alert("No tienes suficientes monedas.");
-                if (result.reason === 'stock') alert("¡Producto agotado!");
-            }
-        }
+    // ================================================
+    // COMPRA (con confetti + cashback toast)
+    // ================================================
+    function initiatePurchase(item) {
+        const bought = GameCenter.getBoughtCount(item.id);
+        if ((item.stock - bought) <= 0) return;
 
-        // ---- SYNC: EXPORT ----
-        function handleExport() {
-            const code = GameCenter.exportSave();
-            const output = document.getElementById('export-output');
-            const msg = document.getElementById('export-msg');
-            if (!code) { showMsg(msg, 'Error al generar el código.', '#ff4757'); return; }
-            output.value = code;
-            output.classList.remove('hidden');
-            output.select();
-            try {
-                document.execCommand('copy');
-                showMsg(msg, '✓ Código copiado al portapapeles. Pégalo en otro dispositivo.', '#4ade80');
-            } catch {
-                showMsg(msg, 'Código generado. Cópialo manualmente.', '#facc15');
-            }
-        }
+        const eco        = window.ECONOMY;
+        const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+        const cashback   = Math.floor(finalPrice * eco.cashbackRate);
 
-        // ---- SYNC: IMPORT ----
-        function handleImport() {
-            const code = document.getElementById('import-input').value.trim();
-            const msg = document.getElementById('import-msg');
-            if (!code) { showMsg(msg, 'Pega un código primero.', '#ff4757'); return; }
-            if (!confirm('¿Importar progreso? Esto reemplazará tu partida actual.')) return;
-            const result = GameCenter.importSave(code);
-            if (result.success) {
-                showMsg(msg, '✓ Progreso importado. Recargando...', '#4ade80');
-                setTimeout(() => location.reload(), 1200);
-            } else {
-                showMsg(msg, `✗ ${result.message}`, '#ff4757');
-            }
-        }
+        const confirmMsg = eco.isSaleActive
+            ? `¿Canjear "${item.name}" por ${finalPrice} monedas? (precio original: ${item.price})`
+            : `¿Canjear "${item.name}" por ${item.price} monedas?`;
 
-        // ---- UTIL ----
-        function showMsg(el, text, color) {
-            el.textContent = text;
-            el.style.color = color;
-            el.style.opacity = '1';
+        if (!confirm(confirmMsg)) return;
+
+        const result = GameCenter.buyItem(item);
+
+        if (result.success) {
+            // Refrescar UI
+            filterItems();
+            document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+
+            // 🎉 Confetti desde los laterales
+            fireConfetti();
+
+            // Toast con info de cashback
+            const cashbackNote = result.cashback > 0
+                ? ` <strong>+${result.cashback} cashback</strong> devueltas.`
+                : '';
+            showToast(`✓ ¡"${item.name}" desbloqueado!${cashbackNote} Ve a <strong>Mis Tesoros</strong> para descargar.`, 'success');
+        } else {
+            if (result.reason === 'coins') showToast('No tienes suficientes monedas.', 'error');
+            if (result.reason === 'stock') showToast('¡Producto agotado!', 'error');
         }
+    }
+
+    // ================================================
+    // CONFETTI (canvas-confetti)
+    // ================================================
+    function fireConfetti() {
+        // Ráfaga desde la izquierda
+        confetti({
+            particleCount: 60,
+            angle: 60,
+            spread: 70,
+            origin: { x: 0, y: 0.7 },
+            colors: ['#9b59ff', '#ff59b4', '#facc15', '#4ade80', '#00d4ff']
+        });
+        // Ráfaga desde la derecha
+        confetti({
+            particleCount: 60,
+            angle: 120,
+            spread: 70,
+            origin: { x: 1, y: 0.7 },
+            colors: ['#9b59ff', '#ff59b4', '#facc15', '#4ade80', '#00d4ff']
+        });
+    }
+
+    // ================================================
+    // TOAST
+    // ================================================
+    function showToast(html, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        toast.innerHTML = html;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('toast--visible'));
+        setTimeout(() => {
+            toast.classList.remove('toast--visible');
+            setTimeout(() => toast.remove(), 400);
+        }, 4500);
+    }
+
+    // ================================================
+    // PROMO CODE
+    // ================================================
+    function handleRedeem() {
+        const input = document.getElementById('promo-input');
+        const msg   = document.getElementById('promo-msg');
+        const btn   = document.getElementById('btn-redeem');
+        const code  = input.value.trim();
+        if (!code) return;
+
+        const result = window.GameCenter.redeemPromoCode(code);
+        if (result.success) {
+            showMsg(msg, `✓ ${result.message}`, '#4ade80');
+            input.value = '';
+            input.style.borderColor = '';
+            document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+            // Confetti de código redimido
+            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#facc15', '#9b59ff', '#4ade80'] });
+        } else {
+            showMsg(msg, `✗ ${result.message}`, '#ff4757');
+            input.style.borderColor = '#ff4757';
+            btn.style.transform = 'translateX(6px)';
+            setTimeout(() => btn.style.transform = '', 120);
+        }
+    }
+
+    // ================================================
+    // SYNC
+    // ================================================
+    function handleExport() {
+        const code   = GameCenter.exportSave();
+        const output = document.getElementById('export-output');
+        const msg    = document.getElementById('export-msg');
+        if (!code) { showMsg(msg, 'Error al generar el código.', '#ff4757'); return; }
+        output.value = code;
+        output.classList.remove('hidden');
+        output.select();
+        try {
+            document.execCommand('copy');
+            showMsg(msg, '✓ Código copiado al portapapeles.', '#4ade80');
+        } catch {
+            showMsg(msg, 'Código generado. Cópialo manualmente.', '#facc15');
+        }
+    }
+
+    function handleImport() {
+        const code = document.getElementById('import-input').value.trim();
+        const msg  = document.getElementById('import-msg');
+        if (!code) { showMsg(msg, 'Pega un código primero.', '#ff4757'); return; }
+        if (!confirm('¿Importar progreso? Esto reemplazará tu partida actual.')) return;
+        const result = GameCenter.importSave(code);
+        if (result.success) {
+            showMsg(msg, '✓ Importado correctamente. Recargando…', '#4ade80');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            showMsg(msg, `✗ ${result.message}`, '#ff4757');
+        }
+    }
+
+    // ================================================
+    // SALE BANNER + ECONOMY INFO
+    // ================================================
+    function initSaleBanner() {
+        const eco    = window.ECONOMY;
+        const banner = document.getElementById('sale-banner');
+        if (!banner) return;
+        if (eco.isSaleActive) {
+            banner.classList.remove('hidden');
+            const discount = Math.round((1 - eco.saleMultiplier) * 100);
+            document.getElementById('sale-label-text').textContent = `¡${eco.saleLabel}!`;
+            document.getElementById('sale-desc-text').textContent  = `${discount}% de descuento en toda la tienda + ${Math.round(eco.cashbackRate * 100)}% de cashback.`;
+        }
+    }
+
+    function initEconomyInfo() {
+        const eco = window.ECONOMY;
+        const saleEl = document.getElementById('eco-sale-status');
+        const cbEl   = document.getElementById('eco-cashback');
+        if (!saleEl || !cbEl) return;
+        const discount = Math.round((1 - eco.saleMultiplier) * 100);
+        saleEl.textContent  = eco.isSaleActive ? `${discount}% OFF activo` : 'Sin oferta activa';
+        saleEl.className    = 'eco-badge' + (eco.isSaleActive ? ' eco-badge--sale' : '');
+        cbEl.textContent    = `${Math.round(eco.cashbackRate * 100)}% en cada compra`;
+        cbEl.className      = 'eco-badge eco-badge--green';
+    }
+
+    // ================================================
+    // UTIL
+    // ================================================
+    function showMsg(el, text, color) {
+        el.textContent  = text;
+        el.style.color   = color;
+        el.style.opacity = '1';
+    }
     </script>
 </body>
 </html>
