@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tienda | Love Arcade</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
@@ -20,6 +18,8 @@
         <div class="nav-user">
             <a href="index.html" class="btn-ghost">Volver</a>
             <div class="coin-badge">
+                <!-- Ícono de luna: visible solo cuando Bendición Lunar está activa -->
+                <span class="moon-blessing-badge hidden" title="Bendición Lunar activa">🌙</span>
                 <i data-lucide="star" size="16" fill="#facc15"></i>
                 <span class="coin-display">...</span>
             </div>
@@ -28,7 +28,7 @@
 
     <main class="container">
 
-        <!-- SALE BANNER (oculto por defecto, se muestra via JS si ECONOMY.isSaleActive) -->
+        <!-- SALE BANNER -->
         <div id="sale-banner" class="sale-banner hidden">
             <div class="sale-banner__inner">
                 <i data-lucide="zap" size="18" fill="currentColor"></i>
@@ -43,7 +43,11 @@
             <div>
                 <span class="section-subtitle">Balance Disponible</span>
                 <div class="shop-balance">
-                    <h2><i data-lucide="star" size="32" fill="#facc15"></i> <span class="coin-display">0</span></h2>
+                    <h2>
+                        <span class="moon-blessing-badge hidden">🌙</span>
+                        <i data-lucide="star" size="32" fill="#facc15"></i>
+                        <span class="coin-display">0</span>
+                    </h2>
                 </div>
             </div>
             <div>
@@ -95,9 +99,7 @@
         ============================ -->
         <section id="tab-catalog" class="tab-panel">
 
-            <!-- BARRA DE HERRAMIENTAS: Búsqueda + Filtros -->
             <div class="shop-toolbar">
-                <!-- Search -->
                 <div class="search-wrap">
                     <i data-lucide="search" size="16" class="search-icon"></i>
                     <input
@@ -112,42 +114,33 @@
                     </button>
                 </div>
 
-                <!-- Filter pills -->
                 <div class="filter-pills" id="filter-pills">
                     <button class="pill active" data-filter="Todos">Todos</button>
-                    <button class="pill" data-filter="PC">
-                        <i data-lucide="monitor" size="12"></i> PC
-                    </button>
-                    <button class="pill" data-filter="Mobile">
-                        <i data-lucide="smartphone" size="12"></i> Mobile
-                    </button>
-                    <button class="pill" data-filter="Anime">
-                        <i data-lucide="sparkles" size="12"></i> Anime
-                    </button>
-                    <button class="pill" data-filter="Gaming">
-                        <i data-lucide="gamepad-2" size="12"></i> Gaming
-                    </button>
-                    <button class="pill" data-filter="Sonic">
-                        <i data-lucide="wind" size="12"></i> Sonic
-                    </button>
-                    <button class="pill" data-filter="DragonBall">
-                        <i data-lucide="flame" size="12"></i> Dragon Ball
-                    </button>
-                    <button class="pill" data-filter="Genshin">
-                        <i data-lucide="star" size="12"></i> Genshin
-                    </button>
+                    <button class="pill" data-filter="PC"><i data-lucide="monitor" size="12"></i> PC</button>
+                    <button class="pill" data-filter="Mobile"><i data-lucide="smartphone" size="12"></i> Mobile</button>
+                    <button class="pill" data-filter="Anime"><i data-lucide="sparkles" size="12"></i> Anime</button>
+                    <button class="pill" data-filter="Gaming"><i data-lucide="gamepad-2" size="12"></i> Gaming</button>
+                    <button class="pill" data-filter="Sonic"><i data-lucide="wind" size="12"></i> Sonic</button>
+                    <button class="pill" data-filter="DragonBall"><i data-lucide="flame" size="12"></i> Dragon Ball</button>
+                    <button class="pill" data-filter="Genshin"><i data-lucide="star" size="12"></i> Genshin</button>
                 </div>
             </div>
 
-            <!-- Resultado de búsqueda -->
             <p id="search-results-count" class="search-count hidden"></p>
 
-            <!-- Grid -->
-            <div id="shop-container" class="shop-grid">
-                <p style="color:var(--text-med)">Cargando inventario...</p>
+            <!-- Skeleton screens (visibles mientras carga el JSON) -->
+            <div id="shop-skeleton" class="shop-grid">
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
+                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
             </div>
 
-            <!-- Empty state de filtrado -->
+            <!-- Grid real (oculto hasta que carga) -->
+            <div id="shop-container" class="shop-grid hidden"></div>
+
             <div id="filter-empty" class="filter-empty hidden">
                 <i data-lucide="search-x" size="48"></i>
                 <p>Sin resultados para tu búsqueda.</p>
@@ -177,13 +170,12 @@
                 <p class="section-subtitle">Transfiere tu progreso entre dispositivos</p>
             </div>
 
-            <!-- Exportar -->
             <div class="glass-panel sync-card" style="margin-bottom:1.5rem; border-left:4px solid var(--accent);">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
                     <div class="promo-icon-wrap"><i data-lucide="upload" color="white" size="20"></i></div>
                     <div>
                         <h3 style="margin:0; font-size:1rem; font-weight:700;">Exportar partida</h3>
-                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Genera un código para copiar tu progreso</p>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Genera un código con checksum de integridad</p>
                     </div>
                 </div>
                 <button id="btn-export" class="btn-primary">
@@ -193,7 +185,6 @@
                 <p id="export-msg" class="feedback-msg"></p>
             </div>
 
-            <!-- Importar -->
             <div class="glass-panel sync-card" style="border-left:4px solid #4ade80;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
                     <div class="promo-icon-wrap" style="background:#4ade80;">
@@ -201,7 +192,7 @@
                     </div>
                     <div>
                         <h3 style="margin:0; font-size:1rem; font-weight:700;">Importar partida</h3>
-                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Pega un código para restaurar tu progreso</p>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">El checksum previene edición manual del código</p>
                     </div>
                 </div>
                 <textarea id="import-input" class="sync-textarea" placeholder="Pega tu código aquí..."></textarea>
@@ -230,7 +221,6 @@
                         <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
                     </div>
                 </div>
-
                 <div class="theme-grid">
                     <button class="theme-btn" data-theme="violet">
                         <span class="theme-swatch" style="background:#9b59ff;"></span>
@@ -252,10 +242,46 @@
                         <span class="theme-name">Dorado</span>
                         <i data-lucide="check" size="14" class="theme-check"></i>
                     </button>
+                    <button class="theme-btn" data-theme="crimson">
+                        <span class="theme-swatch" style="background:#e11d48;"></span>
+                        <span class="theme-name">Carmesí</span>
+                        <i data-lucide="check" size="14" class="theme-check"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- Info de economía (readonly, para referencia) -->
+            <!-- Bendición Lunar -->
+            <div class="glass-panel settings-card" style="margin-top:1.5rem; border-left:4px solid #c084fc;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap moon-icon-wrap">
+                        <span style="font-size:20px;">🌙</span>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Bendición Lunar</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">+90 monedas extra en cada bono diario durante 7 días</p>
+                    </div>
+                </div>
+                <div class="economy-info" style="margin-bottom:1rem;">
+                    <div class="economy-row">
+                        <span>Estado</span>
+                        <span id="moon-blessing-status" class="eco-badge">Cargando…</span>
+                    </div>
+                    <div class="economy-row">
+                        <span>Costo</span>
+                        <span class="eco-badge eco-badge--gold">100 🪙</span>
+                    </div>
+                    <div class="economy-row">
+                        <span>Efecto</span>
+                        <span class="eco-badge eco-badge--moon">+90 por día</span>
+                    </div>
+                </div>
+                <button id="btn-moon-blessing" class="btn-primary moon-btn">
+                    Activar Bendición Lunar (100 🪙)
+                </button>
+                <p id="moon-blessing-msg" class="feedback-msg"></p>
+            </div>
+
+            <!-- Estado de economía -->
             <div class="glass-panel settings-card" style="margin-top:1.5rem;">
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
                     <div class="promo-icon-wrap" style="background:#facc15;">
@@ -277,13 +303,26 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Historial de transacciones -->
+            <div class="glass-panel settings-card" style="margin-top:1.5rem;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap" style="background:rgba(148,163,184,0.3);">
+                        <i data-lucide="scroll-text" color="white" size="20"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Historial de transacciones</h3>
+                        <p style="margin:0; font-size:0.8rem; color:var(--text-low);">Últimos movimientos de tu saldo</p>
+                    </div>
+                </div>
+                <div id="history-list" class="history-list">
+                    <p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Cargando historial…</p>
+                </div>
+            </div>
         </section>
 
     </main>
 
-    <!-- ===========================
-         SCRIPTS
-    ============================ -->
     <script src="js/app.js"></script>
     <script>
     // ================================================
@@ -298,41 +337,53 @@
     // ================================================
     document.addEventListener('DOMContentLoaded', () => {
 
-        // Banner de oferta
         initSaleBanner();
-
-        // Economía info en Ajustes
         initEconomyInfo();
+        renderMoonBlessingStatus();
 
-        // Cargar catálogo
+        // ── Cargar catálogo con debounce en búsqueda ──
         fetch('data/shop.json')
             .then(r => r.json())
             .then(items => {
                 allItems = items;
-                filterItems();          // Primer render
+                // Ocultar skeleton, mostrar grid real
+                document.getElementById('shop-skeleton').classList.add('hidden');
+                document.getElementById('shop-container').classList.remove('hidden');
+                filterItems();
                 renderLibrary(items);
             })
-            .catch(err => console.error('Error cargando shop.json:', err));
+            .catch(err => {
+                console.error('Error cargando shop.json:', err);
+                document.getElementById('shop-skeleton').classList.add('hidden');
+                document.getElementById('shop-container').innerHTML =
+                    '<p style="color:#ff4757">Error al cargar el catálogo. Recarga la página.</p>';
+                document.getElementById('shop-container').classList.remove('hidden');
+            });
 
-        // Promo code
+        // ── Promo code ──
         document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
         document.getElementById('promo-input').addEventListener('keydown', e => {
             if (e.key === 'Enter') handleRedeem();
         });
 
-        // Tabs
+        // ── Tabs ──
         document.querySelectorAll('.shop-tab').forEach(btn =>
             btn.addEventListener('click', () => switchTab(btn.dataset.tab))
         );
 
-        // Búsqueda
+        // ── Búsqueda con debounce (300ms) ──
         const searchInput = document.getElementById('search-input');
         const clearBtn    = document.getElementById('search-clear');
 
-        searchInput.addEventListener('input', () => {
+        // debounce está disponible globalmente via app.js
+        const debouncedFilter = debounce(() => {
             searchQuery = searchInput.value.trim().toLowerCase();
-            clearBtn.classList.toggle('hidden', !searchQuery);
             filterItems();
+        }, 300);
+
+        searchInput.addEventListener('input', () => {
+            clearBtn.classList.toggle('hidden', !searchInput.value);
+            debouncedFilter();
         });
 
         clearBtn.addEventListener('click', () => {
@@ -343,7 +394,7 @@
             searchInput.focus();
         });
 
-        // Filter pills
+        // ── Filter pills ──
         document.querySelectorAll('.pill').forEach(pill => {
             pill.addEventListener('click', () => {
                 document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -353,22 +404,23 @@
             });
         });
 
-        // Sync
-        document.getElementById('btn-export').addEventListener('click', handleExport);
-        document.getElementById('btn-import').addEventListener('click', handleImport);
-
         if (window.lucide) lucide.createIcons();
     });
 
     // ================================================
     // TABS
     // ================================================
-    function switchTab(name) {
-        document.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
+    function switchTab(tab) {
+        document.querySelectorAll('.shop-tab').forEach(b =>
+            b.classList.toggle('active', b.dataset.tab === tab)
+        );
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-        document.querySelector(`[data-tab="${name}"]`).classList.add('active');
-        document.getElementById(`tab-${name}`).classList.remove('hidden');
-        if (name === 'library' && allItems.length) renderLibrary(allItems);
+        document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+        if (tab === 'settings') {
+            renderHistory();
+            renderMoonBlessingStatus();
+        }
         if (window.lucide) lucide.createIcons();
     }
 
@@ -381,20 +433,18 @@
         const filtered = allItems.filter(item => {
             const matchesFilter = activeFilter === 'Todos' ||
                 (Array.isArray(item.tags) && item.tags.includes(activeFilter));
-
             const matchesSearch = !searchQuery ||
                 item.name.toLowerCase().includes(searchQuery) ||
                 item.desc.toLowerCase().includes(searchQuery) ||
                 (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
-
             return matchesFilter && matchesSearch;
         });
 
         renderShop(filtered);
 
-        const countEl  = document.getElementById('search-results-count');
-        const emptyEl  = document.getElementById('filter-empty');
-        const gridEl   = document.getElementById('shop-container');
+        const countEl = document.getElementById('search-results-count');
+        const emptyEl = document.getElementById('filter-empty');
+        const gridEl  = document.getElementById('shop-container');
 
         if (filtered.length === 0) {
             gridEl.classList.add('hidden');
@@ -433,11 +483,12 @@
             const remaining = item.stock - bought;
             const isOwned   = bought > 0;
             const isSoldOut = remaining <= 0 && !isOwned;
+            const isWished  = GameCenter.isWishlisted(item.id);
 
-            // Precio con descuento
             const eco        = window.ECONOMY;
             const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
-            const priceHTML  = eco.isSaleActive && !isOwned
+
+            const priceHTML = eco.isSaleActive && !isOwned
                 ? `<div class="shop-price">
                        <span class="price-original">${item.price}</span>
                        <i data-lucide="star" size="14" fill="#facc15"></i>
@@ -448,12 +499,10 @@
                        <i data-lucide="star" size="14" fill="#facc15"></i> ${item.price}
                    </div>`;
 
-            // Tags HTML
             const tagsHTML = Array.isArray(item.tags)
                 ? `<div class="card-tags">${item.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}</div>`
                 : '';
 
-            // Acción
             let actionHTML;
             if (isOwned) {
                 const url = GameCenter.getDownloadUrl(item.id, item.file);
@@ -467,8 +516,8 @@
             } else if (isSoldOut) {
                 actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.45; cursor:not-allowed;" disabled>Sin Stock</button>`;
             } else {
-                actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center;"
-                                onclick='initiatePurchase(${JSON.stringify(item)})'>
+                actionHTML = `<button class="btn-primary shop-buy-btn" style="width:100%; justify-content:center;"
+                                data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
                                 <i data-lucide="star" size="14" fill="#facc15"></i> Canjear
                               </button>`;
             }
@@ -476,9 +525,16 @@
             const card = document.createElement('article');
             card.className = 'glass-panel shop-card';
             card.innerHTML = `
+                <!-- Wishlist heart -->
+                <button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
+                        data-id="${item.id}" title="${isWished ? 'Quitar de favoritos' : 'Agregar a favoritos'}">
+                    ${isWished ? '♥' : '♡'}
+                </button>
+
                 <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
                 ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="12"></i> Tuyo</div>' : ''}
                 ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="11" fill="currentColor"></i> OFERTA</div>' : ''}
+
                 <div style="width:100%">
                     <h3 style="font-size:1.05rem; margin-bottom:4px;">${item.name}</h3>
                     <p style="font-size:0.82rem; color:var(--text-med); min-height:36px; overflow:hidden; margin-bottom:6px;">${item.desc}</p>
@@ -495,6 +551,28 @@
                     ${actionHTML}
                 </div>`;
             container.appendChild(card);
+        });
+
+        // Listeners de wishlist
+        container.querySelectorAll('.wishlist-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id       = parseInt(btn.dataset.id, 10);
+                const isNowWished = GameCenter.toggleWishlist(id);
+                btn.textContent = isNowWished ? '♥' : '♡';
+                btn.classList.toggle('wishlist-btn--active', isNowWished);
+                btn.title = isNowWished ? 'Quitar de favoritos' : 'Agregar a favoritos';
+            });
+        });
+
+        // Listeners de compra
+        container.querySelectorAll('.shop-buy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                try {
+                    const item = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
+                    initiatePurchase(item, btn);
+                } catch(e) { console.error('Error parsing item data', e); }
+            });
         });
 
         if (window.lucide) lucide.createIcons();
@@ -545,15 +623,71 @@
     }
 
     // ================================================
-    // COMPRA (con confetti + cashback toast)
+    // RENDER HISTORIAL
     // ================================================
-    function initiatePurchase(item) {
+    function renderHistory() {
+        const container = document.getElementById('history-list');
+        if (!container) return;
+        const history = GameCenter.getHistory();
+
+        if (!history.length) {
+            container.innerHTML = '<p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Aún no hay transacciones registradas.</p>';
+            return;
+        }
+
+        container.innerHTML = history.slice(0, 50).map(entry => {
+            // Soporte para entradas de formato nuevo {tipo, cantidad, motivo, fecha}
+            // y entradas legadas {itemId, name, price, cashback, date}
+            if (entry.tipo) {
+                const isIngreso = entry.tipo === 'ingreso';
+                const fecha     = new Date(entry.fecha).toLocaleString('es-MX', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                return `
+                    <div class="history-entry">
+                        <span class="history-icon ${isIngreso ? 'history-icon--in' : 'history-icon--out'}">
+                            ${isIngreso ? '+' : '-'}
+                        </span>
+                        <div class="history-detail">
+                            <span class="history-motivo">${entry.motivo}</span>
+                            <span class="history-fecha">${fecha}</span>
+                        </div>
+                        <span class="history-amount ${isIngreso ? 'history-amount--in' : 'history-amount--out'}">
+                            ${isIngreso ? '+' : '-'}${entry.cantidad} 🪙
+                        </span>
+                    </div>`;
+            } else {
+                // Entrada legada
+                const fecha = entry.date
+                    ? new Date(entry.date).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                    : '—';
+                const isCode = entry.itemId === 'promo_code';
+                return `
+                    <div class="history-entry">
+                        <span class="history-icon ${isCode ? 'history-icon--in' : 'history-icon--out'}">
+                            ${isCode ? '+' : '-'}
+                        </span>
+                        <div class="history-detail">
+                            <span class="history-motivo">${entry.name || 'Transacción'}</span>
+                            <span class="history-fecha">${fecha}</span>
+                        </div>
+                        <span class="history-amount ${isCode ? 'history-amount--in' : 'history-amount--out'}">
+                            ${isCode ? `+${entry.price || '?'}` : `-${entry.price || '?'}`} 🪙
+                        </span>
+                    </div>`;
+            }
+        }).join('');
+    }
+
+    // ================================================
+    // COMPRA (con shake en error + confetti en éxito)
+    // ================================================
+    function initiatePurchase(item, btn) {
         const bought = GameCenter.getBoughtCount(item.id);
         if ((item.stock - bought) <= 0) return;
 
         const eco        = window.ECONOMY;
         const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
-        const cashback   = Math.floor(finalPrice * eco.cashbackRate);
 
         const confirmMsg = eco.isSaleActive
             ? `¿Canjear "${item.name}" por ${finalPrice} monedas? (precio original: ${item.price})`
@@ -564,44 +698,39 @@
         const result = GameCenter.buyItem(item);
 
         if (result.success) {
-            // Refrescar UI
             filterItems();
             document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-
-            // 🎉 Confetti desde los laterales
             fireConfetti();
-
-            // Toast con info de cashback
             const cashbackNote = result.cashback > 0
                 ? ` <strong>+${result.cashback} cashback</strong> devueltas.`
                 : '';
             showToast(`✓ ¡"${item.name}" desbloqueado!${cashbackNote} Ve a <strong>Mis Tesoros</strong> para descargar.`, 'success');
         } else {
-            if (result.reason === 'coins') showToast('No tienes suficientes monedas.', 'error');
+            if (result.reason === 'coins') {
+                // Shake animation en el botón y en el precio
+                if (btn) shakeElement(btn);
+                const priceEl = btn?.closest('.shop-card')?.querySelector('.shop-price');
+                if (priceEl) shakeElement(priceEl);
+                showToast('No tienes suficientes monedas para este wallpaper.', 'error');
+            }
             if (result.reason === 'stock') showToast('¡Producto agotado!', 'error');
         }
     }
 
+    function shakeElement(el) {
+        el.classList.remove('anim-shake');
+        // forzar reflow
+        void el.offsetWidth;
+        el.classList.add('anim-shake');
+        el.addEventListener('animationend', () => el.classList.remove('anim-shake'), { once: true });
+    }
+
     // ================================================
-    // CONFETTI (canvas-confetti)
+    // CONFETTI
     // ================================================
     function fireConfetti() {
-        // Ráfaga desde la izquierda
-        confetti({
-            particleCount: 60,
-            angle: 60,
-            spread: 70,
-            origin: { x: 0, y: 0.7 },
-            colors: ['#9b59ff', '#ff59b4', '#facc15', '#4ade80', '#00d4ff']
-        });
-        // Ráfaga desde la derecha
-        confetti({
-            particleCount: 60,
-            angle: 120,
-            spread: 70,
-            origin: { x: 1, y: 0.7 },
-            colors: ['#9b59ff', '#ff59b4', '#facc15', '#4ade80', '#00d4ff']
-        });
+        confetti({ particleCount: 60, angle: 60,  spread: 70, origin: { x: 0, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
+        confetti({ particleCount: 60, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
     }
 
     // ================================================
@@ -620,61 +749,93 @@
     }
 
     // ================================================
-    // PROMO CODE
+    // PROMO CODE (async — SHA-256)
     // ================================================
-    function handleRedeem() {
+    async function handleRedeem() {
         const input = document.getElementById('promo-input');
         const msg   = document.getElementById('promo-msg');
         const btn   = document.getElementById('btn-redeem');
         const code  = input.value.trim();
         if (!code) return;
 
-        const result = window.GameCenter.redeemPromoCode(code);
+        btn.disabled = true;
+        const result = await window.GameCenter.redeemPromoCode(code);
+        btn.disabled = false;
+
         if (result.success) {
             showMsg(msg, `✓ ${result.message}`, '#4ade80');
             input.value = '';
             input.style.borderColor = '';
             document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-            // Confetti de código redimido
-            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#facc15', '#9b59ff', '#4ade80'] });
+            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#facc15','#9b59ff','#4ade80'] });
         } else {
             showMsg(msg, `✗ ${result.message}`, '#ff4757');
             input.style.borderColor = '#ff4757';
-            btn.style.transform = 'translateX(6px)';
-            setTimeout(() => btn.style.transform = '', 120);
+            shakeElement(btn);
         }
     }
 
     // ================================================
-    // SYNC
+    // SYNC (async — Worker + Checksum)
     // ================================================
-    function handleExport() {
-        const code   = GameCenter.exportSave();
+    async function handleExport() {
         const output = document.getElementById('export-output');
         const msg    = document.getElementById('export-msg');
+        const btn    = document.getElementById('btn-export');
+
+        btn.disabled = true;
+        showMsg(msg, 'Generando código…', 'var(--text-med)');
+
+        const code = await GameCenter.exportSave();
+        btn.disabled = false;
+
         if (!code) { showMsg(msg, 'Error al generar el código.', '#ff4757'); return; }
         output.value = code;
         output.classList.remove('hidden');
         output.select();
         try {
             document.execCommand('copy');
-            showMsg(msg, '✓ Código copiado al portapapeles.', '#4ade80');
+            showMsg(msg, '✓ Código con checksum copiado al portapapeles.', '#4ade80');
         } catch {
             showMsg(msg, 'Código generado. Cópialo manualmente.', '#facc15');
         }
     }
 
-    function handleImport() {
+    async function handleImport() {
         const code = document.getElementById('import-input').value.trim();
         const msg  = document.getElementById('import-msg');
+        const btn  = document.getElementById('btn-import');
         if (!code) { showMsg(msg, 'Pega un código primero.', '#ff4757'); return; }
         if (!confirm('¿Importar progreso? Esto reemplazará tu partida actual.')) return;
-        const result = GameCenter.importSave(code);
+
+        btn.disabled = true;
+        showMsg(msg, 'Verificando integridad…', 'var(--text-med)');
+
+        const result = await GameCenter.importSave(code);
+        btn.disabled = false;
+
         if (result.success) {
             showMsg(msg, '✓ Importado correctamente. Recargando…', '#4ade80');
             setTimeout(() => location.reload(), 1200);
         } else {
             showMsg(msg, `✗ ${result.message}`, '#ff4757');
+        }
+    }
+
+    // ================================================
+    // BENDICIÓN LUNAR — STATUS UI
+    // ================================================
+    function renderMoonBlessingStatus() {
+        const status  = GameCenter.getMoonBlessingStatus();
+        const statusEl = document.getElementById('moon-blessing-status');
+        if (!statusEl) return;
+
+        if (status.active) {
+            statusEl.textContent  = `Activa · expira ${status.expiresAt}`;
+            statusEl.className    = 'eco-badge eco-badge--moon';
+        } else {
+            statusEl.textContent  = 'Inactiva';
+            statusEl.className    = 'eco-badge';
         }
     }
 
@@ -694,22 +855,30 @@
     }
 
     function initEconomyInfo() {
-        const eco = window.ECONOMY;
+        const eco    = window.ECONOMY;
         const saleEl = document.getElementById('eco-sale-status');
         const cbEl   = document.getElementById('eco-cashback');
         if (!saleEl || !cbEl) return;
         const discount = Math.round((1 - eco.saleMultiplier) * 100);
-        saleEl.textContent  = eco.isSaleActive ? `${discount}% OFF activo` : 'Sin oferta activa';
-        saleEl.className    = 'eco-badge' + (eco.isSaleActive ? ' eco-badge--sale' : '');
-        cbEl.textContent    = `${Math.round(eco.cashbackRate * 100)}% en cada compra`;
-        cbEl.className      = 'eco-badge eco-badge--green';
+        saleEl.textContent = eco.isSaleActive ? `${discount}% OFF activo` : 'Sin oferta activa';
+        saleEl.className   = 'eco-badge' + (eco.isSaleActive ? ' eco-badge--sale' : '');
+        cbEl.textContent   = `${Math.round(eco.cashbackRate * 100)}% en cada compra`;
+        cbEl.className     = 'eco-badge eco-badge--green';
     }
+
+    // ================================================
+    // EVENT LISTENERS SYNC + DAILY
+    // ================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('btn-export')?.addEventListener('click', handleExport);
+        document.getElementById('btn-import')?.addEventListener('click', handleImport);
+    });
 
     // ================================================
     // UTIL
     // ================================================
     function showMsg(el, text, color) {
-        el.textContent  = text;
+        el.innerHTML     = text;
         el.style.color   = color;
         el.style.opacity = '1';
     }
