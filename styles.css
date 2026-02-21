@@ -16,7 +16,7 @@
     --accent-hover: #9b59ffcc;
     --accent-glow: rgba(155, 89, 255, 0.4);
 
-    /* Textos */
+    /* Textos base */
     --text-high: #ffffff;
     --text-med: #c8c8d0;
     --text-low: #8a8a95;
@@ -26,6 +26,19 @@
     --radius-md: 12px;
     --nav-height: 70px;
     --bottom-nav-height: 65px;
+}
+
+/* =========================================================
+   CORRECCIÓN DE CONTRASTE WCAG AA — Temas claros
+   Los temas Rosa Neón (#ff59b4) y Cyan Arcade (#00d4ff) tienen
+   textos intermedios que no superan el ratio 4.5:1 sobre fondos
+   de vidrio oscuro. Se eleva --text-med a #d8d8e0 cuando estos
+   temas están activos para garantizar legibilidad.
+   ========================================================= */
+[data-theme="pink"],
+[data-theme="cyan"] {
+    --text-med: #d8d8e0; /* ratio ≈ 5.2:1 sobre var(--bg-main) */
+    --text-low: #a0a0ae; /* ratio ≈ 4.6:1 */
 }
 
 /* =========================================================
@@ -73,6 +86,7 @@ ul { list-style: none; }
     align-items: center;
     gap: 8px;
     font-size: 0.9rem;
+    font-family: inherit;
 }
 .btn-primary:hover {
     background: var(--accent-hover);
@@ -204,184 +218,179 @@ ul { list-style: none; }
 }
 .shop-card:hover { background: rgba(255,255,255,0.03); border-color: var(--accent); }
 .shop-img { width: 100%; height: 180px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; }
-.shop-price { font-size: 1.05rem; font-weight: 700; color: #facc15; margin: 8px 0; display: flex; align-items: center; gap: 4px; justify-content: center; flex-wrap: wrap; }
 
 /* =========================================================
-   FAQ
+   SKELETON SCREENS
    ========================================================= */
-.faq-grid { max-width: 800px; margin: 0 auto; display: grid; gap: 15px; }
-details { border-radius: 16px; overflow: hidden; transition: 0.3s; }
-details[open] { background: rgba(155,89,255,0.05); border-color: var(--accent); }
-summary { padding: 20px; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; list-style: none; }
-summary::-webkit-details-marker { display: none; }
-summary::after { content: '+'; font-size: 1.5rem; color: var(--accent); transition: 0.2s; }
-details[open] summary::after { transform: rotate(45deg); }
-.faq-content { padding: 0 20px 20px 20px; color: var(--text-med); line-height: 1.6; font-size: 0.95rem; }
+.skeleton-card {
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+.skeleton-img {
+    width: 100%;
+    height: 180px;
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.4s ease-in-out infinite;
+}
+.skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.4s ease-in-out infinite;
+}
+.skeleton-line--long  { width: 80%; }
+.skeleton-line--med   { width: 55%; }
+.skeleton-line--short { width: 35%; }
+
+@keyframes skeleton-loading {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* =========================================================
+   SHAKE ANIMATION (error de saldo insuficiente)
+   ========================================================= */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15%       { transform: translateX(-6px); }
+    30%       { transform: translateX(6px); }
+    45%       { transform: translateX(-4px); }
+    60%       { transform: translateX(4px); }
+    75%       { transform: translateX(-2px); }
+    90%       { transform: translateX(2px); }
+}
+.anim-shake { animation: shake 0.45s ease-in-out; }
+
+/* =========================================================
+   WISHLIST
+   ========================================================= */
+.wishlist-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-low);
+    transition: transform 0.18s, color 0.18s;
+    backdrop-filter: blur(4px);
+}
+.wishlist-btn:hover           { transform: scale(1.2); color: #ff4f7a; }
+.wishlist-btn--active         { color: #ff4f7a; }
+.wishlist-btn--active:hover   { transform: scale(1.1); }
+
+/* =========================================================
+   TIENDA — TABS
+   ========================================================= */
+.shop-tabs { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+.shop-tab {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+    color: var(--text-med); padding: 10px 18px; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 0.88rem; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; transition: 0.2s;
+}
+.shop-tab:hover { border-color: var(--accent); color: white; }
+.shop-tab.active { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 12px var(--accent-glow); }
+
+/* =========================================================
+   TIENDA — TOOLBAR (search + pills)
+   ========================================================= */
+.shop-toolbar { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+.search-wrap { position: relative; max-width: 420px; width: 100%; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-low); pointer-events: none; }
+.search-input {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md); color: var(--text-high); font-family: inherit;
+    font-size: 0.9rem; padding: 10px 36px 10px 40px; outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-low); }
+.search-clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.1); border: none; border-radius: 50%; width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    color: var(--text-med); transition: 0.2s;
+}
+.search-clear:hover { background: rgba(255,255,255,0.2); color: white; }
+.search-count { font-size: 0.82rem; color: var(--text-low); margin-bottom: 8px; font-style: italic; }
+
+.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.04); color: var(--text-med); font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;
+    font-family: inherit;
+}
+.pill:hover { border-color: var(--accent); color: white; }
+.pill.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+.filter-empty {
+    grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--text-med);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+
+/* =========================================================
+   TAB PANELS
+   ========================================================= */
+.tab-panel { min-height: 300px; }
 
 /* =========================================================
    PROMO SECTION
    ========================================================= */
-.promo-section {
-    margin-bottom: 2.5rem; border-radius: var(--radius-lg); overflow: hidden;
-    border-left: 4px solid var(--accent); padding: 1.5rem;
-}
+.promo-section { padding: 24px; border-radius: var(--radius-lg); margin-bottom: 28px; }
 .promo-icon-wrap {
-    background: var(--accent); padding: 8px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 15px var(--accent-glow); flex-shrink: 0;
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.promo-input-group { display: flex; gap: 10px; }
+.promo-input-group { display: flex; gap: 10px; align-items: center; }
 .promo-input {
-    flex: 1; min-width: 0; padding: 12px 16px;
-    border-radius: var(--radius-md); border: 1px solid var(--glass-border);
-    background: rgba(0,0,0,0.2); color: white; outline: none;
-    font-family: inherit; font-weight: 500; font-size: 0.95rem;
-    transition: border-color 0.2s, background 0.2s;
+    flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md); color: var(--text-high); font-family: inherit;
+    font-size: 0.9rem; padding: 10px 16px; outline: none; transition: border-color 0.2s;
+    text-transform: uppercase; letter-spacing: 1px;
 }
-.promo-input:focus { border-color: var(--accent); background: rgba(155,89,255,0.05); }
+.promo-input:focus { border-color: var(--accent); }
 
 /* =========================================================
-   TABS
-   ========================================================= */
-.shop-tabs {
-    display: flex; gap: 4px; flex-wrap: wrap;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid var(--glass-border);
-    padding-bottom: 0;
-}
-.shop-tab {
-    background: transparent; border: none; color: var(--text-low);
-    font-family: inherit; font-size: 0.88rem; font-weight: 600;
-    padding: 10px 16px; cursor: pointer;
-    border-bottom: 3px solid transparent; margin-bottom: -1px;
-    transition: 0.2s; display: flex; align-items: center; gap: 6px;
-    border-radius: 8px 8px 0 0;
-}
-.shop-tab:hover { color: var(--text-med); background: rgba(255,255,255,0.03); }
-.shop-tab.active { color: white; border-bottom-color: var(--accent); background: rgba(155,89,255,0.08); }
-
-.tab-panel { animation: fadeIn 0.22s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-/* =========================================================
-   BARRA DE HERRAMIENTAS (BUSCADOR + PILLS)
-   ========================================================= */
-.shop-toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-/* Search */
-.search-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    max-width: 420px;
-}
-.search-icon {
-    position: absolute; left: 14px;
-    color: var(--text-low); pointer-events: none; flex-shrink: 0;
-}
-.search-input {
-    width: 100%;
-    padding: 11px 40px 11px 40px;
-    border-radius: 50px;
-    border: 1px solid var(--glass-border);
-    background: rgba(255,255,255,0.04);
-    color: white; outline: none;
-    font-family: inherit; font-size: 0.9rem;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-}
-.search-input:focus {
-    border-color: var(--accent);
-    background: rgba(155,89,255,0.06);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-}
-.search-input::placeholder { color: var(--text-low); }
-.search-clear {
-    position: absolute; right: 12px;
-    background: none; border: none; cursor: pointer;
-    color: var(--text-low); display: flex; align-items: center; justify-content: center;
-    width: 20px; height: 20px; border-radius: 50%;
-    transition: color 0.15s, background 0.15s;
-    padding: 0;
-}
-.search-clear:hover { color: white; background: rgba(255,255,255,0.1); }
-
-/* Filter pills */
-.filter-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 6px 14px;
-    border-radius: 50px;
-    border: 1px solid var(--glass-border);
-    background: rgba(255,255,255,0.04);
-    color: var(--text-med);
-    font-family: inherit; font-size: 0.82rem; font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s;
-    white-space: nowrap;
-}
-.pill:hover { border-color: var(--accent); color: white; background: rgba(155,89,255,0.1); }
-.pill.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-    box-shadow: 0 0 10px var(--accent-glow);
-}
-
-/* Results count */
-.search-count {
-    font-size: 0.82rem; color: var(--text-low); font-weight: 500;
-    margin-bottom: 4px; margin-top: -8px;
-}
-
-/* Filter empty state */
-.filter-empty {
-    grid-column: 1/-1;
-    text-align: center; padding: 60px 20px;
-    color: var(--text-med); display: flex; flex-direction: column; align-items: center; gap: 14px;
-}
-.filter-empty i { opacity: 0.3; }
-.filter-empty p { font-size: 1rem; font-weight: 600; }
-
-/* =========================================================
-   OWNED BADGE & SALE BADGES
+   SHOP CARD — BADGES & PRICES
    ========================================================= */
 .owned-badge {
-    position: absolute; top: 10px; right: 10px;
-    background: rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.4);
-    color: #4ade80; padding: 3px 8px; border-radius: 20px;
-    font-size: 0.7rem; font-weight: 700;
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(74,222,128,0.2); border: 1px solid rgba(74,222,128,0.4);
+    color: #4ade80; font-size: 0.7rem; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px;
     display: flex; align-items: center; gap: 4px; backdrop-filter: blur(4px);
 }
-
 .sale-card-badge {
-    position: absolute; top: 10px; left: 10px;
-    background: linear-gradient(135deg, #ff4757, #ff6b81);
-    color: white; padding: 3px 8px; border-radius: 20px;
-    font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
-    display: flex; align-items: center; gap: 3px;
-    box-shadow: 0 2px 8px rgba(255,71,87,0.4);
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(255,71,87,0.9); color: white; font-size: 0.65rem; font-weight: 800;
+    padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 4px;
 }
-
-/* Precio con descuento */
-.price-original {
-    text-decoration: line-through;
-    color: var(--text-low);
-    font-size: 0.85rem;
-    font-weight: 500;
+.shop-price {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 1rem; font-weight: 700; color: #facc15; margin: 8px 0;
 }
-.price-sale {
-    color: #4ade80;
-    font-size: 1.15rem;
-}
+.price-original { text-decoration: line-through; color: var(--text-low); font-size: 0.85rem; font-weight: 400; }
+.price-sale { color: #4ade80; font-size: 1.15rem; }
 .sale-pill {
     background: rgba(74,222,128,0.15);
     border: 1px solid rgba(74,222,128,0.3);
@@ -391,17 +400,12 @@ details[open] summary::after { transform: rotate(45deg); }
 }
 
 /* =========================================================
-   CARD TAGS (mini chips dentro de la card)
+   CARD TAGS
    ========================================================= */
-.card-tags {
-    display: flex; flex-wrap: wrap; gap: 5px; justify-content: center;
-    margin-bottom: 6px;
-}
+.card-tags { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 6px; }
 .card-tag {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--glass-border);
-    color: var(--text-low);
-    font-size: 0.65rem; font-weight: 600;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+    color: var(--text-low); font-size: 0.65rem; font-weight: 600;
     padding: 2px 7px; border-radius: 10px;
 }
 
@@ -419,7 +423,7 @@ details[open] summary::after { transform: rotate(45deg); }
 }
 
 /* =========================================================
-   SALE BANNER (global)
+   SALE BANNER
    ========================================================= */
 .sale-banner {
     background: linear-gradient(90deg, #ff4757, #ff6b35, #ff4757);
@@ -430,7 +434,7 @@ details[open] summary::after { transform: rotate(45deg); }
     overflow: hidden;
 }
 @keyframes bannerShimmer {
-    0% { background-position: 0% 50%; }
+    0%   { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
 }
 .sale-banner__inner {
@@ -457,12 +461,7 @@ details[open] summary::after { transform: rotate(45deg); }
    AJUSTES — THEME PICKER
    ========================================================= */
 .settings-card { padding: 1.5rem; border-radius: var(--radius-lg); }
-
-.theme-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-}
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .theme-btn {
     display: flex; align-items: center; gap: 10px;
     padding: 12px 14px;
@@ -475,19 +474,46 @@ details[open] summary::after { transform: rotate(45deg); }
 }
 .theme-btn:hover { border-color: var(--accent); color: white; background: rgba(255,255,255,0.08); }
 .theme-btn--active { border-color: var(--accent); background: rgba(155,89,255,0.12); color: white; }
-
-.theme-swatch {
-    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-    box-shadow: 0 0 8px currentColor;
-}
+.theme-swatch { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
 .theme-name { flex: 1; text-align: left; }
-.theme-check {
-    color: var(--accent);
-    opacity: 0;
-    transition: opacity 0.2s;
-    flex-shrink: 0;
-}
+.theme-check { color: var(--accent); opacity: 0; transition: opacity 0.2s; flex-shrink: 0; }
 .theme-btn--active .theme-check { opacity: 1; }
+
+/* =========================================================
+   BENDICIÓN LUNAR
+   ========================================================= */
+.moon-icon-wrap {
+    background: linear-gradient(135deg, #7c3aed, #db2777) !important;
+}
+.moon-btn {
+    background: linear-gradient(135deg, #7c3aed, #db2777) !important;
+    box-shadow: 0 0 16px rgba(192, 132, 252, 0.3);
+}
+.moon-btn:hover {
+    box-shadow: 0 0 24px rgba(192, 132, 252, 0.5) !important;
+    transform: translateY(-1px);
+}
+.eco-badge--moon {
+    background: rgba(192,132,252,0.15);
+    border-color: rgba(192,132,252,0.4);
+    color: #c084fc;
+}
+.eco-badge--gold {
+    background: rgba(245,158,11,0.15);
+    border-color: rgba(245,158,11,0.3);
+    color: #f59e0b;
+}
+
+/* Moon badge (icono en navbar / hero) */
+.moon-blessing-badge {
+    font-size: 1rem;
+    filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.8));
+    animation: moonPulse 2.5s ease-in-out infinite;
+}
+@keyframes moonPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.7; transform: scale(1.15); }
+}
 
 /* =========================================================
    ECONOMY INFO
@@ -506,6 +532,60 @@ details[open] summary::after { transform: rotate(45deg); }
 }
 .eco-badge--green { background: rgba(74,222,128,0.12); border-color: rgba(74,222,128,0.3); color: #4ade80; }
 .eco-badge--sale  { background: rgba(255,71,87,0.12); border-color: rgba(255,71,87,0.3); color: #ff4757; }
+
+/* =========================================================
+   HISTORIAL DE TRANSACCIONES
+   ========================================================= */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.history-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.02);
+    transition: background 0.15s;
+}
+.history-entry:hover { background: rgba(255,255,255,0.05); }
+.history-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.history-icon--in  { background: rgba(74,222,128,0.15); color: #4ade80; }
+.history-icon--out { background: rgba(255,71,87,0.15);  color: #ff4757; }
+.history-detail {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.history-motivo {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-high);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.history-fecha { font-size: 0.73rem; color: var(--text-low); }
+.history-amount {
+    font-size: 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.history-amount--in  { color: #4ade80; }
+.history-amount--out { color: #ff4757; }
 
 /* =========================================================
    TOAST NOTIFICATIONS
@@ -561,6 +641,16 @@ details[open] summary::after { transform: rotate(45deg); }
 .daily-msg { font-size: 0.8rem; font-weight: 600; text-align: right; min-height: 1.1rem; transition: opacity 0.4s; opacity: 0; }
 
 /* =========================================================
+   FAQ
+   ========================================================= */
+.faq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+details.glass-panel { padding: 18px 22px; border-radius: var(--radius-md); }
+details summary { cursor: pointer; font-weight: 700; font-size: 0.95rem; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details summary::after { content: '+'; font-size: 1.3rem; color: var(--accent); transition: transform 0.2s; }
+details[open] summary::after { transform: rotate(45deg); }
+.faq-content { margin-top: 12px; font-size: 0.88rem; color: var(--text-med); line-height: 1.6; }
+
+/* =========================================================
    RESPONSIVE
    ========================================================= */
 @media (max-width: 768px) {
@@ -575,6 +665,7 @@ details[open] summary::after { transform: rotate(45deg); }
     .shop-tab { padding: 8px 10px; font-size: 0.78rem; }
     .section-title { font-size: 1.5rem; }
     .theme-grid { grid-template-columns: 1fr 1fr; }
+    .faq-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
