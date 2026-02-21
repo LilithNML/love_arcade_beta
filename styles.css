@@ -35,7 +35,7 @@ body {
     color: var(--text-high);
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
-    padding-top: var(--nav-height); /* Espacio para navbar superior */
+    padding-top: var(--nav-height);
     display: flex;
     flex-direction: column;
 }
@@ -143,7 +143,7 @@ ul { list-style: none; }
 
 /* --- BOTTOM NAV (Móvil) --- */
 .bottom-nav {
-    display: none; /* Oculto en desktop */
+    display: none;
     position: fixed; bottom: 0; left: 0; width: 100%;
     height: var(--bottom-nav-height);
     background: rgba(14, 14, 18, 0.95);
@@ -163,7 +163,6 @@ ul { list-style: none; }
 .b-nav-item.active { color: var(--accent); }
 .b-nav-item i { transition: 0.2s; }
 .b-nav-item.active i { transform: translateY(-2px); filter: drop-shadow(0 0 5px var(--accent-glow)); }
-
 
 /* --- LAYOUT GENERAL --- */
 .container {
@@ -202,7 +201,6 @@ ul { list-style: none; }
     background-size: cover; background-position: center;
     position: relative;
 }
-/* Badges en la imagen */
 .card-badge {
     position: absolute; top: 10px; left: 10px;
     padding: 4px 8px; border-radius: 6px;
@@ -230,11 +228,11 @@ ul { list-style: none; }
 .shop-card {
     border-radius: var(--radius-lg); padding: 20px;
     display: flex; flex-direction: column; align-items: center; text-align: center;
-    transition: 0.2s;
+    transition: 0.2s; position: relative;
 }
 .shop-card:hover { background: rgba(255,255,255,0.03); border-color: var(--accent); }
 .shop-img { width: 100%; height: 180px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; }
-.shop-price { font-size: 1.1rem; font-weight: 700; color: #facc15; margin: 10px 0; }
+.shop-price { font-size: 1.1rem; font-weight: 700; color: #facc15; margin: 10px 0; display:flex; align-items:center; gap:4px; justify-content:center; }
 
 /* --- FAQ ACCORDION --- */
 .faq-grid { max-width: 800px; margin: 0 auto; display: grid; gap: 15px; }
@@ -252,40 +250,204 @@ details[open] summary::after { transform: rotate(45deg); }
 
 .faq-content { padding: 0 20px 20px 20px; color: var(--text-med); line-height: 1.6; font-size: 0.95rem; }
 
+/* =========================================
+   NUEVOS ESTILOS v7
+   ========================================= */
+
+/* --- PROMO SECTION --- */
+.promo-section {
+    margin-bottom: 2.5rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border-left: 4px solid var(--accent);
+    padding: 1.5rem;
+}
+
+.promo-icon-wrap {
+    background: var(--accent);
+    padding: 8px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 15px var(--accent-glow);
+    flex-shrink: 0;
+}
+
+.promo-input-group { display: flex; gap: 10px; }
+
+.promo-input {
+    flex: 1; min-width: 0;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(0,0,0,0.2);
+    color: white;
+    outline: none;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, background 0.2s;
+}
+.promo-input:focus {
+    border-color: var(--accent);
+    background: rgba(155, 89, 255, 0.05);
+}
+
+/* --- SHOP TABS --- */
+.shop-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 0;
+}
+
+.shop-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-low);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    transition: 0.2s;
+    display: flex; align-items: center; gap: 6px;
+    border-radius: 8px 8px 0 0;
+}
+.shop-tab:hover { color: var(--text-med); background: rgba(255,255,255,0.03); }
+.shop-tab.active { color: white; border-bottom-color: var(--accent); background: rgba(155,89,255,0.08); }
+
+/* --- TAB PANEL --- */
+.tab-panel { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- OWNED BADGE en shop card --- */
+.owned-badge {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    color: #4ade80;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+    backdrop-filter: blur(4px);
+}
+
+/* --- VAULT DOWNLOAD BUTTON (subtle green tint) --- */
+.vault-btn {
+    background: linear-gradient(135deg, #4ade80, #22c55e) !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+}
+.vault-btn:hover {
+    background: linear-gradient(135deg, #6ee7a0, #4ade80) !important;
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.4) !important;
+}
+
+/* --- SYNC PANEL --- */
+.sync-card { padding: 1.5rem; border-radius: var(--radius-lg); }
+
+.sync-textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-med);
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    padding: 12px;
+    resize: vertical;
+    min-height: 90px;
+    outline: none;
+    margin-top: 12px;
+    transition: border-color 0.2s;
+}
+.sync-textarea:focus { border-color: var(--accent); }
+
+/* --- FEEDBACK MSG --- */
+.feedback-msg {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    min-height: 1.2rem;
+    font-weight: 500;
+    transition: opacity 0.4s;
+}
+
+/* --- DAILY BUTTON --- */
+.daily-btn {
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #1a1200;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 10px 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.2);
+}
+.daily-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fde047, #facc15);
+    box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
+    transform: translateY(-1px);
+}
+.daily-btn:disabled { cursor: not-allowed; }
+
+.daily-msg {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: right;
+    min-height: 1.1rem;
+    transition: opacity 0.4s;
+    opacity: 0;
+}
+
+/* --- TOAST NOTIFICATION --- */
+.toast-success {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(26, 29, 34, 0.97);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    color: #4ade80;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 90vw;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4);
+}
+.toast-success.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* --- RESPONSIVE --- */
 @media (max-width: 768px) {
-    /* Ocultar enlaces de desktop */
     .nav-links { display: none; }
-    
-    /* Mostrar bottom bar */
     .bottom-nav { display: flex; }
-    
-    /* Ajustes generales móvil */
-    body { padding-bottom: var(--bottom-nav-height); } /* Espacio para no tapar contenido */
+    body { padding-bottom: var(--bottom-nav-height); }
     .navbar { padding: 0 20px; }
-    .nav-brand span { display: none; } /* Ahorrar espacio en header */
+    .nav-brand span { display: none; }
     .container { padding: 20px; }
     .shop-hero { flex-direction: column; gap: 20px; text-align: center; }
-}
-
-/* Ajuste para el input de promos */
-.promo-input-group {
-    display: flex;
-    gap: 10px;
-}
-
-#promo-input:focus {
-    border-color: var(--accent) !important;
-    background: rgba(155, 89, 255, 0.05) !important;
+    .shop-tabs { gap: 4px; }
+    .shop-tab { padding: 8px 12px; font-size: 0.82rem; }
 }
 
 @media (max-width: 480px) {
-    .promo-input-group {
-        flex-direction: column;
-    }
-    #btn-redeem {
-        width: 100%;
-        justify-content: center;
-        padding: 14px;
-    }
+    .promo-input-group { flex-direction: column; }
+    #btn-redeem { width: 100%; justify-content: center; padding: 14px; }
+    .shop-hero { padding: 24px; }
 }
