@@ -129,16 +129,8 @@
 
             <p id="search-results-count" class="search-count hidden"></p>
 
-            <!-- Skeleton screens -->
-            <div id="shop-skeleton" class="shop-grid">
-                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
-                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
-                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
-                <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-line skeleton-line--long"></div><div class="skeleton-line skeleton-line--med"></div><div class="skeleton-line skeleton-line--short"></div></div>
-            </div>
-
-            <!-- Grid real -->
-            <div id="shop-container" class="shop-grid hidden"></div>
+            <!-- Grid del catálogo -->
+            <div id="shop-container" class="shop-grid"></div>
 
             <div id="filter-empty" class="filter-empty hidden">
                 <i data-lucide="search-x" size="44"></i>
@@ -427,30 +419,19 @@
             if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
         });
 
-        // Cargar catálogo — skeleton solo en primera carga de sesión
-        const alreadyLoaded = sessionStorage.getItem('shop-catalog-loaded');
-        if (alreadyLoaded) {
-            document.getElementById('shop-skeleton').classList.add('hidden');
-            document.getElementById('shop-container').classList.remove('hidden');
-        }
-
+        // Cargar catálogo desde shop.json
         fetch('data/shop.json')
             .then(r => r.json())
             .then(items => {
                 allItems = items;
-                sessionStorage.setItem('shop-catalog-loaded', '1');
-                document.getElementById('shop-skeleton').classList.add('hidden');
-                document.getElementById('shop-container').classList.remove('hidden');
                 filterItems();
                 renderLibrary(items);
                 updateWishlistCost();
             })
             .catch(err => {
                 console.error('Error cargando shop.json:', err);
-                document.getElementById('shop-skeleton').classList.add('hidden');
                 const container = document.getElementById('shop-container');
                 container.innerHTML = '<p style="color:#ff4757; grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo. Recarga la página.</p>';
-                container.classList.remove('hidden');
             });
 
         // Promo code
