@@ -5,7 +5,8 @@
     "desc": "La espía de G.U.N. para que le de estilo a tu teléfono.",
     "price": 110,
     "stock": 1,
-    "image": "assets/product-thumbs/rouge_the_bat_a94a3cca_thumbs.webp"
+    "image": "assets/product-thumbs/rouge_the_bat_a94a3cca_thumbs.webp",
+    "file": "rouge_the_bat_a94a3cca.zip"
   },
   {
     "id": 2,
@@ -13,7 +14,8 @@
     "desc": "El erizo azul en su versión más clásica para el fondo de tu celular.",
     "price": 110,
     "stock": 1,
-    "image": "assets/product-thumbs/sonic_the_hedgehog_2936a9be_thumbs.webp"
+    "image": "assets/product-thumbs/sonic_the_hedgehog_2936a9be_thumbs.webp",
+    "file": "sonic_the_hedgehog_2936a9be.zip"
   },
   {
     "id": 3,
@@ -21,7 +23,8 @@
     "desc": "La forma de vida definitiva. Un wallpaper bastante atractivo para tu PC.",
     "price": 250,
     "stock": 1,
-    "image": "assets/product-thumbs/shadow_the_hedgehog_6ff623c4_thumbs.webp"
+    "image": "assets/product-thumbs/shadow_the_hedgehog_6ff623c4_thumbs.webp",
+    "file": "shadow_the_hedgehog_6ff623c4.zip"
   },
   {
     "id": 4,
@@ -29,7 +32,8 @@
     "desc": "La forma de vida definitiva. El fan #1 de las latinas en tu PC",
     "price": 250,
     "stock": 1,
-    "image": "assets/product-thumbs/shadow_the_hedgehog_2_18b617f7_thumbs.webp"
+    "image": "assets/product-thumbs/shadow_the_hedgehog_2_18b617f7_thumbs.webp",
+    "file": "shadow_the_hedgehog_2_18b617f7.zip"
   },
   {
     "id": 5,
@@ -37,7 +41,8 @@
     "desc": "Goku con el pelo plateado para que tu teléfono se vea con más nivel.",
     "price": 450,
     "stock": 1,
-    "image": "assets/product-thumbs/goku_ultra_instinto_f089881b_thumbs.webp"
+    "image": "assets/product-thumbs/goku_ultra_instinto_f089881b_thumbs.webp",
+    "file": "goku_ultra_instinto_f089881b.zip"
   },
   {
     "id": 6,
@@ -45,7 +50,8 @@
     "desc": "Toda la estética de la Arconte Hydro para decorar tu laptop.",
     "price": 1050,
     "stock": 1,
-    "image": "assets/product-thumbs/furina_d9040eb4_thumbs.webp"
+    "image": "assets/product-thumbs/furina_d9040eb4_thumbs.webp",
+    "file": "furina_d9040eb4.zip"
   },
   {
     "id": 7,
@@ -53,7 +59,8 @@
     "desc": "El pájaro más rápido de la isla directo para el monitor de tu computadora.",
     "price": 1050,
     "stock": 1,
-    "image": "assets/product-thumbs/chuck_49168af7_thumbs.webp"
+    "image": "assets/product-thumbs/chuck_49168af7_thumbs.webp",
+    "file": "chuck_49168af7.zip"
   },
   {
     "id": 8,
@@ -61,7 +68,8 @@
     "desc": "Un fondo de la princesa de la Dimensión Sol para tu laptop.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/blaze_the_cat_3ca68b7d_thumbs.webp"
+    "image": "assets/product-thumbs/blaze_the_cat_3ca68b7d_thumbs.webp",
+    "file": "blaze_the_cat_3ca68b7d.zip"
   },
   {
     "id": 9,
@@ -69,7 +77,8 @@
     "desc": "La gravedad cero de Uraraka para que tu teléfono se vea más ligero.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/ochaco_uraraka_68e2e708_thumbs.webp"
+    "image": "assets/product-thumbs/ochaco_uraraka_68e2e708_thumbs.webp",
+    "file": "ochaco_uraraka_68e2e708.zip"
   },
   {
     "id": 10,
@@ -77,7 +86,8 @@
     "desc": "Diseño metálico y frío para darle un toque diferente a tu smartphone.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/metal_sonic_f76ecb8c_thumbs.webp"
+    "image": "assets/product-thumbs/metal_sonic_f76ecb8c_thumbs.webp",
+    "file": "metal_sonic_f76ecb8c.zip"
   },
   {
     "id": 11,
@@ -85,7 +95,8 @@
     "desc": "El estilo de Zamasu en el cuerpo de Goku para la pantalla de tu celular.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/goku_black_05117d17_thumbs.webp"
+    "image": "assets/product-thumbs/goku_black_05117d17_thumbs.webp",
+    "file": "goku_black_05117d17.zip"
   },
   {
     "id": 12,
@@ -93,7 +104,8 @@
     "desc": "La fusión de los pendientes Pothala lista para tu fondo de celular.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/vegetto_3d2e6f5d_thumbs.webp"
+    "image": "assets/product-thumbs/vegetto_3d2e6f5d_thumbs.webp",
+    "file": "vegetto_3d2e6f5d.zip"
   },
   {
     "id": 13,
@@ -101,7 +113,8 @@
     "desc": "Resultado de la danza de la fusión para que luzca en tu teléfono.",
     "price": 750,
     "stock": 1,
-    "image": "assets/product-thumbs/gogeta_d68cb043_thumbs.webp"
+    "image": "assets/product-thumbs/gogeta_d68cb043_thumbs.webp",
+    "file": "gogeta_d68cb043.zip"
   },
   {
     "id": 14,
@@ -109,7 +122,8 @@
     "desc": "Un diseño con el estilo de Toga para el fondo de tu teléfono.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/himiko_toga_3f42c0d7_thumbs.webp"
+    "image": "assets/product-thumbs/himiko_toga_3f42c0d7_thumbs.webp",
+    "file": "himiko_toga_3f42c0d7.zip"
   },
   {
     "id": 15,
@@ -117,7 +131,8 @@
     "desc": "Un wallpaper con la estética del anime para tu pantalla móvil.",
     "price": 630,
     "stock": 1,
-    "image": "assets/product-thumbs/kaoruko_waguri_96348cb3_thumbs.webp"
+    "image": "assets/product-thumbs/kaoruko_waguri_96348cb3_thumbs.webp",
+    "file": "kaoruko_waguri_96348cb3.zip"
   },
   {
     "id": 16,
@@ -125,7 +140,8 @@
     "desc": "Bocchi la roca, perfecto para el fondo de tu PC.",
     "price": 630,
     "stock": 1,
-    "image": "assets/product-thumbs/hitori_gotou_69e25c56_thumbs.webp"
+    "image": "assets/product-thumbs/hitori_gotou_69e25c56_thumbs.webp",
+    "file": "hitori_gotou_69e25c56.zip"
   },
   {
     "id": 17,
@@ -133,7 +149,8 @@
     "desc": "Directo de Zenless Zone Zero para que le des color a tu teléfono.",
     "price": 1050,
     "stock": 1,
-    "image": "assets/product-thumbs/burnice_white_86d8d99c_thumbs.webp"
+    "image": "assets/product-thumbs/burnice_white_86d8d99c_thumbs.webp",
+    "file": "burnice_white_86d8d99c.zip"
   },
   {
     "id": 18,
@@ -141,7 +158,8 @@
     "desc": "La tiburoncina de los Victoria Housekeeping para tu fondo de teléfono.",
     "price": 300,
     "stock": 1,
-    "image": "assets/product-thumbs/ellen_joe_25d19b28_thumbs.webp"
+    "image": "assets/product-thumbs/ellen_joe_25d19b28_thumbs.webp",
+    "file": "ellen_joe_25d19b28.zip"
   },
   {
     "id": 19,
@@ -149,7 +167,8 @@
     "desc": "La jefa de las Liebres Astutas para que decore tu smartphone.",
     "price": 1050,
     "stock": 1,
-    "image": "assets/product-thumbs/nicole_demara_131cf874_thumbs.webp"
+    "image": "assets/product-thumbs/nicole_demara_131cf874_thumbs.webp",
+    "file": "nicole_demara_131cf874.zip"
   },
   {
     "id": 20,
@@ -157,7 +176,8 @@
     "desc": "Un clásico de PvZ para que mantengas tu celular bien fresco.",
     "price": 1500,
     "stock": 1,
-    "image": "assets/product-thumbs/lanzaguisantes_de_hielo_7041b0cf_thumbs.webp"
+    "image": "assets/product-thumbs/lanzaguisantes_de_hielo_7041b0cf_thumbs.webp",
+    "file": "lanzaguisantes_de_hielo_7041b0cf.zip"
   },
   {
     "id": 21,
@@ -165,15 +185,17 @@
     "desc": "Estética estelar y moderna para que tu teléfono se vea impecable.",
     "price": 2000,
     "stock": 0,
-    "image": "assets/product-thumbs/astra_yao_ec9bcd48_thumbs.webp"
+    "image": "assets/product-thumbs/astra_yao_ec9bcd48_thumbs.webp",
+    "file": "astra_yao_ec9bcd48.zip"
   },
-    {
+  {
     "id": 22,
     "name": "Xilonen",
     "desc": "La herrera de Natlan para el fondo de tu PC.",
     "price": 1300,
     "stock": 1,
-    "image": "assets/product-thumbs/xilonen_c4f2a9d1_thumbs.webp"
+    "image": "assets/product-thumbs/xilonen_c4f2a9d1_thumbs.webp",
+    "file": "xilonen_c4f2a9d1.zip"
   },
   {
     "id": 23,
@@ -181,7 +203,8 @@
     "desc": "Varesa para tu fondo de celular.",
     "price": 530,
     "stock": 1,
-    "image": "assets/product-thumbs/varesa_7b8e3f6a_thumbs.webp"
+    "image": "assets/product-thumbs/varesa_7b8e3f6a_thumbs.webp",
+    "file": "varesa_7b8e3f6a.zip"
   },
   {
     "id": 24,
@@ -189,7 +212,8 @@
     "desc": "La Arconte Pyro para el fondo de tu PC.",
     "price": 730,
     "stock": 1,
-    "image": "assets/product-thumbs/mavuika_9e41d6b2_thumbs.webp"
+    "image": "assets/product-thumbs/mavuika_9e41d6b2_thumbs.webp",
+    "file": "mavuika_9e41d6b2.zip"
   },
   {
     "id": 25,
@@ -197,7 +221,8 @@
     "desc": "Nueva skin de Hu Tao para tu celular.",
     "price": 2000,
     "stock": 1,
-    "image": "assets/product-thumbs/hutao_f3a7c981_thumbs.webp"
+    "image": "assets/product-thumbs/hutao_f3a7c981_thumbs.webp",
+    "file": "hutao_f3a7c981.zip"
   },
   {
     "id": 26,
@@ -205,7 +230,8 @@
     "desc": "Wallpaper de Sonic y Shadow para tu teléfono.",
     "price": 630,
     "stock": 1,
-    "image": "assets/product-thumbs/sonicxshadow_4a9c2d7e_thumbs.webp"
+    "image": "assets/product-thumbs/sonicxshadow_4a9c2d7e_thumbs.webp",
+    "file": "sonicxshadow_4a9c2d7e.zip"
   },
   {
     "id": 27,
@@ -213,7 +239,8 @@
     "desc": "Goku y Vegeta juntos para el fondo de tu celular.",
     "price": 900,
     "stock": 1,
-    "image": "assets/product-thumbs/gokuxvegeta_8f3b6c1a_thumbs.webp"
+    "image": "assets/product-thumbs/gokuxvegeta_8f3b6c1a_thumbs.webp",
+    "file": "gokuxvegeta_8f3b6c1a.zip"
   },
   {
     "id": 28,
@@ -221,15 +248,17 @@
     "desc": "Fondo de Hatsune Miku para decorar tu PC.",
     "price": 1800,
     "stock": 1,
-    "image": "assets/product-thumbs/hatsunemiku_b2e7a94f_thumbs.webp"
+    "image": "assets/product-thumbs/hatsunemiku_b2e7a94f_thumbs.webp",
+    "file": "hatsunemiku_b2e7a94f.zip"
   },
-   {
+  {
     "id": 29,
     "name": "Jane Doe",
     "desc": "Wallpaper de Jane Doe para tu teléfono.",
     "price": 800,
     "stock": 1,
-    "image": "assets/product-thumbs/jane_doe_5c8a1f2e_thumbs.webp"
+    "image": "assets/product-thumbs/jane_doe_5c8a1f2e_thumbs.webp",
+    "file": "jane_doe_5c8a1f2e.zip"
   },
   {
     "id": 30,
@@ -237,7 +266,8 @@
     "desc": "Versión chibi de Jane Doe.",
     "price": 50,
     "stock": 3,
-    "image": "assets/product-thumbs/jane_doe_chibi_1_9d3f7b4a_thumbs.webp"
+    "image": "assets/product-thumbs/jane_doe_chibi_1_9d3f7b4a_thumbs.webp",
+    "file": "jane_doe_chibi_1_9d3f7b4a.zip"
   },
   {
     "id": 31,
@@ -245,7 +275,8 @@
     "desc": "Miku Nakano para el fondo de tu celular.",
     "price": 700,
     "stock": 1,
-    "image": "assets/product-thumbs/miku_nakano_3e9d2a6c_thumbs.webp"
+    "image": "assets/product-thumbs/miku_nakano_3e9d2a6c_thumbs.webp",
+    "file": "miku_nakano_3e9d2a6c.zip"
   },
   {
     "id": 32,
@@ -253,7 +284,8 @@
     "desc": "Wallpaper de Sacarosa.",
     "price": 500,
     "stock": 1,
-    "image": "assets/product-thumbs/sacarosa_8b1f4d9e_thumbs.webp"
+    "image": "assets/product-thumbs/sacarosa_8b1f4d9e_thumbs.webp",
+    "file": "sacarosa_8b1f4d9e.zip"
   },
   {
     "id": 33,
@@ -261,7 +293,8 @@
     "desc": "Fondo de Trunks del Futuro para tu teléfono.",
     "price": 700,
     "stock": 1,
-    "image": "assets/product-thumbs/trunks_del_futuro_6a0c3f8d_thumbs.webp"
+    "image": "assets/product-thumbs/trunks_del_futuro_6a0c3f8d_thumbs.webp",
+    "file": "trunks_del_futuro_6a0c3f8d.zip"
   },
   {
     "id": 34,
@@ -269,7 +302,8 @@
     "desc": "La batalla de Gogeta contra Broly en tu pantalla.",
     "price": 200,
     "stock": 1,
-    "image": "assets/product-thumbs/gogeta_vs_broly_2d9a7e4c_thumbs.webp"
+    "image": "assets/product-thumbs/gogeta_vs_broly_2d9a7e4c_thumbs.webp",
+    "file": "gogeta_vs_broly_2d9a7e4c.zip"
   },
   {
     "id": 35,
@@ -277,7 +311,8 @@
     "desc": "Wallpaper del combate contra Zamasu para tu celular.",
     "price": 800,
     "stock": 1,
-    "image": "assets/product-thumbs/vegetto_vs_zamasu_b5c8f1a3_thumbs.webp"
+    "image": "assets/product-thumbs/vegetto_vs_zamasu_b5c8f1a3_thumbs.webp",
+    "file": "vegetto_vs_zamasu_b5c8f1a3.zip"
   },
   {
     "id": 36,
@@ -285,6 +320,7 @@
     "desc": "Wallpaper de Amy Rose para tu teléfono.",
     "price": 2000,
     "stock": 1,
-    "image": "assets/product-thumbs/amy_rose_7e3d9c2b_thumbs.webp"
+    "image": "assets/product-thumbs/amy_rose_7e3d9c2b_thumbs.webp",
+    "file": "amy_rose_7e3d9c2b.zip"
   }
 ]
