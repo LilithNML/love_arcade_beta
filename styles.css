@@ -225,26 +225,26 @@ ul { list-style: none; }
    ========================================================= */
 .games-grid {
     display: grid;
-    grid-template-columns: 1fr; /* Mobile base */
+    grid-template-columns: 1fr; /* Mobile base: 1 columna */
     gap: 18px;
 }
 .game-card {
-    background: var(--surface); border-radius: var(--radius-lg); overflow: hidden;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    position: relative; border: 1px solid transparent; display: flex; flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden; transition: all 0.2s;
+    position: relative;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
 }
-.game-card:hover { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-color: rgba(155,89,255,0.3); }
-.card-cover { height: 150px; width: 100%; background-size: cover; background-position: center; position: relative; }
-.card-badge {
-    position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 6px;
-    font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
-    color: white; backdrop-filter: blur(4px);
+.game-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+.card-cover {
+    width: 100%; height: 140px; /* Mobile base */
+    object-fit: cover;
+    border-bottom: 1px solid var(--glass-border);
 }
-.badge-new { background: var(--accent); }
-.badge-hot { background: #ff4757; }
-.card-info { padding: 16px; flex: 1; display: flex; flex-direction: column; }
-.card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-.card-desc { font-size: 0.85rem; color: var(--text-med); margin-bottom: 16px; line-height: 1.4; flex: 1; }
+.card-info { padding: 16px; /* Mobile base */ }
+.card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 5px; color: white; }
+.card-desc { font-size: 0.88rem; color: var(--text-med); line-height: 1.5; }
 
 /* =========================================================
    TIENDA — HERO BALANCE
@@ -266,17 +266,24 @@ ul { list-style: none; }
 /* =========================================================
    TIENDA — SHOP GRID
    Mobile: 2 columnas; Desktop: auto-fill
+   OPTIMIZACIÓN: Centrado perfecto
    ========================================================= */
 .shop-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr); /* Mobile: 2 columnas */
     gap: 12px;
+    justify-content: center;   /* Centra las columnas si hay espacio sobrante */
+    justify-items: center;     /* Centra las cards dentro de su celda */
+    width: 100%;
+    margin: 0 auto;            /* Asegura centrado del contenedor */
 }
 .shop-card {
     border-radius: var(--radius-lg);
     padding: 12px; /* Mobile base: más compacto */
     display: flex; flex-direction: column; align-items: center; text-align: center;
     transition: 0.2s; position: relative;
+    width: 100%;
+    max-width: 170px; /* Limita el ancho para que no se estiren demasiado */
 }
 .shop-card:hover { background: rgba(255,255,255,0.03); border-color: var(--accent); }
 
@@ -406,6 +413,7 @@ ul { list-style: none; }
 
 /* =========================================================
    TIENDA — TOOLBAR (search + pills)
+   OPTIMIZACIÓN: Scroll horizontal en filtros
    ========================================================= */
 .shop-toolbar { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 .search-wrap { position: relative; width: 100%; }
@@ -429,12 +437,27 @@ ul { list-style: none; }
 .search-clear:hover { background: rgba(255,255,255,0.2); color: white; }
 .search-count { font-size: 0.82rem; color: var(--text-low); margin-bottom: 6px; font-style: italic; }
 
-.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* OPTIMIZACIÓN MOBILE: Fila única con scroll horizontal */
+.filter-pills { 
+    display: flex; 
+    flex-wrap: nowrap;      /* Impide que bajen a la segunda fila */
+    overflow-x: auto;       /* Permite scroll horizontal */
+    gap: 8px; 
+    padding-bottom: 8px;    /* Espacio para que el scroll no tape el diseño */
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS/Android */
+}
+
+.filter-pills::-webkit-scrollbar {
+    display: none;          /* Oculta barra de scroll para limpieza visual */
+}
+
 .pill {
     padding: 5px 12px; border-radius: 20px; border: 1px solid var(--glass-border);
     background: rgba(255,255,255,0.04); color: var(--text-med); font-size: 0.78rem; font-weight: 600;
     cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px;
-    font-family: inherit; white-space: nowrap;
+    font-family: inherit; 
+    white-space: nowrap;    /* Mantiene el texto en una sola línea */
+    flex-shrink: 0;         /* Evita que los botones se deformen */
 }
 .pill:hover { border-color: var(--accent); color: white; }
 .pill.active { background: var(--accent); border-color: var(--accent); color: white; }
@@ -649,51 +672,45 @@ ul { list-style: none; }
 /* =========================================================
    HISTORIAL DE TRANSACCIONES
    ========================================================= */
-.history-list {
-    display: flex; flex-direction: column; gap: 2px;
-    max-height: 380px; overflow-y: auto;
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item {
+    padding: 10px 12px; border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.82rem; transition: 0.2s;
 }
-.history-entry {
-    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-    border-radius: var(--radius-md); background: rgba(255,255,255,0.02); transition: background 0.15s;
-}
-.history-entry:hover { background: rgba(255,255,255,0.05); }
+.history-item:hover { background: rgba(255,255,255,0.05); }
+.history-left { display: flex; align-items: center; gap: 10px; }
 .history-icon {
-    width: 26px; height: 26px; border-radius: 50%; font-size: 0.8rem; font-weight: 900;
+    width: 28px; height: 28px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.history-icon--in  { background: rgba(74,222,128,0.15); color: #4ade80; }
-.history-icon--out { background: rgba(255,71,87,0.15);  color: #ff4757; }
-.history-detail {
-    flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;
-}
-.history-motivo {
-    font-size: 0.82rem; font-weight: 600; color: var(--text-high);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.history-fecha { font-size: 0.72rem; color: var(--text-low); }
-.history-amount { font-size: 0.88rem; font-weight: 700; white-space: nowrap; }
-.history-amount--in  { color: #4ade80; }
-.history-amount--out { color: #ff4757; }
+.history-icon--spend  { background: rgba(255,71,87,0.12); color: #ff4757; }
+.history-icon--earn   { background: rgba(74,222,128,0.12); color: #4ade80; }
+.history-icon--refund { background: rgba(168,85,247,0.12); color: #a855f7; }
+.history-details { display: flex; flex-direction: column; gap: 1px; }
+.history-label { font-weight: 600; color: var(--text-high); }
+.history-time  { font-size: 0.72rem; color: var(--text-low); }
+.history-amount { font-weight: 700; white-space: nowrap; }
+.history-amount--spend  { color: #ff4757; }
+.history-amount--earn   { color: #4ade80; }
+.history-amount--refund { color: #a855f7; }
 
 /* =========================================================
-   TOAST NOTIFICATIONS
+   TOAST
    ========================================================= */
 .toast {
-    position: fixed;
-    /* Mobile: sobre la bottom nav */
-    bottom: calc(var(--bottom-nav-height) + 10px);
-    left: 50%; transform: translateX(-50%) translateY(20px);
-    padding: 12px 18px; border-radius: 14px;
-    font-size: 0.84rem; font-weight: 600;
-    display: flex; align-items: center; gap: 10px;
-    z-index: 9999; opacity: 0;
-    transition: opacity 0.3s, transform 0.3s;
-    max-width: 92vw; text-align: center;
-    backdrop-filter: blur(12px); box-shadow: 0 4px 30px rgba(0,0,0,0.4);
-    pointer-events: none; line-height: 1.5;
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--bottom-nav-height) + 20px); /* Mobile base */
+    padding: 12px 18px; border-radius: var(--radius-md);
+    font-size: 0.84rem; font-weight: 500; z-index: 9999;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    animation: toastIn 0.3s ease, toastOut 0.25s ease 2.7s forwards;
+    max-width: calc(100vw - 40px);
 }
-.toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+@keyframes toastIn  { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toastOut { to   { opacity: 0; transform: translate(-50%, 20px); } }
 .toast--success { background: rgba(26,29,34,0.97); border: 1px solid rgba(74,222,128,0.4); color: #4ade80; }
 .toast--error   { background: rgba(26,29,34,0.97); border: 1px solid rgba(255,71,87,0.4); color: #ff4757; }
 
