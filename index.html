@@ -24,6 +24,8 @@
 
         <div class="nav-user">
             <div class="coin-badge">
+                <!-- Ícono de luna: visible solo cuando Bendición Lunar está activa -->
+                <span class="moon-blessing-badge hidden" title="Bendición Lunar activa">🌙</span>
                 <i data-lucide="star" size="16" fill="#facc15"></i>
                 <span class="coin-display">0</span>
             </div>
@@ -160,7 +162,7 @@
                 <details class="glass-panel">
                     <summary>¿Cómo gano monedas?</summary>
                     <div class="faq-content">
-                        Ganas monedas completando niveles en los juegos, canjeando códigos promocionales en la tienda, y reclamando el Bono Diario (+20 monedas cada 24 horas) desde esta pantalla. Cuando hay ofertas activas, el cashback te devuelve un porcentaje de cada compra automáticamente.
+                        Ganas monedas completando niveles en los juegos, canjeando códigos promocionales en la tienda, y reclamando el Bono Diario desde esta pantalla. La recompensa diaria escala con tu racha: empieza en 20 monedas y aumenta 5 por cada día consecutivo, hasta un máximo de 60. Activa la Bendición Lunar para sumar 90 monedas extra por reclamo.
                     </div>
                 </details>
                 <details class="glass-panel">
@@ -176,21 +178,27 @@
                     </div>
                 </details>
                 <details class="glass-panel">
+                    <summary>¿Qué es la Bendición Lunar?</summary>
+                    <div class="faq-content">
+                        La Bendición Lunar es un buff temporal que puedes activar desde la Tienda → Ajustes por 100 monedas. Mientras esté activa (7 días reales), cada vez que reclames el bono diario recibirás 90 monedas adicionales además de tu recompensa normal de racha. El icono 🌙 aparece junto a tu saldo cuando el buff está activo.
+                    </div>
+                </details>
+                <details class="glass-panel">
                     <summary>¿Cómo busco wallpapers específicos?</summary>
                     <div class="faq-content">
-                        En la Tienda encontrarás una barra de búsqueda y pills de filtro. Puedes buscar por nombre, descripción o filtrar por categoría: PC, Mobile, Anime, Gaming, Sonic, Dragon Ball o Genshin. Los filtros se combinan con la búsqueda de texto en tiempo real.
+                        En la Tienda encontrarás una barra de búsqueda con debounce y pills de filtro. Puedes buscar por nombre, descripción o filtrar por categoría: PC, Mobile, Anime, Gaming, Sonic, Dragon Ball o Genshin. Los filtros se combinan con la búsqueda de texto en tiempo real.
                     </div>
                 </details>
                 <details class="glass-panel">
                     <summary>¿Cómo cambio el tema de color?</summary>
                     <div class="faq-content">
-                        Ve a Tienda → pestaña "Ajustes". Allí encontrarás el selector de tema con 4 opciones: Violeta, Rosa Neón, Cyan Arcade y Dorado. El color se aplica instantáneamente a toda la plataforma y se guarda en tu progreso.
+                        Ve a Tienda → pestaña "Ajustes". Encontrarás el selector de tema con 5 opciones: Violeta, Rosa Neón, Cyan Arcade, Dorado y el nuevo Carmesí Arcade. El color se aplica instantáneamente a toda la plataforma y se guarda en tu progreso.
                     </div>
                 </details>
                 <details class="glass-panel">
                     <summary>¿Qué pasa si cambio de dispositivo?</summary>
                     <div class="faq-content">
-                        Usa "Sincronizar" en la Tienda. Exporta tu partida (genera un código), pégalo en el otro dispositivo usando "Importar". Tu progreso completo —monedas, wallpapers, tema y bono diario— se transfiere al instante.
+                        Usa "Sincronizar" en la Tienda. Exporta tu partida (genera un código con checksum de integridad), pégalo en el otro dispositivo usando "Importar". Tu progreso completo —monedas, wallpapers, racha, tema y buff lunar— se transfiere al instante. El sistema rechaza cualquier código que haya sido editado manualmente.
                     </div>
                 </details>
             </div>
