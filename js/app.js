@@ -14,7 +14,7 @@ const CONFIG = {
 // ECONOMÍA — Editar aquí para eventos especiales
 // =====================================================
 const ECONOMY = {
-    isSaleActive: false,      // true = descuento global activo
+    isSaleActive: true,      // true = descuento global activo
     saleMultiplier: 0.8,      // 0.8 = 20% de descuento
     saleLabel: '20% OFF',     // Badge de oferta
     cashbackRate: 0.1         // 10% de cashback en cada compra
