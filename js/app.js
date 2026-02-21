@@ -401,7 +401,7 @@ window.GameCenter = {
         logTransaction(
             'ingreso',
             totalReward,
-            `Bono diario · racha ${newStreak}${moonActive ? ' + 🌙 Bendición Lunar' : ''}`
+            `Bono diario · racha ${newStreak}${moonActive ? ' + Bendición Lunar' : ''}`
         );
 
         saveState();
@@ -413,7 +413,7 @@ window.GameCenter = {
             baseReward,
             moonBonus,
             streak:      newStreak,
-            message:     `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''} 🔥`
+            message:     `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}`
         };
     },
 
@@ -458,7 +458,7 @@ window.GameCenter = {
             : now
         ) + DURATION;
 
-        logTransaction('gasto', COST, '🌙 Bendición Lunar activada (7 días)');
+        logTransaction('gasto', COST, 'Bendición Lunar activada (7 días)');
         saveState();
         updateMoonBlessingUI();
 
@@ -617,10 +617,10 @@ function updateDailyButton() {
 
     if (span) {
         if (!can) {
-            span.textContent = `Vuelve mañana · Racha: ${info.streak} 🔥`;
+            span.textContent = `Vuelve mañana · Racha: ${info.streak}`;
         } else {
             const moonStatus = window.GameCenter.getMoonBlessingStatus();
-            const moonNote   = moonStatus.active ? ' +🌙' : '';
+            const moonNote   = moonStatus.active ? ' +Luna' : '';
             span.textContent = `Bono Diario (+${info.nextReward}${moonNote})`;
         }
     }
@@ -633,7 +633,7 @@ function updateMoonBlessingUI() {
     moonBadges.forEach(badge => {
         badge.classList.toggle('hidden', !status.active);
         if (status.active) {
-            badge.title = `🌙 Bendición Lunar activa hasta ${status.expiresAt}`;
+            badge.title = `Bendición Lunar activa hasta ${status.expiresAt}`;
         }
     });
 
@@ -645,7 +645,7 @@ function updateMoonBlessingUI() {
             moonBtn.textContent = 'Extender Bendición (+7 días)';
             if (statusEl) statusEl.textContent = `Activa hasta ${status.expiresAt}`;
         } else {
-            moonBtn.textContent = 'Activar Bendición Lunar (100 🪙)';
+            moonBtn.textContent = 'Activar Bendición Lunar (100 monedas)';
             if (statusEl) statusEl.textContent = 'Inactiva';
         }
     }
