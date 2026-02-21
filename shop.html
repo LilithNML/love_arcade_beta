@@ -42,47 +42,33 @@
             </div>
         </div>
 
-        <!-- HERO BALANCE (oculto en móvil vía CSS) -->
-        <section class="shop-hero glass-panel">
-            <div>
-                <span class="section-subtitle">Balance Disponible</span>
-                <div class="shop-balance">
-                    <h2>
-                        <span class="moon-blessing-badge hidden">
-                            <i data-lucide="moon" size="28" color="#c084fc"></i>
-                        </span>
-                        <i data-lucide="star" size="32" fill="#facc15"></i>
-                        <span class="coin-display">0</span>
-                    </h2>
+        <!-- CÓDIGO PROMO — Colapsable -->
+        <div class="promo-toggle-wrap">
+            <button id="btn-promo-toggle" class="btn-ghost promo-toggle-btn" aria-expanded="false" aria-controls="promo-section">
+                <i data-lucide="ticket-percent" size="15"></i>
+                <span>¿Tienes un código promocional?</span>
+                <i data-lucide="chevron-down" size="14" class="promo-chevron"></i>
+            </button>
+            <section id="promo-section" class="glass-panel promo-section promo-section--collapsed" aria-hidden="true">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                    <div class="promo-icon-wrap">
+                        <i data-lucide="ticket-percent" color="white" size="20"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Canjear código</h3>
+                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <p style="color:var(--text-med); max-width:300px; text-align:right;">
-                    Canjea tus monedas por wallpapers y descárgalos al instante.
-                </p>
-            </div>
-        </section>
-
-        <!-- CÓDIGO PROMO -->
-        <section class="glass-panel promo-section">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                <div class="promo-icon-wrap">
-                    <i data-lucide="ticket-percent" color="white" size="20"></i>
+                <div class="promo-input-group">
+                    <input type="text" id="promo-input" placeholder="Ej: AMOR2024" class="promo-input">
+                    <button id="btn-redeem" class="btn-primary">
+                        <span>Canjear</span>
+                        <i data-lucide="sparkles" size="15"></i>
+                    </button>
                 </div>
-                <div>
-                    <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">¿Tienes un código secreto?</h3>
-                    <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
-                </div>
-            </div>
-            <div class="promo-input-group">
-                <input type="text" id="promo-input" placeholder="Ej: AMOR2024" class="promo-input">
-                <button id="btn-redeem" class="btn-primary">
-                    <span>Canjear</span>
-                    <i data-lucide="sparkles" size="15"></i>
-                </button>
-            </div>
-            <p id="promo-msg" class="feedback-msg"></p>
-        </section>
+                <p id="promo-msg" class="feedback-msg"></p>
+            </section>
+        </div>
 
         <!-- TABS -->
         <div class="shop-tabs">
@@ -130,7 +116,7 @@
                         <i data-lucide="smartphone" size="11"></i> Mobile
                     </button>
                     <button class="pill pill--wishlist" data-filter="Wishlist">
-                        <i data-lucide="heart" size="11"></i> Mis Lista
+                        <i data-lucide="heart" size="11"></i> Lista de deseos
                     </button>
                 </div>
             </div>
@@ -363,6 +349,19 @@
 
     </main>
 
+    <!-- CUSTOM CONFIRM MODAL -->
+    <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title" class="modal-title"></h3>
+            <div id="modal-body" class="modal-body"></div>
+            <p id="modal-error" class="modal-error"></p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn-ghost">Cancelar</button>
+                <button id="modal-confirm" class="btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
     <script>
     // ================================================
@@ -373,6 +372,28 @@
     let searchQuery  = '';
 
     // ================================================
+    // CUSTOM CONFIRM MODAL
+    // ================================================
+    let _modalResolve = null;
+
+    function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-body').innerHTML = bodyHTML;
+        document.getElementById('modal-confirm').textContent = confirmText;
+        document.getElementById('modal-error').textContent = '';
+        const overlay = document.getElementById('confirm-modal');
+        overlay.classList.remove('hidden');
+        // Defer focus so animation is visible first
+        requestAnimationFrame(() => document.getElementById('modal-confirm').focus());
+        return new Promise(resolve => { _modalResolve = resolve; });
+    }
+
+    function _closeModal(value) {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        if (_modalResolve) { _modalResolve(value); _modalResolve = null; }
+    }
+
+    // ================================================
     // INIT
     // ================================================
     document.addEventListener('DOMContentLoaded', () => {
@@ -381,11 +402,43 @@
         initEconomyInfo();
         renderMoonBlessingStatus();
 
-        // Cargar catálogo
+        // Modal buttons
+        document.getElementById('modal-cancel').addEventListener('click',  () => _closeModal(false));
+        document.getElementById('modal-confirm').addEventListener('click', () => _closeModal(true));
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) _closeModal(false);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('confirm-modal').classList.contains('hidden')) {
+                _closeModal(false);
+            }
+        });
+
+        // Promo toggle
+        document.getElementById('btn-promo-toggle').addEventListener('click', () => {
+            const toggleBtn = document.getElementById('btn-promo-toggle');
+            const section   = document.getElementById('promo-section');
+            const expanded  = toggleBtn.getAttribute('aria-expanded') === 'true';
+            toggleBtn.setAttribute('aria-expanded', String(!expanded));
+            section.setAttribute('aria-hidden',    String(expanded));
+            section.classList.toggle('promo-section--collapsed', expanded);
+            section.classList.toggle('promo-section--open', !expanded);
+            if (!expanded) setTimeout(() => document.getElementById('promo-input').focus(), 50);
+            if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
+        });
+
+        // Cargar catálogo — skeleton solo en primera carga de sesión
+        const alreadyLoaded = sessionStorage.getItem('shop-catalog-loaded');
+        if (alreadyLoaded) {
+            document.getElementById('shop-skeleton').classList.add('hidden');
+            document.getElementById('shop-container').classList.remove('hidden');
+        }
+
         fetch('data/shop.json')
             .then(r => r.json())
             .then(items => {
                 allItems = items;
+                sessionStorage.setItem('shop-catalog-loaded', '1');
                 document.getElementById('shop-skeleton').classList.add('hidden');
                 document.getElementById('shop-container').classList.remove('hidden');
                 filterItems();
@@ -622,14 +675,6 @@
                        <i data-lucide="star" size="12" fill="#facc15"></i> ${item.price}
                    </div>`;
 
-            // Solo mostrar tags PC/Mobile (v8.0: categorías simplificadas)
-            const filteredTags = Array.isArray(item.tags)
-                ? item.tags.filter(t => t === 'PC' || t === 'Mobile')
-                : [];
-            const tagsHTML = filteredTags.length
-                ? `<div class="card-tags">${filteredTags.map(t => `<span class="card-tag">${t}</span>`).join('')}</div>`
-                : '';
-
             let actionHTML;
             if (isOwned) {
                 const url = GameCenter.getDownloadUrl(item.id, item.file);
@@ -652,12 +697,12 @@
             const card = document.createElement('article');
             card.className = 'glass-panel shop-card';
             card.innerHTML = `
-                <!-- Wishlist: icono Lucide heart (v8.0 — sin emojis) -->
+                ${!isOwned ? `
                 <button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
                         data-id="${item.id}"
-                        title="${isWished ? 'Quitar de favoritos' : 'Agregar a favoritos'}">
+                        title="${isWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos'}">
                     <i data-lucide="heart" size="13"></i>
-                </button>
+                </button>` : ''}
 
                 <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
                 ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>' : ''}
@@ -665,44 +710,32 @@
 
                 <div style="width:100%">
                     <h3 class="card-name">${item.name}</h3>
-                    <p class="card-desc-text">${item.desc}</p>
-                    ${tagsHTML}
                     ${priceHTML}
-                    <div style="margin:4px 0; font-size:0.72rem;">
-                        ${isOwned
-                            ? '<span style="color:#4ade80; font-weight:600;">En tu biblioteca</span>'
-                            : isSoldOut
-                                ? '<span style="color:#ef4444; font-weight:700;">AGOTADO</span>'
-                                : `<span style="color:var(--text-low);">Disp: ${remaining}</span>`
-                        }
-                    </div>
                     ${actionHTML}
                 </div>`;
             container.appendChild(card);
         });
 
-        // Wishlist listeners (icono Lucide heart, controlado por CSS)
+        // Wishlist listeners
         container.querySelectorAll('.wishlist-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id          = parseInt(btn.dataset.id, 10);
                 const isNowWished = GameCenter.toggleWishlist(id);
                 btn.classList.toggle('wishlist-btn--active', isNowWished);
-                btn.title = isNowWished ? 'Quitar de favoritos' : 'Agregar a favoritos';
-                // Re-render icon para actualizar fill
+                btn.title = isNowWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos';
                 btn.innerHTML = '<i data-lucide="heart" size="13"></i>';
                 if (window.lucide) lucide.createIcons({ nodes: [btn] });
-                // La clase CSS wishlist-btn--active controla el fill del SVG
                 updateWishlistCost();
             });
         });
 
         // Buy listeners
         container.querySelectorAll('.shop-buy-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 try {
                     const item = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
-                    initiatePurchase(item, btn);
+                    await initiatePurchase(item, btn);
                 } catch(e) { console.error('Error parsing item data', e); }
             });
         });
@@ -812,17 +845,49 @@
     // ================================================
     // COMPRA
     // ================================================
-    function initiatePurchase(item, btn) {
+    async function initiatePurchase(item, btn) {
         const bought = GameCenter.getBoughtCount(item.id);
         if ((item.stock - bought) <= 0) return;
 
         const eco        = window.ECONOMY;
         const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
-        const confirmMsg = eco.isSaleActive
-            ? `¿Canjear "${item.name}" por ${finalPrice} monedas? (precio original: ${item.price})`
-            : `¿Canjear "${item.name}" por ${item.price} monedas?`;
+        const cashback   = Math.floor(finalPrice * eco.cashbackRate);
+        const netCost    = finalPrice - cashback;
 
-        if (!confirm(confirmMsg)) return;
+        const bodyHTML = `
+            <div class="modal-product-row">
+                <span class="modal-label">Wallpaper</span>
+                <span class="modal-value" style="color:white;">${item.name}</span>
+            </div>
+            ${eco.isSaleActive ? `
+            <div class="modal-product-row">
+                <span class="modal-label">Precio original</span>
+                <span class="modal-strikethrough">${item.price} ⭐</span>
+            </div>
+            <div class="modal-product-row">
+                <span class="modal-label">Precio con oferta</span>
+                <span class="modal-value--sale">${finalPrice} ⭐</span>
+            </div>` : `
+            <div class="modal-product-row">
+                <span class="modal-label">Precio</span>
+                <span class="modal-value">${item.price} ⭐</span>
+            </div>`}
+            ${cashback > 0 ? `
+            <div class="modal-product-row">
+                <span class="modal-label">Cashback recibido</span>
+                <span class="modal-value--cashback">+${cashback} ⭐</span>
+            </div>` : ''}
+            <div class="modal-product-row modal-product-row--total">
+                <span class="modal-label">Costo neto</span>
+                <span class="modal-value--total">${netCost} ⭐</span>
+            </div>`;
+
+        const confirmed = await openConfirmModal({
+            title: '¿Canjear wallpaper?',
+            bodyHTML,
+            confirmText: `Canjear · ${finalPrice} ⭐`
+        });
+        if (!confirmed) return;
 
         const result = GameCenter.buyItem(item);
 
@@ -974,7 +1039,16 @@
             showMsg(msg, 'Carga un archivo o pega un código primero.', '#ff4757');
             return;
         }
-        if (!confirm('¿Importar progreso? Esto reemplazará tu partida actual.')) return;
+
+        const confirmed = await openConfirmModal({
+            title: 'Importar partida',
+            bodyHTML: `<div class="modal-warning">
+                Esto <strong>reemplazará tu progreso actual</strong> (monedas, wallpapers, racha y ajustes) con los datos del código importado.<br><br>
+                Esta acción no se puede deshacer.
+            </div>`,
+            confirmText: 'Sí, importar'
+        });
+        if (!confirmed) return;
 
         btn.disabled = true;
         showMsg(msg, 'Verificando integridad del checksum…', 'var(--text-med)');
