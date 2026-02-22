@@ -70,6 +70,7 @@
                     <span>Bono Diario (+20)</span>
                 </button>
                 <p id="daily-msg" class="daily-msg"></p>
+                <p id="daily-countdown" class="daily-countdown hidden">Próximo bono en: <span id="countdown-display">--:--:--</span></p>
             </div>
         </header>
 
@@ -211,6 +212,69 @@
     <script src="js/app.js"></script>
     <script>
         lucide.createIcons();
+
+        // ── CONTADOR DE TIEMPO PARA BONO DIARIO ────────────────────────────────
+        let _countdownInterval = null;
+
+        function updateCountdownDisplay() {
+            const canClaim      = window.GameCenter.canClaimDaily();
+            const countdownEl   = document.getElementById('daily-countdown');
+            const displayEl     = document.getElementById('countdown-display');
+            if (!countdownEl || !displayEl) return;
+
+            if (canClaim) {
+                countdownEl.classList.add('hidden');
+                if (_countdownInterval) {
+                    clearInterval(_countdownInterval);
+                    _countdownInterval = null;
+                }
+                return;
+            }
+
+            // Mostrar el contador
+            countdownEl.classList.remove('hidden');
+
+            function tick() {
+                const now       = new Date();
+                const tomorrow  = new Date(now);
+                tomorrow.setHours(24, 0, 0, 0); // 00:00:00 del día siguiente
+                let diff = Math.max(0, tomorrow - now);
+
+                const hh = String(Math.floor(diff / 3_600_000)).padStart(2, '0');
+                diff %= 3_600_000;
+                const mm = String(Math.floor(diff / 60_000)).padStart(2, '0');
+                diff %= 60_000;
+                const ss = String(Math.floor(diff / 1_000)).padStart(2, '0');
+
+                displayEl.textContent = `${hh}:${mm}:${ss}`;
+
+                // Cuando llega a cero, actualizar el botón y detener
+                if (window.GameCenter.canClaimDaily()) {
+                    countdownEl.classList.add('hidden');
+                    clearInterval(_countdownInterval);
+                    _countdownInterval = null;
+                    updateDailyButton();
+                }
+            }
+
+            tick();
+            if (!_countdownInterval) {
+                _countdownInterval = setInterval(tick, 1000);
+            }
+        }
+
+        // Ejecutar al cargar y vincular al botón diario
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCountdownDisplay();
+
+            const dailyBtn = document.getElementById('btn-daily');
+            if (dailyBtn) {
+                dailyBtn.addEventListener('click', () => {
+                    // Dar tiempo a GameCenter para actualizar
+                    setTimeout(updateCountdownDisplay, 50);
+                });
+            }
+        });
     </script>
 </body>
 </html>
