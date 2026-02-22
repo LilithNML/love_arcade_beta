@@ -296,17 +296,6 @@ ul { list-style: none; }
     font-weight: 700; margin-bottom: 4px;
     line-height: 1.2;
 }
-.shop-card .card-desc-text {
-    font-size: 0.76rem; /* Mobile */
-    color: var(--text-med);
-    min-height: 28px;
-    overflow: hidden;
-    margin-bottom: 5px;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
 
 .shop-img {
     width: 100%;
@@ -714,6 +703,14 @@ ul { list-style: none; }
     font-size: 0.78rem; font-weight: 600; text-align: right;
     min-height: 1.1rem; transition: opacity 0.4s; opacity: 0;
 }
+.daily-countdown {
+    font-size: 0.75rem; color: var(--text-low); text-align: right;
+    transition: opacity 0.4s;
+}
+.daily-countdown #countdown-display {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
 
 /* =========================================================
    FAQ
@@ -768,11 +765,6 @@ details[open] summary::after { transform: rotate(45deg); }
     /* Shop card */
     .shop-card { padding: 18px; }
     .shop-card .card-name { font-size: 1.02rem; }
-    .shop-card .card-desc-text {
-        font-size: 0.82rem;
-        min-height: 36px;
-        -webkit-line-clamp: 3;
-    }
     .shop-img { height: 170px; border-radius: 12px; margin-bottom: 10px; }
 
     /* Wishlist btn */
