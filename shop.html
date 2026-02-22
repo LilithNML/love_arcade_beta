@@ -636,11 +636,9 @@
         if (!items.length) return;
 
         items.forEach(item => {
-            const bought    = GameCenter.getBoughtCount(item.id);
-            const remaining = item.stock - bought;
-            const isOwned   = bought > 0;
-            const isSoldOut = remaining <= 0 && !isOwned;
-            const isWished  = GameCenter.isWishlisted(item.id);
+            const bought   = GameCenter.getBoughtCount(item.id);
+            const isOwned  = bought > 0;
+            const isWished = GameCenter.isWishlisted(item.id);
 
             const eco        = window.ECONOMY;
             const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
@@ -666,8 +664,6 @@
                     : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6; font-size:0.82rem; padding:8px;" disabled>
                            <i data-lucide="check" size="14"></i> Obtenido
                        </button>`;
-            } else if (isSoldOut) {
-                actionHTML = `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.45; cursor:not-allowed; font-size:0.82rem; padding:8px;" disabled>Sin Stock</button>`;
             } else {
                 actionHTML = `<button class="btn-primary shop-buy-btn" style="width:100%; justify-content:center; font-size:0.82rem; padding:8px;"
                                 data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
@@ -753,7 +749,6 @@
                 <div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>
                 <div style="width:100%">
                     <h3 class="card-name">${item.name}</h3>
-                    <p class="card-desc-text">${item.desc}</p>
                     ${url
                         ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:10px; width:100%; justify-content:center; font-size:0.82rem; padding:8px;">
                                <i data-lucide="download" size="14"></i> Descargar
@@ -827,9 +822,6 @@
     // COMPRA
     // ================================================
     async function initiatePurchase(item, btn) {
-        const bought = GameCenter.getBoughtCount(item.id);
-        if ((item.stock - bought) <= 0) return;
-
         const eco        = window.ECONOMY;
         const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
         const cashback   = Math.floor(finalPrice * eco.cashbackRate);
@@ -888,7 +880,6 @@
                 if (priceEl) shakeElement(priceEl);
                 showToast('No tienes suficientes monedas para este wallpaper.', 'error');
             }
-            if (result.reason === 'stock') showToast('Producto agotado.', 'error');
         }
     }
 
