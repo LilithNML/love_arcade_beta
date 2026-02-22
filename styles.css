@@ -315,34 +315,6 @@ ul { list-style: none; }
 }
 
 /* =========================================================
-   SKELETON SCREENS
-   ========================================================= */
-.skeleton-card {
-    border-radius: var(--radius-lg); padding: 12px;
-    border: 1px solid var(--glass-border); background: var(--glass-bg);
-    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
-}
-.skeleton-img {
-    width: 100%; height: 120px; border-radius: 10px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.4s ease-in-out infinite;
-}
-.skeleton-line {
-    height: 10px; border-radius: 6px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.4s ease-in-out infinite;
-}
-.skeleton-line--long  { width: 80%; }
-.skeleton-line--med   { width: 55%; }
-.skeleton-line--short { width: 35%; }
-@keyframes skeleton-loading {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-/* =========================================================
    SHAKE ANIMATION (error de saldo insuficiente)
    ========================================================= */
 @keyframes shake {
@@ -803,10 +775,6 @@ details[open] summary::after { transform: rotate(45deg); }
     }
     .shop-img { height: 170px; border-radius: 12px; margin-bottom: 10px; }
 
-    /* Skeleton */
-    .skeleton-card { padding: 20px; gap: 12px; }
-    .skeleton-img { height: 170px; }
-
     /* Wishlist btn */
     .wishlist-btn { width: 30px; height: 30px; top: 10px; left: 10px; }
 
@@ -936,7 +904,7 @@ details[open] summary::after { transform: rotate(45deg); }
 }
 
 /* ==========================================================
-   FIX — Filtros, centrado de grid y elementos dinámicos
+   FIX — Filtros y centrado de grid
    ========================================================== */
 
 /* Garantía extra: pills no crecen ni encogen en ningún motor */
@@ -947,19 +915,6 @@ details[open] summary::after { transform: rotate(45deg); }
 /* Scrollbar sutil en Chrome/Safari móvil */
 .filter-pills::-webkit-scrollbar { height: 6px; }
 .filter-pills::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 6px; }
-
-/* Elementos dinámicos inyectados por JS */
-.history-entry {
-  display: flex; gap: 10px; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
-  color: var(--text-med);
-}
-.history-icon {
-  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.04);
-}
-.feedback-msg { font-size: 0.86rem; color: var(--text-low); margin-top: 8px; }
 
 /* ─────────────────────────────────────────────────────────
    END OF STYLES
