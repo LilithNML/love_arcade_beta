@@ -275,7 +275,7 @@ window.GameCenter = {
 
     buyItem: (itemData) => {
         const bought = store.inventory[itemData.id] || 0;
-        if (bought >= itemData.stock) return { success: false, reason: 'stock' };
+        if (bought > 0) return { success: false, reason: 'owned' };
 
         const finalPrice = ECONOMY.isSaleActive
             ? Math.floor(itemData.price * ECONOMY.saleMultiplier)
