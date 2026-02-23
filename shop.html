@@ -10,338 +10,383 @@
 </head>
 <body>
 
+    <!-- ── TOP NAVBAR ── -->
     <nav class="navbar glass-panel">
         <div class="nav-brand">
-            <i data-lucide="shopping-bag" color="#9b59ff" size="24"></i>
+            <i data-lucide="shopping-bag" size="22"></i>
             Tienda
         </div>
         <div class="nav-user">
-            <a href="index.html" class="btn-ghost">
-                <i data-lucide="arrow-left" size="15"></i> Volver
+            <a href="index.html" class="btn-ghost" style="font-size:0.8rem; padding:7px 12px;">
+                <i data-lucide="arrow-left" size="14"></i> Volver
             </a>
             <div class="coin-badge">
-                <!-- Ícono lunar: visible solo cuando Bendición Lunar está activa -->
                 <span class="moon-blessing-badge hidden" title="Bendición Lunar activa">
-                    <i data-lucide="moon" size="14" color="#c084fc"></i>
+                    <i data-lucide="moon" size="13"></i>
                 </span>
-                <i data-lucide="star" size="16" fill="#facc15"></i>
-                <span class="coin-display">...</span>
+                <i data-lucide="star" size="15" fill="#fbbf24" stroke="none"></i>
+                <span class="coin-display">…</span>
             </div>
         </div>
     </nav>
 
     <main class="container">
 
-        <!-- SALE BANNER -->
+        <!-- ─────────────────────────────────
+             SALE BANNER — Flash Offer Ticket
+             ───────────────────────────────── -->
         <div id="sale-banner" class="sale-banner hidden">
-            <div class="sale-banner__inner">
-                <i data-lucide="zap" size="16" fill="currentColor"></i>
-                <strong id="sale-label-text">¡OFERTA ESPECIAL!</strong>
-                <span id="sale-desc-text">Descuento activo en toda la tienda.</span>
-                <i data-lucide="zap" size="16" fill="currentColor"></i>
+            <div class="sale-banner__ticket">
+                <div class="sale-banner__notch-left"></div>
+                <div class="sale-banner__notch-right"></div>
+                <div class="sale-banner__icon">
+                    <i data-lucide="zap" size="20" fill="currentColor" stroke="none"></i>
+                </div>
+                <div class="sale-banner__content">
+                    <p class="sale-banner__title" id="sale-label-text">¡OFERTA ESPECIAL!</p>
+                    <p class="sale-banner__desc" id="sale-desc-text">Descuento activo en toda la tienda.</p>
+                </div>
+                <div class="sale-banner__badge" id="sale-badge-pct">20%</div>
             </div>
         </div>
 
-        <!-- CÓDIGO PROMO — Colapsable -->
+        <!-- ─────────────────────────────────
+             CÓDIGO PROMO
+             ───────────────────────────────── -->
         <div class="promo-toggle-wrap">
             <button id="btn-promo-toggle" class="btn-ghost promo-toggle-btn" aria-expanded="false" aria-controls="promo-section">
-                <i data-lucide="ticket-percent" size="15"></i>
+                <i data-lucide="ticket-percent" size="14"></i>
                 <span>¿Tienes un código promocional?</span>
-                <i data-lucide="chevron-down" size="14" class="promo-chevron"></i>
+                <i data-lucide="chevron-down" size="13" class="promo-chevron"></i>
             </button>
             <section id="promo-section" class="glass-panel promo-section promo-section--collapsed" aria-hidden="true">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                     <div class="promo-icon-wrap">
-                        <i data-lucide="ticket-percent" color="white" size="20"></i>
+                        <i data-lucide="ticket-percent" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1.05rem; font-weight:700; letter-spacing:-0.3px;">Canjear código</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800; letter-spacing:-0.2px;">Canjear código</h3>
+                        <p style="margin:0; font-size:0.75rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
                     </div>
                 </div>
                 <div class="promo-input-group">
                     <input type="text" id="promo-input" placeholder="Ej: AMOR2024" class="promo-input">
                     <button id="btn-redeem" class="btn-primary">
                         <span>Canjear</span>
-                        <i data-lucide="sparkles" size="15"></i>
+                        <i data-lucide="sparkles" size="14"></i>
                     </button>
                 </div>
                 <p id="promo-msg" class="feedback-msg"></p>
             </section>
         </div>
 
-        <!-- TABS -->
+        <!-- ─────────────────────────────────
+             TABS
+             ───────────────────────────────── -->
         <div class="shop-tabs">
             <button class="shop-tab active" data-tab="catalog">
-                <i data-lucide="layout-grid" size="14"></i> Catálogo
+                <i data-lucide="layout-grid" size="13"></i> Catálogo
             </button>
             <button class="shop-tab" data-tab="library">
-                <i data-lucide="archive" size="14"></i> Mis Tesoros
+                <i data-lucide="archive" size="13"></i> Mis Tesoros
             </button>
             <button class="shop-tab" data-tab="sync">
-                <i data-lucide="refresh-cw" size="14"></i> Sincronizar
+                <i data-lucide="refresh-cw" size="13"></i> Sincronizar
             </button>
             <button class="shop-tab" data-tab="settings">
-                <i data-lucide="settings-2" size="14"></i> Ajustes
+                <i data-lucide="settings-2" size="13"></i> Ajustes
             </button>
         </div>
 
-        <!-- ===========================
+        <!-- ═══════════════════════════════
              TAB: CATÁLOGO
-        ============================ -->
+             ═══════════════════════════════ -->
         <section id="tab-catalog" class="tab-panel">
 
             <div class="shop-toolbar">
                 <div class="search-wrap">
-                    <i data-lucide="search" size="15" class="search-icon"></i>
-                    <input
-                        type="text"
-                        id="search-input"
-                        class="search-input"
-                        placeholder="Buscar wallpaper..."
-                        autocomplete="off"
-                    >
+                    <i data-lucide="search" size="14" class="search-icon"></i>
+                    <input type="text" id="search-input" class="search-input"
+                           placeholder="Buscar wallpaper…" autocomplete="off">
                     <button id="search-clear" class="search-clear hidden" aria-label="Limpiar">
-                        <i data-lucide="x" size="13"></i>
+                        <i data-lucide="x" size="12"></i>
                     </button>
                 </div>
-
-                <!-- Filtros simplificados: solo Todos, PC, Mobile + Mis Lista -->
                 <div class="filter-pills" id="filter-pills">
                     <button class="pill active" data-filter="Todos">Todos</button>
                     <button class="pill" data-filter="PC">
-                        <i data-lucide="monitor" size="11"></i> PC
+                        <i data-lucide="monitor" size="10"></i> PC
                     </button>
                     <button class="pill" data-filter="Mobile">
-                        <i data-lucide="smartphone" size="11"></i> Mobile
+                        <i data-lucide="smartphone" size="10"></i> Mobile
                     </button>
                     <button class="pill pill--wishlist" data-filter="Wishlist">
-                        <i data-lucide="heart" size="11"></i> Lista de deseos
+                        <i data-lucide="heart" size="10"></i> Lista de deseos
                     </button>
                 </div>
             </div>
 
-            <!-- Indicador de coste de wishlist -->
+            <!-- Wishlist cost indicator -->
             <div id="wishlist-cost-banner" class="wishlist-cost-banner hidden">
-                <i data-lucide="heart" size="13" fill="currentColor" style="color:#ff4f7a; flex-shrink:0;"></i>
+                <i data-lucide="heart" size="12" fill="currentColor" style="color:#ff4f7a; flex-shrink:0;"></i>
                 <span id="wishlist-cost-text"></span>
             </div>
 
             <p id="search-results-count" class="search-count hidden"></p>
-
-            <!-- Grid del catálogo -->
             <div id="shop-container" class="shop-grid"></div>
 
             <div id="filter-empty" class="filter-empty hidden">
-                <i data-lucide="search-x" size="44"></i>
+                <i data-lucide="search-x" size="40"></i>
                 <p>Sin resultados para tu búsqueda.</p>
                 <button class="btn-ghost" onclick="resetFilters()">Ver todo el catálogo</button>
             </div>
         </section>
 
-        <!-- ===========================
+        <!-- ═══════════════════════════════
              TAB: MIS TESOROS
-        ============================ -->
+             ═══════════════════════════════ -->
         <section id="tab-library" class="tab-panel hidden">
-            <div class="section-header">
-                <h2 class="section-title">Mis Tesoros</h2>
-                <p class="section-subtitle">Todos tus wallpapers desbloqueados</p>
+            <div class="section-header" style="margin-bottom:16px;">
+                <div>
+                    <h2 class="section-title">Mis Tesoros</h2>
+                    <p class="section-subtitle">Todos tus wallpapers desbloqueados</p>
+                </div>
             </div>
             <div id="library-container" class="shop-grid">
-                <p style="color:var(--text-med)">Cargando tu biblioteca...</p>
+                <p style="color:var(--text-low); grid-column:1/-1; text-align:center; padding:40px 0;">Cargando tu biblioteca…</p>
             </div>
         </section>
 
-        <!-- ===========================
-             TAB: SINCRONIZAR
-        ============================ -->
+        <!-- ═══════════════════════════════
+             TAB: SINCRONIZAR — Memory Card
+             ═══════════════════════════════ -->
         <section id="tab-sync" class="tab-panel hidden">
-            <div class="section-header">
-                <h2 class="section-title">Sincronizar Partida</h2>
-                <p class="section-subtitle">Transfiere tu progreso entre dispositivos</p>
+            <div class="section-header" style="margin-bottom:16px;">
+                <div>
+                    <h2 class="section-title">Sincronizar Partida</h2>
+                    <p class="section-subtitle">Transfiere tu progreso entre dispositivos</p>
+                </div>
+            </div>
+
+            <!-- Status chips -->
+            <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; background:var(--accent-soft); border:1px solid var(--accent-border); font-size:0.72rem; font-weight:700; color:var(--accent);">
+                    <i data-lucide="shield-check" size="12"></i> Checksum SHA-256
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; background:var(--success-soft); border:1px solid rgba(34,208,122,0.3); font-size:0.72rem; font-weight:700; color:var(--success);">
+                    <i data-lucide="lock" size="12"></i> Anti-edición
+                </div>
             </div>
 
             <!-- EXPORTAR -->
-            <div class="glass-panel sync-card" style="margin-bottom:1.25rem; border-left:4px solid var(--accent);">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap">
-                        <i data-lucide="upload-cloud" color="white" size="20"></i>
+            <div class="memory-card">
+                <div class="memory-card__header">
+                    <div class="memory-card__chip memory-card__chip--export">
+                        <i data-lucide="upload-cloud" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Exportar partida</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">
-                            Copia el código al portapapeles y descarga un archivo .txt de respaldo
-                        </p>
+                        <h3 class="memory-card__title">Exportar partida</h3>
+                        <p class="memory-card__sub">Genera un código de seguridad y descarga respaldo .txt</p>
                     </div>
                 </div>
-                <button id="btn-export" class="btn-primary">
-                    <i data-lucide="download-cloud" size="16"></i>
+                <button id="btn-export" class="btn-primary" style="position:relative; z-index:1;">
+                    <i data-lucide="download-cloud" size="15"></i>
                     <span>Exportar y descargar</span>
                 </button>
                 <p id="export-msg" class="feedback-msg"></p>
             </div>
 
             <!-- IMPORTAR -->
-            <div class="glass-panel sync-card" style="border-left:4px solid #4ade80;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background:#4ade80;">
-                        <i data-lucide="upload-cloud" color="white" size="20"></i>
+            <div class="memory-card" style="border-color:rgba(34,208,122,0.25);">
+                <div class="memory-card__header">
+                    <div class="memory-card__chip memory-card__chip--import">
+                        <i data-lucide="download-cloud" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Importar partida</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">
-                            Carga tu archivo .txt de respaldo o pega el código manualmente
-                        </p>
+                        <h3 class="memory-card__title">Importar partida</h3>
+                        <p class="memory-card__sub">Carga tu respaldo .txt o pega el código manualmente</p>
                     </div>
                 </div>
 
-                <!-- Carga por archivo (FileReader — sin bloqueo de hilo) -->
-                <label for="import-file" class="btn-ghost file-label">
-                    <i data-lucide="file-up" size="15"></i> Cargar archivo .txt
+                <label for="import-file" class="btn-ghost file-label" style="position:relative; z-index:1;">
+                    <i data-lucide="file-up" size="14"></i> Cargar archivo .txt
                 </label>
                 <input type="file" id="import-file" accept=".txt" hidden>
                 <span id="import-file-name" class="file-name-display">Ningún archivo seleccionado</span>
 
-                <div class="sync-separator">o pega el código manualmente</div>
+                <div class="sync-separator" style="position:relative; z-index:1;">o pega el código manualmente</div>
 
-                <textarea
-                    id="import-input"
-                    class="sync-textarea"
-                    placeholder="Pega tu código aquí..."
-                ></textarea>
+                <textarea id="import-input" class="sync-textarea" placeholder="Pega tu código aquí…" style="position:relative; z-index:1;"></textarea>
 
-                <button id="btn-import" class="btn-primary" style="margin-top:12px; background:#4ade80; color:#000; width:100%; justify-content:center;">
-                    <i data-lucide="check" size="16"></i>
+                <button id="btn-import" class="btn-primary" style="margin-top:10px; width:100%; justify-content:center; position:relative; z-index:1; background:linear-gradient(135deg,#22d07a,#16a85e); color:#041a0a;">
+                    <i data-lucide="check-circle" size="15"></i>
                     <span>Importar progreso</span>
                 </button>
                 <p id="import-msg" class="feedback-msg"></p>
             </div>
         </section>
 
-        <!-- ===========================
+        <!-- ═══════════════════════════════
              TAB: AJUSTES
-        ============================ -->
+             ═══════════════════════════════ -->
         <section id="tab-settings" class="tab-panel hidden">
-            <div class="section-header">
-                <h2 class="section-title">Ajustes</h2>
-                <p class="section-subtitle">Personaliza tu experiencia</p>
+            <div class="section-header" style="margin-bottom:16px;">
+                <div>
+                    <h2 class="section-title">Ajustes</h2>
+                    <p class="section-subtitle">Personaliza tu experiencia</p>
+                </div>
             </div>
 
-            <!-- Tema de color -->
-            <div class="glass-panel settings-card">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.25rem;">
+            <!-- ── Tema de color ── -->
+            <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.1rem;">
                     <div class="promo-icon-wrap">
-                        <i data-lucide="palette" color="white" size="20"></i>
+                        <i data-lucide="palette" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Tema de color</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Tema de color</h3>
+                        <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
                     </div>
                 </div>
                 <div class="theme-grid">
                     <button class="theme-btn" data-theme="violet">
-                        <span class="theme-swatch" style="background:#9b59ff;"></span>
+                        <span class="theme-swatch" style="background:#9b59ff; color:#9b59ff;"></span>
                         <span class="theme-name">Violeta</span>
-                        <i data-lucide="check" size="13" class="theme-check"></i>
+                        <i data-lucide="check" size="12" class="theme-check"></i>
                     </button>
                     <button class="theme-btn" data-theme="pink">
-                        <span class="theme-swatch" style="background:#ff59b4;"></span>
+                        <span class="theme-swatch" style="background:#ff59b4; color:#ff59b4;"></span>
                         <span class="theme-name">Rosa Neón</span>
-                        <i data-lucide="check" size="13" class="theme-check"></i>
+                        <i data-lucide="check" size="12" class="theme-check"></i>
                     </button>
                     <button class="theme-btn" data-theme="cyan">
-                        <span class="theme-swatch" style="background:#00d4ff;"></span>
+                        <span class="theme-swatch" style="background:#00d4ff; color:#00d4ff;"></span>
                         <span class="theme-name">Cyan Arcade</span>
-                        <i data-lucide="check" size="13" class="theme-check"></i>
+                        <i data-lucide="check" size="12" class="theme-check"></i>
                     </button>
                     <button class="theme-btn" data-theme="gold">
-                        <span class="theme-swatch" style="background:#f59e0b;"></span>
+                        <span class="theme-swatch" style="background:#f59e0b; color:#f59e0b;"></span>
                         <span class="theme-name">Dorado</span>
-                        <i data-lucide="check" size="13" class="theme-check"></i>
+                        <i data-lucide="check" size="12" class="theme-check"></i>
                     </button>
                     <button class="theme-btn" data-theme="crimson">
-                        <span class="theme-swatch" style="background:#e11d48;"></span>
+                        <span class="theme-swatch" style="background:#e11d48; color:#e11d48;"></span>
                         <span class="theme-name">Carmesí</span>
-                        <i data-lucide="check" size="13" class="theme-check"></i>
+                        <i data-lucide="check" size="12" class="theme-check"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Bendición Lunar -->
-            <div class="glass-panel settings-card" style="margin-top:1.25rem; border-left:4px solid #c084fc;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
+            <!-- ── Bendición Lunar ── -->
+            <div class="glass-panel settings-card" style="margin-bottom:1rem; border-color:rgba(192,132,252,0.2);">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                     <div class="promo-icon-wrap moon-icon-wrap">
-                        <i data-lucide="moon" color="white" size="20"></i>
+                        <i data-lucide="moon" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Bendición Lunar</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">+90 monedas extra en cada bono diario durante 7 días</p>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Bendición Lunar</h3>
+                        <p style="margin:0; font-size:0.72rem; color:var(--text-low);">+90 monedas extra en cada bono diario durante 7 días</p>
                     </div>
                 </div>
-                <div class="economy-info" style="margin-bottom:1rem;">
+                <div class="economy-info" style="margin-bottom:14px;">
                     <div class="economy-row">
-                        <span>Estado</span>
+                        <span style="font-size:0.85rem; color:var(--text-med);">Estado</span>
                         <span id="moon-blessing-status" class="eco-badge">Cargando…</span>
                     </div>
                     <div class="economy-row">
-                        <span>Costo</span>
+                        <span style="font-size:0.85rem; color:var(--text-med);">Costo</span>
                         <span class="eco-badge eco-badge--gold">100 monedas</span>
                     </div>
                     <div class="economy-row">
-                        <span>Efecto</span>
+                        <span style="font-size:0.85rem; color:var(--text-med);">Efecto</span>
                         <span class="eco-badge eco-badge--moon">+90 por día</span>
                     </div>
                 </div>
                 <button id="btn-moon-blessing" class="btn-primary moon-btn" style="width:100%; justify-content:center;">
-                    <i data-lucide="moon" size="15"></i>
+                    <i data-lucide="moon" size="14"></i>
                     <span>Activar Bendición Lunar (100 monedas)</span>
                 </button>
                 <p id="moon-blessing-msg" class="feedback-msg"></p>
             </div>
 
-            <!-- Estado de economía -->
-            <div class="glass-panel settings-card" style="margin-top:1.25rem;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background:#facc15;">
-                        <i data-lucide="trending-up" color="#000" size="20"></i>
+            <!-- ── Racha semanal ── -->
+            <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                    <div class="promo-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                        <i data-lucide="flame" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Estado de la economía</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Configuración actual de descuentos y cashback</p>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Racha Diaria</h3>
+                        <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Vuelve cada día para aumentar tu recompensa</p>
+                    </div>
+                </div>
+                <div class="streak-calendar" id="settings-streak-calendar">
+                    <!-- Populated by JS -->
+                </div>
+                <p style="font-size:0.72rem; color:var(--text-low); margin-top:10px; text-align:center;">
+                    Cada día de racha aumenta +5 monedas (máx. 60)
+                </p>
+            </div>
+
+            <!-- ── Estado de la economía ── -->
+            <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                    <div class="promo-icon-wrap" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);">
+                        <i data-lucide="trending-up" color="#120900" size="18"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Estado de la economía</h3>
+                        <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Descuentos y cashback activos</p>
                     </div>
                 </div>
                 <div class="economy-info">
                     <div class="economy-row">
-                        <span>Descuento global</span>
+                        <span style="font-size:0.85rem; color:var(--text-med);">Descuento global</span>
                         <span id="eco-sale-status" class="eco-badge">—</span>
                     </div>
                     <div class="economy-row">
-                        <span>Cashback por compra</span>
+                        <span style="font-size:0.85rem; color:var(--text-med);">Cashback por compra</span>
                         <span id="eco-cashback" class="eco-badge eco-badge--green">—</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Historial de transacciones -->
-            <div class="glass-panel settings-card" style="margin-top:1.25rem;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                    <div class="promo-icon-wrap" style="background:rgba(148,163,184,0.3);">
-                        <i data-lucide="scroll-text" color="white" size="20"></i>
+            <!-- ── Historial de transacciones ── -->
+            <div class="glass-panel settings-card">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                    <div class="promo-icon-wrap" style="background:rgba(148,163,184,0.2);">
+                        <i data-lucide="scroll-text" color="white" size="18"></i>
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:1rem; font-weight:700;">Historial de transacciones</h3>
-                        <p style="margin:0; font-size:0.78rem; color:var(--text-low);">Últimos movimientos de tu saldo</p>
+                        <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Historial de transacciones</h3>
+                        <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Últimos movimientos de tu saldo</p>
                     </div>
                 </div>
                 <div id="history-list" class="history-list">
-                    <p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Cargando historial…</p>
+                    <p style="color:var(--text-low); font-size:0.8rem; text-align:center; padding:20px 0;">Cargando…</p>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <!-- CUSTOM CONFIRM MODAL -->
+    <!-- ── WALLPAPER PREVIEW MODAL ── -->
+    <div id="preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Vista previa de wallpaper">
+        <div class="modal-box" style="max-width:500px; padding:0; overflow:hidden; background:#070710;">
+            <div id="preview-img-wrap" style="width:100%; aspect-ratio:16/9; position:relative; overflow:hidden; background:var(--bg-surface);">
+                <img id="preview-img" src="" alt="" style="width:100%; height:100%; object-fit:cover;">
+                <button id="preview-close" aria-label="Cerrar" style="position:absolute; top:10px; right:10px; background:rgba(7,7,13,0.8); border:1px solid rgba(255,255,255,0.15); color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(8px); transition:0.2s;">
+                    <i data-lucide="x" size="16"></i>
+                </button>
+            </div>
+            <div style="padding:18px 20px;">
+                <h3 id="preview-name" style="font-family:var(--font-display); font-size:1.05rem; font-weight:900; margin-bottom:6px;"></h3>
+                <div id="preview-actions" style="display:flex; gap:8px; margin-top:14px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── CUSTOM CONFIRM MODAL ── -->
     <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-box">
             <h3 id="modal-title" class="modal-title"></h3>
@@ -364,18 +409,17 @@
     let searchQuery  = '';
 
     // ================================================
-    // CUSTOM CONFIRM MODAL
+    // CONFIRM MODAL
     // ================================================
     let _modalResolve = null;
 
     function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
         document.getElementById('modal-title').textContent = title;
-        document.getElementById('modal-body').innerHTML = bodyHTML;
+        document.getElementById('modal-body').innerHTML   = bodyHTML;
         document.getElementById('modal-confirm').textContent = confirmText;
-        document.getElementById('modal-error').textContent = '';
+        document.getElementById('modal-error').textContent   = '';
         const overlay = document.getElementById('confirm-modal');
         overlay.classList.remove('hidden');
-        // Defer focus so animation is visible first
         requestAnimationFrame(() => document.getElementById('modal-confirm').focus());
         return new Promise(resolve => { _modalResolve = resolve; });
     }
@@ -386,6 +430,57 @@
     }
 
     // ================================================
+    // WALLPAPER PREVIEW MODAL
+    // ================================================
+    function openPreviewModal(item) {
+        const modal    = document.getElementById('preview-modal');
+        const img      = document.getElementById('preview-img');
+        const nameEl   = document.getElementById('preview-name');
+        const actionsEl = document.getElementById('preview-actions');
+        const eco = window.ECONOMY;
+
+        img.src    = item.image;
+        img.alt    = item.name;
+        nameEl.textContent = item.name;
+
+        const isOwned    = GameCenter.getBoughtCount(item.id) > 0;
+        const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+
+        if (isOwned) {
+            const url = GameCenter.getDownloadUrl(item.id, item.file);
+            actionsEl.innerHTML = url
+                ? `<a href="${url}" download class="btn-primary vault-btn" style="flex:1; justify-content:center;">
+                       <i data-lucide="download" size="14"></i> Descargar
+                   </a>`
+                : `<button class="btn-primary" style="flex:1; justify-content:center; opacity:0.5;" disabled>
+                       <i data-lucide="check" size="14"></i> Obtenido
+                   </button>`;
+        } else {
+            actionsEl.innerHTML = `
+                <button class="btn-ghost" style="flex:1; justify-content:center;" id="preview-close-btn">Volver</button>
+                <button class="btn-primary preview-buy-btn" style="flex:2; justify-content:center;"
+                        data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                    <i data-lucide="star" size="13" fill="#fbbf24" stroke="none"></i>
+                    Canjear · ${finalPrice}
+                </button>`;
+        }
+
+        modal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons({ nodes: [actionsEl] });
+
+        // Buy button inside preview
+        actionsEl.querySelector('.preview-buy-btn')?.addEventListener('click', async () => {
+            modal.classList.add('hidden');
+            const parsed = JSON.parse(actionsEl.querySelector('.preview-buy-btn').dataset.item.replace(/&#39;/g, "'"));
+            await initiatePurchase(parsed, null);
+        });
+
+        document.getElementById('preview-close-btn')?.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+    }
+
+    // ================================================
     // INIT
     // ================================================
     document.addEventListener('DOMContentLoaded', () => {
@@ -393,16 +488,27 @@
         initSaleBanner();
         initEconomyInfo();
         renderMoonBlessingStatus();
+        renderStreakCalendar();
 
-        // Modal buttons
+        // Confirm modal buttons
         document.getElementById('modal-cancel').addEventListener('click',  () => _closeModal(false));
         document.getElementById('modal-confirm').addEventListener('click', () => _closeModal(true));
-        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+        document.getElementById('confirm-modal').addEventListener('click', e => {
             if (e.target === e.currentTarget) _closeModal(false);
         });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !document.getElementById('confirm-modal').classList.contains('hidden')) {
-                _closeModal(false);
+
+        // Preview modal close
+        document.getElementById('preview-close').addEventListener('click', () => {
+            document.getElementById('preview-modal').classList.add('hidden');
+        });
+        document.getElementById('preview-modal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) document.getElementById('preview-modal').classList.add('hidden');
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                document.getElementById('confirm-modal').classList.add('hidden');
+                document.getElementById('preview-modal').classList.add('hidden');
             }
         });
 
@@ -419,7 +525,7 @@
             if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
         });
 
-        // Cargar catálogo
+        // Load catalog
         fetch('data/shop.json')
             .then(r => r.json())
             .then(items => {
@@ -431,7 +537,7 @@
             .catch(err => {
                 console.error('Error cargando shop.json:', err);
                 document.getElementById('shop-container').innerHTML =
-                    '<p style="color:#ff4757; grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo. Recarga la página.</p>';
+                    '<p style="color:var(--error); grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo.</p>';
             });
 
         // Promo code
@@ -445,7 +551,7 @@
             btn.addEventListener('click', () => switchTab(btn.dataset.tab))
         );
 
-        // Búsqueda con debounce
+        // Search
         const searchInput = document.getElementById('search-input');
         const clearBtn    = document.getElementById('search-clear');
         const debouncedFilter = debounce(() => {
@@ -465,7 +571,7 @@
             searchInput.focus();
         });
 
-        // Filter pills (solo Todos, PC, Mobile, Wishlist)
+        // Filter pills
         document.querySelectorAll('.pill').forEach(pill => {
             pill.addEventListener('click', () => {
                 document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -475,30 +581,48 @@
             });
         });
 
-        // Sync buttons
+        // Sync
         document.getElementById('btn-export')?.addEventListener('click', handleExport);
         document.getElementById('btn-import')?.addEventListener('click', handleImport);
 
-        // Import por archivo (FileReader — evita el bloqueo de hilo con texto masivo)
-        document.getElementById('import-file')?.addEventListener('change', (e) => {
+        document.getElementById('import-file')?.addEventListener('change', e => {
             const file = e.target.files[0];
             if (!file) return;
             const nameEl = document.getElementById('import-file-name');
             if (nameEl) nameEl.textContent = file.name;
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                const textarea = document.getElementById('import-input');
-                if (textarea) textarea.value = evt.target.result.trim();
-                showMsg(
-                    document.getElementById('import-msg'),
-                    `Archivo "${file.name}" cargado. Haz clic en "Importar progreso" para aplicarlo.`,
-                    'var(--text-med)'
-                );
+            reader.onload = evt => {
+                const ta = document.getElementById('import-input');
+                if (ta) ta.value = evt.target.result.trim();
+                showMsg(document.getElementById('import-msg'),
+                    `Archivo "${file.name}" cargado. Haz clic en Importar.`, 'var(--text-med)');
             };
-            reader.onerror = () => {
-                showMsg(document.getElementById('import-msg'), 'Error al leer el archivo.', '#ff4757');
-            };
+            reader.onerror = () => showMsg(document.getElementById('import-msg'), 'Error al leer.', 'var(--error)');
             reader.readAsText(file);
+        });
+
+        // Theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                if (window.GameCenter) window.GameCenter.setTheme(theme);
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('theme-btn--active'));
+                btn.classList.add('theme-btn--active');
+            });
+        });
+
+        // Moon blessing
+        document.getElementById('btn-moon-blessing')?.addEventListener('click', () => {
+            const result = window.GameCenter?.activateMoonBlessing?.();
+            const msg    = document.getElementById('moon-blessing-msg');
+            if (result?.success) {
+                showMsg(msg, result.message || 'Bendición Lunar activada.', 'var(--success)');
+                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+                renderMoonBlessingStatus();
+            } else {
+                showMsg(msg, result?.message || 'Monedas insuficientes.', 'var(--error)');
+                shakeElement(document.getElementById('btn-moon-blessing'));
+            }
         });
 
         if (window.lucide) lucide.createIcons();
@@ -517,49 +641,41 @@
         if (tab === 'settings') {
             renderHistory();
             renderMoonBlessingStatus();
+            renderStreakCalendar();
         }
         if (window.lucide) lucide.createIcons();
     }
 
     // ================================================
-    // FILTROS + BÚSQUEDA
-    // Solo categorías: Todos / PC / Mobile / Wishlist (v8.0)
-    // Los ítems en Wishlist aparecen siempre al principio.
+    // FILTROS
     // ================================================
     function filterItems() {
         if (!allItems.length) return;
 
         const filtered = allItems.filter(item => {
-            // Filtro de categoría
             let matchesFilter;
             if (activeFilter === 'Todos') {
                 matchesFilter = true;
             } else if (activeFilter === 'Wishlist') {
                 matchesFilter = GameCenter.isWishlisted(item.id);
             } else {
-                // Solo PC / Mobile
                 matchesFilter = Array.isArray(item.tags) && item.tags.includes(activeFilter);
             }
-
-            // Filtro de búsqueda de texto
             const matchesSearch = !searchQuery ||
                 item.name.toLowerCase().includes(searchQuery) ||
                 item.desc.toLowerCase().includes(searchQuery) ||
                 (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
-
             return matchesFilter && matchesSearch;
         });
 
-        // Wishlist al principio de los resultados
         const wishlisted = filtered.filter(item => GameCenter.isWishlisted(item.id));
         const others     = filtered.filter(item => !GameCenter.isWishlisted(item.id));
-        const sorted     = [...wishlisted, ...others];
-
-        renderShop(sorted);
+        renderShop([...wishlisted, ...others]);
 
         const countEl = document.getElementById('search-results-count');
         const emptyEl = document.getElementById('filter-empty');
         const gridEl  = document.getElementById('shop-container');
+        const sorted  = [...wishlisted, ...others];
 
         if (sorted.length === 0) {
             gridEl.classList.add('hidden');
@@ -569,12 +685,9 @@
             gridEl.classList.remove('hidden');
             emptyEl.classList.add('hidden');
             const isFiltered = activeFilter !== 'Todos' || searchQuery;
-            countEl.textContent = isFiltered
-                ? `${sorted.length} resultado${sorted.length !== 1 ? 's' : ''}`
-                : '';
+            countEl.textContent = isFiltered ? `${sorted.length} resultado${sorted.length !== 1 ? 's' : ''}` : '';
             countEl.classList.toggle('hidden', !isFiltered);
         }
-
         updateWishlistCost();
     }
 
@@ -589,41 +702,61 @@
     }
 
     // ================================================
-    // WISHLIST COST INDICATOR
+    // WISHLIST COST
     // ================================================
     function updateWishlistCost() {
         const banner = document.getElementById('wishlist-cost-banner');
         const textEl = document.getElementById('wishlist-cost-text');
         if (!banner || !textEl || !allItems.length) return;
 
-        const unwownedWishlisted = allItems.filter(item =>
+        const unwowned = allItems.filter(item =>
             GameCenter.isWishlisted(item.id) && GameCenter.getBoughtCount(item.id) === 0
         );
-
-        if (unwownedWishlisted.length === 0) {
-            banner.classList.add('hidden');
-            return;
-        }
+        if (unwowned.length === 0) { banner.classList.add('hidden'); return; }
 
         const eco   = window.ECONOMY;
-        const total = unwownedWishlisted.reduce((sum, item) => {
-            const price = eco.isSaleActive
-                ? Math.floor(item.price * eco.saleMultiplier)
-                : item.price;
+        const total = unwowned.reduce((sum, item) => {
+            const price = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
             return sum + price;
         }, 0);
 
         const balance = GameCenter.getBalance();
         const needed  = Math.max(0, total - balance);
-        const count   = unwownedWishlisted.length;
+        const count   = unwowned.length;
         const plural  = count !== 1 ? 's' : '';
 
         textEl.innerHTML = needed > 0
-            ? `Necesitas <strong>${needed}</strong> monedas más para comprar toda tu lista (<strong>${count}</strong> ítem${plural})`
-            : `¡Tienes saldo suficiente para comprar toda tu lista! (<strong>${count}</strong> ítem${plural})`;
+            ? `Necesitas <strong>${needed} ⭐</strong> más para toda tu lista (<strong>${count}</strong> ítem${plural})`
+            : `¡Tienes saldo para toda tu lista! (<strong>${count}</strong> ítem${plural})`;
 
         banner.classList.remove('hidden');
         if (window.lucide) lucide.createIcons({ nodes: [banner] });
+    }
+
+    // ================================================
+    // RENDER STREAK CALENDAR
+    // ================================================
+    function renderStreakCalendar() {
+        const cal = document.getElementById('settings-streak-calendar');
+        if (!cal) return;
+        const state  = window.GameCenter?.getState?.();
+        const streak = state?.streak || 0;
+        const days   = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+        const rewards = [20, 25, 30, 35, 40, 50, 60];
+
+        cal.innerHTML = days.map((day, i) => {
+            let cls = 'streak-cal-dot';
+            if (i < streak) cls += ' claimed';
+            else if (i === streak) cls += ' today';
+            return `<div class="streak-cal-day">
+                <span class="streak-cal-label">${day}</span>
+                <div class="${cls}" title="${rewards[i]} monedas">
+                    ${i < streak ? '<i data-lucide="check" size="10"></i>' : rewards[i]}
+                </div>
+            </div>`;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons({ nodes: [cal] });
     }
 
     // ================================================
@@ -632,43 +765,46 @@
     function renderShop(items) {
         const container = document.getElementById('shop-container');
         container.innerHTML = '';
-
         if (!items.length) return;
 
         items.forEach(item => {
-            const bought   = GameCenter.getBoughtCount(item.id);
-            const isOwned  = bought > 0;
-            const isWished = GameCenter.isWishlisted(item.id);
-
+            const bought     = GameCenter.getBoughtCount(item.id);
+            const isOwned    = bought > 0;
+            const isWished   = GameCenter.isWishlisted(item.id);
             const eco        = window.ECONOMY;
             const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
 
             const priceHTML = eco.isSaleActive && !isOwned
                 ? `<div class="shop-price">
                        <span class="price-original">${item.price}</span>
-                       <i data-lucide="star" size="12" fill="#facc15"></i>
+                       <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i>
                        <span class="price-sale">${finalPrice}</span>
-                       <span class="sale-pill">${eco.saleLabel}</span>
                    </div>`
                 : `<div class="shop-price">
-                       <i data-lucide="star" size="12" fill="#facc15"></i> ${item.price}
+                       <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i>
+                       ${isOwned ? '<span style="color:var(--success);">Obtenido</span>' : item.price}
                    </div>`;
 
             let actionHTML;
             if (isOwned) {
                 const url = GameCenter.getDownloadUrl(item.id, item.file);
                 actionHTML = url
-                    ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center; font-size:0.82rem; padding:8px;">
-                           <i data-lucide="download" size="14"></i> Descargar
+                    ? `<a href="${url}" download class="btn-primary vault-btn" style="width:100%; justify-content:center; font-size:0.78rem; padding:7px;">
+                           <i data-lucide="download" size="13"></i> Descargar
                        </a>`
-                    : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.6; font-size:0.82rem; padding:8px;" disabled>
-                           <i data-lucide="check" size="14"></i> Obtenido
+                    : `<button class="btn-primary" style="width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;" disabled>
+                           <i data-lucide="check" size="13"></i> Obtenido
                        </button>`;
             } else {
-                actionHTML = `<button class="btn-primary shop-buy-btn" style="width:100%; justify-content:center; font-size:0.82rem; padding:8px;"
-                                data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
-                                <i data-lucide="star" size="12" fill="#facc15"></i> Canjear
-                              </button>`;
+                actionHTML = `<div style="display:flex; gap:5px; width:100%;">
+                    <button class="btn-ghost shop-preview-btn" style="flex-shrink:0; padding:7px 9px;" data-id="${item.id}" title="Vista previa">
+                        <i data-lucide="eye" size="13"></i>
+                    </button>
+                    <button class="btn-primary shop-buy-btn" style="flex:1; justify-content:center; font-size:0.78rem; padding:7px;"
+                            data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                        <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i> ${finalPrice}
+                    </button>
+                </div>`;
             }
 
             const card = document.createElement('article');
@@ -677,15 +813,15 @@
                 ${!isOwned ? `
                 <button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
                         data-id="${item.id}"
-                        title="${isWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos'}">
-                    <i data-lucide="heart" size="13"></i>
+                        title="${isWished ? 'Quitar de lista' : 'Agregar a lista de deseos'}">
+                    <i data-lucide="heart" size="12"></i>
                 </button>` : ''}
 
                 <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
-                ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>' : ''}
-                ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="10" fill="currentColor"></i> OFERTA</div>' : ''}
+                ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>' : ''}
+                ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="9" fill="currentColor" stroke="none"></i> OFERTA</div>' : ''}
 
-                <div style="width:100%">
+                <div style="width:100%;">
                     <h3 class="card-name">${item.name}</h3>
                     ${priceHTML}
                     ${actionHTML}
@@ -695,15 +831,24 @@
 
         // Wishlist listeners
         container.querySelectorAll('.wishlist-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', e => {
                 e.stopPropagation();
-                const id          = parseInt(btn.dataset.id, 10);
-                const isNowWished = GameCenter.toggleWishlist(id);
-                btn.classList.toggle('wishlist-btn--active', isNowWished);
-                btn.title = isNowWished ? 'Quitar de lista de deseos' : 'Agregar a lista de deseos';
-                btn.innerHTML = '<i data-lucide="heart" size="13"></i>';
+                const id        = parseInt(btn.dataset.id, 10);
+                const isNow     = GameCenter.toggleWishlist(id);
+                btn.classList.toggle('wishlist-btn--active', isNow);
+                btn.title = isNow ? 'Quitar de lista' : 'Agregar a lista de deseos';
+                btn.innerHTML = '<i data-lucide="heart" size="12"></i>';
                 if (window.lucide) lucide.createIcons({ nodes: [btn] });
                 updateWishlistCost();
+            });
+        });
+
+        // Preview listeners
+        container.querySelectorAll('.shop-preview-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id   = parseInt(btn.dataset.id, 10);
+                const item = allItems.find(i => i.id === id);
+                if (item) openPreviewModal(item);
             });
         });
 
@@ -713,7 +858,7 @@
                 try {
                     const item = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
                     await initiatePurchase(item, btn);
-                } catch(e) { console.error('Error parsing item data', e); }
+                } catch(e) { console.error('Error parsing item', e); }
             });
         });
 
@@ -730,10 +875,10 @@
 
         if (owned.length === 0) {
             container.innerHTML = `
-                <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-med);">
-                    <i data-lucide="archive" size="44" style="opacity:0.3; display:block; margin:0 auto 14px;"></i>
-                    <p style="font-size:1rem; font-weight:600;">Tu biblioteca está vacía</p>
-                    <p style="font-size:0.82rem; margin-top:6px;">Canjea items en el Catálogo para verlos aquí.</p>
+                <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-low);">
+                    <i data-lucide="archive" size="40" style="opacity:0.25; display:block; margin:0 auto 12px;"></i>
+                    <p style="font-family:var(--font-display); font-size:1rem; font-weight:700; color:var(--text-med);">Tu biblioteca está vacía</p>
+                    <p style="font-size:0.8rem; margin-top:6px;">Canjea wallpapers en el Catálogo.</p>
                 </div>`;
             if (window.lucide) lucide.createIcons();
             return;
@@ -746,15 +891,15 @@
             card.className = 'glass-panel shop-card';
             card.innerHTML = `
                 <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
-                <div class="owned-badge"><i data-lucide="check-circle-2" size="11"></i> Tuyo</div>
-                <div style="width:100%">
+                <div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>
+                <div style="width:100%;">
                     <h3 class="card-name">${item.name}</h3>
                     ${url
-                        ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:10px; width:100%; justify-content:center; font-size:0.82rem; padding:8px;">
-                               <i data-lucide="download" size="14"></i> Descargar
+                        ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:8px; width:100%; justify-content:center; font-size:0.78rem; padding:7px;">
+                               <i data-lucide="download" size="13"></i> Descargar
                            </a>`
-                        : `<button class="btn-primary" style="margin-top:10px; width:100%; justify-content:center; opacity:0.6; font-size:0.82rem; padding:8px;" disabled>
-                               <i data-lucide="check" size="14"></i> Sin archivo
+                        : `<button class="btn-primary" style="margin-top:8px; width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;" disabled>
+                               <i data-lucide="check" size="13"></i> Sin archivo
                            </button>`
                     }
                 </div>`;
@@ -772,48 +917,41 @@
         const history = GameCenter.getHistory();
 
         if (!history.length) {
-            container.innerHTML = '<p style="color:var(--text-low); font-size:0.85rem; text-align:center; padding:20px 0;">Aún no hay transacciones registradas.</p>';
+            container.innerHTML = '<p style="color:var(--text-low); font-size:0.8rem; text-align:center; padding:16px 0;">Sin transacciones aún.</p>';
             return;
         }
 
         container.innerHTML = history.slice(0, 50).map(entry => {
             if (entry.tipo) {
-                const isIngreso = entry.tipo === 'ingreso';
+                const isIn  = entry.tipo === 'ingreso';
                 const fecha = new Date(entry.fecha).toLocaleString('es-MX', {
                     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                 });
-                return `
-                    <div class="history-entry">
-                        <span class="history-icon ${isIngreso ? 'history-icon--in' : 'history-icon--out'}">
-                            ${isIngreso ? '+' : '-'}
-                        </span>
-                        <div class="history-detail">
-                            <span class="history-motivo">${entry.motivo}</span>
-                            <span class="history-fecha">${fecha}</span>
-                        </div>
-                        <span class="history-amount ${isIngreso ? 'history-amount--in' : 'history-amount--out'}">
-                            ${isIngreso ? '+' : '-'}${entry.cantidad}
-                        </span>
-                    </div>`;
+                return `<div class="history-entry">
+                    <span class="history-icon ${isIn ? 'history-icon--in' : 'history-icon--out'}">${isIn ? '+' : '-'}</span>
+                    <div class="history-detail">
+                        <span class="history-motivo">${entry.motivo}</span>
+                        <span class="history-fecha">${fecha}</span>
+                    </div>
+                    <span class="history-amount ${isIn ? 'history-amount--in' : 'history-amount--out'}">
+                        ${isIn ? '+' : '-'}${entry.cantidad}
+                    </span>
+                </div>`;
             } else {
-                // Formato legado
                 const fecha = entry.date
                     ? new Date(entry.date).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                     : '—';
                 const isCode = entry.itemId === 'promo_code';
-                return `
-                    <div class="history-entry">
-                        <span class="history-icon ${isCode ? 'history-icon--in' : 'history-icon--out'}">
-                            ${isCode ? '+' : '-'}
-                        </span>
-                        <div class="history-detail">
-                            <span class="history-motivo">${entry.name || 'Transacción'}</span>
-                            <span class="history-fecha">${fecha}</span>
-                        </div>
-                        <span class="history-amount ${isCode ? 'history-amount--in' : 'history-amount--out'}">
-                            ${isCode ? `+${entry.price || '?'}` : `-${entry.price || '?'}`}
-                        </span>
-                    </div>`;
+                return `<div class="history-entry">
+                    <span class="history-icon ${isCode ? 'history-icon--in' : 'history-icon--out'}">${isCode ? '+' : '-'}</span>
+                    <div class="history-detail">
+                        <span class="history-motivo">${entry.name || 'Transacción'}</span>
+                        <span class="history-fecha">${fecha}</span>
+                    </div>
+                    <span class="history-amount ${isCode ? 'history-amount--in' : 'history-amount--out'}">
+                        ${isCode ? `+${entry.price || '?'}` : `-${entry.price || '?'}`}
+                    </span>
+                </div>`;
             }
         }).join('');
     }
@@ -830,7 +968,7 @@
         const bodyHTML = `
             <div class="modal-product-row">
                 <span class="modal-label">Wallpaper</span>
-                <span class="modal-value" style="color:white;">${item.name}</span>
+                <span class="modal-value" style="color:var(--text-high); font-size:0.85rem;">${item.name}</span>
             </div>
             ${eco.isSaleActive ? `
             <div class="modal-product-row">
@@ -838,7 +976,7 @@
                 <span class="modal-strikethrough">${item.price} ⭐</span>
             </div>
             <div class="modal-product-row">
-                <span class="modal-label">Precio con oferta</span>
+                <span class="modal-label">Con oferta</span>
                 <span class="modal-value--sale">${finalPrice} ⭐</span>
             </div>` : `
             <div class="modal-product-row">
@@ -847,11 +985,11 @@
             </div>`}
             ${cashback > 0 ? `
             <div class="modal-product-row">
-                <span class="modal-label">Cashback recibido</span>
+                <span class="modal-label">Cashback</span>
                 <span class="modal-value--cashback">+${cashback} ⭐</span>
             </div>` : ''}
             <div class="modal-product-row modal-product-row--total">
-                <span class="modal-label">Costo neto</span>
+                <span class="modal-label" style="font-weight:700;">Costo neto</span>
                 <span class="modal-value--total">${netCost} ⭐</span>
             </div>`;
 
@@ -863,22 +1001,17 @@
         if (!confirmed) return;
 
         const result = GameCenter.buyItem(item);
-
         if (result.success) {
             filterItems();
             document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
             fireConfetti();
-            const cashbackNote = result.cashback > 0
-                ? ` <strong>+${result.cashback} cashback</strong> devueltas.`
-                : '';
-            showToast(`"${item.name}" desbloqueado.${cashbackNote} Ve a <strong>Mis Tesoros</strong> para descargar.`, 'success');
+            const cbNote = result.cashback > 0 ? ` <strong>+${result.cashback} cashback</strong> devueltas.` : '';
+            showToast(`"${item.name}" desbloqueado.${cbNote} Ve a <strong>Mis Tesoros</strong>.`, 'success');
             updateWishlistCost();
         } else {
             if (result.reason === 'coins') {
                 if (btn) shakeElement(btn);
-                const priceEl = btn?.closest('.shop-card')?.querySelector('.shop-price');
-                if (priceEl) shakeElement(priceEl);
-                showToast('No tienes suficientes monedas para este wallpaper.', 'error');
+                showToast('No tienes suficientes monedas.', 'error');
             }
         }
     }
@@ -894,15 +1027,16 @@
     // CONFETTI
     // ================================================
     function fireConfetti() {
-        confetti({ particleCount: 60, angle: 60,  spread: 70, origin: { x: 0, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
-        confetti({ particleCount: 60, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors: ['#9b59ff','#ff59b4','#facc15','#4ade80','#00d4ff'] });
+        const colors = ['#9b59ff','#ff59b4','#fbbf24','#22d07a','#00d4ff'];
+        confetti({ particleCount: 55, angle: 60,  spread: 65, origin: { x: 0, y: 0.7 }, colors });
+        confetti({ particleCount: 55, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors });
     }
 
     // ================================================
     // TOAST
     // ================================================
     function showToast(html, type = 'success') {
-        const toast = document.createElement('div');
+        const toast     = document.createElement('div');
         toast.className = `toast toast--${type}`;
         toast.innerHTML = html;
         document.body.appendChild(toast);
@@ -914,7 +1048,7 @@
     }
 
     // ================================================
-    // PROMO CODE (async — SHA-256)
+    // PROMO CODE
     // ================================================
     async function handleRedeem() {
         const input = document.getElementById('promo-input');
@@ -928,94 +1062,71 @@
         btn.disabled = false;
 
         if (result.success) {
-            showMsg(msg, `${result.message}`, '#4ade80');
+            showMsg(msg, result.message, 'var(--success)');
             input.value = '';
             input.style.borderColor = '';
             document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#facc15','#9b59ff','#4ade80'] });
+            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#fbbf24','#9b59ff','#22d07a'] });
         } else {
-            showMsg(msg, `${result.message}`, '#ff4757');
-            input.style.borderColor = '#ff4757';
+            showMsg(msg, result.message, 'var(--error)');
+            input.style.borderColor = 'var(--error)';
             shakeElement(btn);
         }
     }
 
     // ================================================
-    // SYNC — Exportación con Clipboard API + Blob download
+    // SYNC
     // ================================================
     async function handleExport() {
         const msg = document.getElementById('export-msg');
         const btn = document.getElementById('btn-export');
-
         btn.disabled = true;
-        showMsg(msg, 'Generando código con checksum…', 'var(--text-med)');
+        showMsg(msg, 'Generando código con checksum…', 'var(--text-low)');
 
         const code = await GameCenter.exportSave();
         btn.disabled = false;
 
-        if (!code) {
-            showMsg(msg, 'Error al generar el código.', '#ff4757');
-            return;
-        }
+        if (!code) { showMsg(msg, 'Error al generar el código.', 'var(--error)'); return; }
 
-        // 1. Copiar al portapapeles
         let clipboardOk = false;
         try {
             await navigator.clipboard.writeText(code);
             clipboardOk = true;
         } catch (_) {
-            // Fallback para navegadores sin Clipboard API
             try {
                 const ta = document.createElement('textarea');
                 ta.value = code;
-                Object.assign(ta.style, { position: 'fixed', opacity: '0', top: '0', left: '0' });
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                clipboardOk = true;
-            } catch (_2) { /* no copy */ }
+                Object.assign(ta.style, { position:'fixed', opacity:'0', top:'0', left:'0' });
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+                document.body.removeChild(ta); clipboardOk = true;
+            } catch (_2) {}
         }
 
-        // 2. Descarga automática como archivo .txt (sin bloquear el hilo)
         try {
             const blob = new Blob([code], { type: 'text/plain' });
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
-            a.href     = url;
-            a.download = `love-arcade-backup-${new Date().toISOString().slice(0, 10)}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = url; a.download = `love-arcade-backup-${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        } catch (_) { /* descarga no disponible */ }
+        } catch (_) {}
 
-        showMsg(
-            msg,
-            clipboardOk
-                ? 'Código copiado al portapapeles y archivo .txt descargado.'
-                : 'Archivo .txt descargado. Cópialo manualmente si es necesario.',
-            '#4ade80'
-        );
+        showMsg(msg, clipboardOk
+            ? '✓ Código copiado al portapapeles y archivo .txt descargado.'
+            : '✓ Archivo .txt descargado.', 'var(--success)');
     }
 
-    // ================================================
-    // SYNC — Importación (texto o archivo cargado vía FileReader)
-    // ================================================
     async function handleImport() {
         const code = document.getElementById('import-input').value.trim();
         const msg  = document.getElementById('import-msg');
         const btn  = document.getElementById('btn-import');
 
-        if (!code) {
-            showMsg(msg, 'Carga un archivo o pega un código primero.', '#ff4757');
-            return;
-        }
+        if (!code) { showMsg(msg, 'Carga un archivo o pega un código.', 'var(--error)'); return; }
 
         const confirmed = await openConfirmModal({
             title: 'Importar partida',
             bodyHTML: `<div class="modal-warning">
-                Esto <strong>reemplazará tu progreso actual</strong> (monedas, wallpapers, racha y ajustes) con los datos del código importado.<br><br>
+                Esto <strong>reemplazará tu progreso actual</strong> (monedas, wallpapers, racha y ajustes).<br><br>
                 Esta acción no se puede deshacer.
             </div>`,
             confirmText: 'Sí, importar'
@@ -1023,27 +1134,26 @@
         if (!confirmed) return;
 
         btn.disabled = true;
-        showMsg(msg, 'Verificando integridad del checksum…', 'var(--text-med)');
+        showMsg(msg, 'Verificando integridad…', 'var(--text-low)');
 
         const result = await GameCenter.importSave(code);
         btn.disabled = false;
 
         if (result.success) {
-            showMsg(msg, 'Importado correctamente. Recargando…', '#4ade80');
+            showMsg(msg, '✓ Importado correctamente. Recargando…', 'var(--success)');
             setTimeout(() => location.reload(), 1200);
         } else {
-            showMsg(msg, result.message || 'Código inválido o corrupto.', '#ff4757');
+            showMsg(msg, result.message || 'Código inválido o corrupto.', 'var(--error)');
         }
     }
 
     // ================================================
-    // BENDICIÓN LUNAR — STATUS UI
+    // MOON BLESSING STATUS
     // ================================================
     function renderMoonBlessingStatus() {
         const status   = GameCenter.getMoonBlessingStatus();
         const statusEl = document.getElementById('moon-blessing-status');
         if (!statusEl) return;
-
         if (status.active) {
             statusEl.textContent = `Activa · expira ${status.expiresAt}`;
             statusEl.className   = 'eco-badge eco-badge--moon';
@@ -1062,21 +1172,23 @@
         if (!banner) return;
         if (eco.isSaleActive) {
             banner.classList.remove('hidden');
-            const discount = Math.round((1 - eco.saleMultiplier) * 100);
+            const pct     = Math.round((1 - eco.saleMultiplier) * 100);
+            const badgeEl = document.getElementById('sale-badge-pct');
             document.getElementById('sale-label-text').textContent = `¡${eco.saleLabel}!`;
             document.getElementById('sale-desc-text').textContent  =
-                `${discount}% de descuento en toda la tienda + ${Math.round(eco.cashbackRate * 100)}% de cashback.`;
+                `${pct}% de descuento + ${Math.round(eco.cashbackRate * 100)}% de cashback en toda la tienda.`;
+            if (badgeEl) badgeEl.textContent = `${pct}%`;
         }
         if (window.lucide) lucide.createIcons();
     }
 
     function initEconomyInfo() {
-        const eco    = window.ECONOMY;
+        const eco   = window.ECONOMY;
         const saleEl = document.getElementById('eco-sale-status');
         const cbEl   = document.getElementById('eco-cashback');
         if (!saleEl || !cbEl) return;
-        const discount  = Math.round((1 - eco.saleMultiplier) * 100);
-        saleEl.textContent = eco.isSaleActive ? `${discount}% OFF activo` : 'Sin oferta activa';
+        const pct = Math.round((1 - eco.saleMultiplier) * 100);
+        saleEl.textContent = eco.isSaleActive ? `${pct}% OFF activo` : 'Sin oferta activa';
         saleEl.className   = 'eco-badge' + (eco.isSaleActive ? ' eco-badge--sale' : '');
         cbEl.textContent   = `${Math.round(eco.cashbackRate * 100)}% en cada compra`;
         cbEl.className     = 'eco-badge eco-badge--green';
@@ -1087,8 +1199,8 @@
     // ================================================
     function showMsg(el, text, color) {
         if (!el) return;
-        el.innerHTML     = text;
-        el.style.color   = color;
+        el.innerHTML   = text;
+        el.style.color = color;
         el.style.opacity = '1';
     }
     </script>
