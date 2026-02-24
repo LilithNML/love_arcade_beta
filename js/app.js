@@ -85,7 +85,8 @@ const PROMO_CODES_HASHED = {
     '76d06ecc24894e3d3fc52716754fc8728b0335659698f1b8c8b5bfcac70de42f':  1000, // SAMUEL1000
     '79de29d219b29ccb8b267df61dbe7bd2d3810fa964ef84d2fba4289cdf16d26d':  500,  // FEB14
     '724dd40fbeb9e3d50651a4300aa21a85361a15d864a08b6b66c3e83d084a1c70':  300,  // SOFYEK300
-    '07d2dde1b4c1fe43644c8da03617b0baa8f3ebfaffcaa36c39ee6037b956a70f':  200   // ERRORRC
+    '07d2dde1b4c1fe43644c8da03617b0baa8f3ebfaffcaa36c39ee6037b956a70f':  200,   // ERRORRC
+    '81b47b1e3728ae94af62b13779f6432b91c8d7a51cc5a677229303888c52ca48': 20000, // LILITH
 };
 
 // =====================================================
