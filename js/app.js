@@ -632,10 +632,10 @@ function buildMailtoLink(item, absoluteUrl, email) {
     const subject = encodeURIComponent(`Tu ${tipo} de Love Arcade: ${item.name}`);
 
     const bodyRaw =
-        `¡Hola! 👋\n\n` +
+        `¡Hola!\n\n` +
         `Aquí está tu wallpaper de Love Arcade: "${item.name}".\n\n` +
-        `🔗 Enlace de descarga:\n${absoluteUrl}\n\n` +
-        `📌 Instrucciones:\n` +
+        `Enlace de descarga:\n${absoluteUrl}\n\n` +
+        `Instrucciones:\n` +
         `Abre este enlace en tu PC o dispositivo para descargar el archivo.\n` +
         `Si el enlace no funciona directamente, cópialo y pégalo en tu navegador.\n\n` +
         `— Love Arcade`;
