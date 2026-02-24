@@ -570,9 +570,11 @@ body::before {
     color: #120900;
     border: none;
     border-radius: var(--radius-md);
-    padding: 0 16px;
-    height: 100%;
+    /* Dimensiones fijas para evitar deformación cuando cambia el texto */
+    width: 72px;
+    flex: 0 0 72px;      /* no crece ni se encoge */
     min-height: 64px;
+    height: 100%;
     font-family: var(--font-display);
     font-weight: 900;
     font-size: 0.78rem;
@@ -586,9 +588,8 @@ body::before {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
-    flex-shrink: 0;
     position: relative;
-    overflow: hidden;
+    overflow: hidden;   /* recorta texto que pueda desbordar */
 }
 .hud-daily-btn::before {
     content: '';
@@ -609,11 +610,23 @@ body::before {
     transform: none;
 }
 .hud-daily-reward {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 900;
     color: #120900;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 64px;
 }
-.hud-daily-label { font-size: 0.6rem; opacity: 0.75; }
+.hud-daily-label {
+    font-size: 0.55rem;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 64px;
+}
 
 /* Streak bar */
 .hud-streak {
