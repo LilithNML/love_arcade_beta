@@ -256,7 +256,7 @@ body::before {
 .nav-brand {
     font-family: var(--font-display);
     font-weight: 900;
-    font-size: 1.15rem;
+    font-size: 1.35rem;
     letter-spacing: -0.3px;
     display: flex;
     align-items: center;
@@ -265,7 +265,7 @@ body::before {
 }
 .nav-brand span {
     color: var(--accent);
-    display: inline;
+    display: none;
     text-shadow: 0 0 20px var(--accent-glow);
 }
 
@@ -1686,6 +1686,18 @@ details[open] summary::after { transform: rotate(45deg); }
     .shop-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
     .nav-user { gap: 18px; }
     .games-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+
+/* ================================================================
+   NARROW SCREEN — @media (max-width: 379px)
+   Oculta el icono del mando en el logo para ganar ~30px en pantallas
+   muy pequeñas (iPhone SE, mini) sin romper el glassmorphism de la navbar.
+   ================================================================ */
+@media (max-width: 379px) {
+    .nav-brand > i,
+    .nav-brand > svg {
+        display: none;
+    }
 }
 
 /* ================================================================
