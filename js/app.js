@@ -555,6 +555,9 @@ window.GameCenter = {
     setAvatar: (dataUrl) => { store.userAvatar = dataUrl; saveState(); applyAvatar(); },
     getAvatar: ()        => store.userAvatar,
 
+    // Alias público para compatibilidad con shop.html
+    activateMoonBlessing: function() { return this.buyMoonBlessing(); },
+
     // ── TEMA ─────────────────────────────────────────────────────────────────
 
     setTheme: (key) => {
@@ -585,9 +588,10 @@ function updateUI() {
 
 function applyAvatar() {
     if (!store.userAvatar) return;
-    document.querySelectorAll('#user-avatar-display').forEach(el => {
+    // Selecciona el avatar de la navbar (#user-avatar-display) y el HUD (.hud-avatar)
+    document.querySelectorAll('#user-avatar-display, #hud-avatar-display, .hud-avatar').forEach(el => {
         el.style.backgroundImage = `url('${store.userAvatar}')`;
-        const icon = el.querySelector('i');
+        const icon = el.querySelector('i, svg');
         if (icon) icon.style.display = 'none';
     });
 }
@@ -595,9 +599,15 @@ function applyAvatar() {
 function applyTheme(key) {
     const t    = THEMES[key] || THEMES.violet;
     const root = document.documentElement;
+    // Variables clásicas (retrocompatibilidad con juegos)
     root.style.setProperty('--accent',       t.accent);
     root.style.setProperty('--accent-hover', t.accent + 'cc');
     root.style.setProperty('--accent-glow',  t.glow);
+    // Variables del Design System v2 (shop / HUD)
+    root.style.setProperty('--accent-dim',    t.accent + '99');
+    root.style.setProperty('--accent-soft',   t.glow.replace(/[\d.]+\)$/, '0.12)'));
+    root.style.setProperty('--accent-border', t.glow.replace(/[\d.]+\)$/, '0.38)'));
+    document.documentElement.setAttribute('data-theme', key);
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.classList.toggle('theme-btn--active', btn.dataset.theme === key);
     });
@@ -607,14 +617,29 @@ function updateDailyButton() {
     const btn = document.getElementById('btn-daily');
     if (!btn) return;
 
-    const can   = window.GameCenter.canClaimDaily();
-    const info  = window.GameCenter.getStreakInfo();
-    const span  = btn.querySelector('span');
+    const can  = window.GameCenter.canClaimDaily();
+    const info = window.GameCenter.getStreakInfo();
 
     btn.disabled      = !can;
     btn.style.opacity = can ? '1' : '0.5';
     btn.style.cursor  = can ? 'pointer' : 'not-allowed';
 
+    // HUD button: tiene elementos hijos específicos (#hud-reward-amount)
+    const rewardEl = document.getElementById('hud-reward-amount');
+    if (rewardEl) {
+        // Solo actualizar la cifra; la etiqueta "BONO DIARIO" se queda fija
+        if (!can) {
+            rewardEl.textContent = `×${info.streak}`;
+        } else {
+            const moonStatus = window.GameCenter.getMoonBlessingStatus();
+            const total = info.nextReward + (moonStatus.active ? 90 : 0);
+            rewardEl.textContent = `+${total}`;
+        }
+        return; // HUD manejado: salir para no tocar el span genérico
+    }
+
+    // Botón clásico (por si se usa en otra vista)
+    const span = btn.querySelector('span');
     if (span) {
         if (!can) {
             span.textContent = `Vuelve mañana · Racha: ${info.streak}`;
