@@ -265,7 +265,7 @@ body::before {
 }
 .nav-brand span {
     color: var(--accent);
-    display: none;
+    display: inline;
     text-shadow: 0 0 20px var(--accent-glow);
 }
 
