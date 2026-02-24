@@ -570,6 +570,118 @@ window.GameCenter = {
 };
 
 // =====================================================
+// MAIL HELPER — Utilidades mailto: (sin backend)
+// =====================================================
+
+/** Clave de localStorage exclusiva para el último correo utilizado.
+ *  Separada del store del juego para no contaminar exportaciones/checksums. */
+const MAIL_RECIPIENT_KEY = 'love_arcade_last_recipient';
+
+/** Umbral de caracteres a partir del cual el mailto: puede truncarse
+ *  en algunos clientes de correo (RFC 2368 / límite práctico). */
+const MAILTO_MAX_LENGTH = 1800;
+
+/**
+ * Regex de validación de correo electrónico (sintáctica básica, FR3).
+ * No pretende cubrir toda la RFC 5322; cubre el 99 % de los casos reales.
+ */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Valida si la cadena tiene forma de correo electrónico válido.
+ * @param {string} email
+ * @returns {boolean}
+ */
+function isValidEmail(email) {
+    return EMAIL_REGEX.test(email.trim());
+}
+
+/**
+ * Persiste el último correo utilizado en localStorage (FR6 / guardado explícito
+ * tras acción del usuario de confirmar el envío).
+ * @param {string} email
+ */
+function saveLastMailRecipient(email) {
+    try { localStorage.setItem(MAIL_RECIPIENT_KEY, email.trim()); }
+    catch (_) { /* localStorage lleno — ignorar silenciosamente */ }
+}
+
+/**
+ * Recupera el último correo guardado para pre-rellenar el campo (FR spec).
+ * @returns {string}  Correo guardado, o cadena vacía si no hay ninguno.
+ */
+function getLastMailRecipient() {
+    try { return localStorage.getItem(MAIL_RECIPIENT_KEY) || ''; }
+    catch (_) { return ''; }
+}
+
+/**
+ * Construye un URI mailto: con los campos To, Subject y Body codificados.
+ * Todos los valores se pasan por encodeURIComponent para evitar inyecciones (FR4).
+ *
+ * @param {{ name: string, tags?: string[] }} item    Metadatos del wallpaper.
+ * @param {string} absoluteUrl  URL absoluta de descarga (construida en la UI).
+ * @param {string} email        Correo destino ya validado.
+ * @returns {{ uri: string, tooLong: boolean }}
+ */
+function buildMailtoLink(item, absoluteUrl, email) {
+    const tipo = Array.isArray(item.tags) && item.tags.includes('Mobile')
+        ? 'Wallpaper Mobile'
+        : 'Wallpaper PC';
+
+    const subject = encodeURIComponent(`Tu ${tipo} de Love Arcade: ${item.name}`);
+
+    const bodyRaw =
+        `¡Hola! 👋\n\n` +
+        `Aquí está tu wallpaper de Love Arcade: "${item.name}".\n\n` +
+        `🔗 Enlace de descarga:\n${absoluteUrl}\n\n` +
+        `📌 Instrucciones:\n` +
+        `Abre este enlace en tu PC o dispositivo para descargar el archivo.\n` +
+        `Si el enlace no funciona directamente, cópialo y pégalo en tu navegador.\n\n` +
+        `— Love Arcade`;
+
+    const body = encodeURIComponent(bodyRaw);
+    const uri  = `mailto:${encodeURIComponent(email.trim())}?subject=${subject}&body=${body}`;
+
+    return { uri, tooLong: uri.length > MAILTO_MAX_LENGTH };
+}
+
+/**
+ * Intenta copiar un texto al portapapeles.
+ * Usa la Clipboard API moderna con fallback a execCommand.
+ * @param {string} text
+ * @returns {Promise<boolean>}  true si tuvo éxito.
+ */
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (_) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            Object.assign(ta.style, { position: 'fixed', opacity: '0', top: '0', left: '0' });
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return true;
+        } catch (_2) {
+            return false;
+        }
+    }
+}
+
+/** API pública del módulo de correo. */
+window.MailHelper = {
+    isValidEmail,
+    saveLastMailRecipient,
+    getLastMailRecipient,
+    buildMailtoLink,
+    copyToClipboard
+};
+
+// =====================================================
 // FUNCIONES INTERNAS
 // =====================================================
 
