@@ -85,8 +85,7 @@ const PROMO_CODES_HASHED = {
     '76d06ecc24894e3d3fc52716754fc8728b0335659698f1b8c8b5bfcac70de42f':  1000, // SAMUEL1000
     '79de29d219b29ccb8b267df61dbe7bd2d3810fa964ef84d2fba4289cdf16d26d':  500,  // FEB14
     '724dd40fbeb9e3d50651a4300aa21a85361a15d864a08b6b66c3e83d084a1c70':  300,  // SOFYEK300
-    '07d2dde1b4c1fe43644c8da03617b0baa8f3ebfaffcaa36c39ee6037b956a70f':  200,   // ERRORRC
-    '81b47b1e3728ae94af62b13779f6432b91c8d7a51cc5a677229303888c52ca48': 20000, // LILITH
+    '07d2dde1b4c1fe43644c8da03617b0baa8f3ebfaffcaa36c39ee6037b956a70f':  200   // ERRORRC
 };
 
 // =====================================================
@@ -691,13 +690,50 @@ function saveState() {
     updateUI();
 }
 
+/**
+ * Formatea un número de monedas para la Navbar.
+ * < 10 000 → número completo (ej: 9 500 → "9500")
+ * ≥ 10 000 → formato "k" con un decimal si aplica (ej: 25 500 → "25.5k", 20 000 → "20k")
+ * El Player Hub siempre recibe el número exacto; esta función es solo para .navbar .coin-display.
+ * @param {number} n
+ * @returns {string}
+ */
+function formatCoinsNavbar(n) {
+    if (n < 10_000) return String(n);
+    const k = n / 1000;
+    // Usar un decimal solo si el resultado no es entero
+    return (Number.isInteger(k) ? k : Math.floor(k * 10) / 10) + 'k';
+}
+
 function updateUI() {
-    const displays = Array.from(document.querySelectorAll('.coin-display'));
-    animateValue(displays, _displayedCoins, store.coins);
+    // Separar elementos: navbar (formato abreviado) vs. el resto (número exacto)
+    const navbarDisplays = Array.from(
+        document.querySelectorAll('.navbar .coin-display')
+    );
+    const otherDisplays = Array.from(
+        document.querySelectorAll('.coin-display:not(.navbar .coin-display)')
+    );
+
+    // Animar con número exacto (los listeners internos de animateValue usan el valor numérico)
+    animateValue([...navbarDisplays, ...otherDisplays], _displayedCoins, store.coins);
+
+    // Sobrescribir la navbar con el valor formateado al terminar la animación
+    // (animateValue dura ~650 ms; con 700 ms de margen evitamos parpadeos)
+    if (navbarDisplays.length) {
+        setTimeout(() => {
+            navbarDisplays.forEach(el => {
+                el.textContent = formatCoinsNavbar(store.coins);
+            });
+        }, 700);
+    }
+
     applyAvatar();
     updateDailyButton();
     updateMoonBlessingUI();
 }
+
+/** Exponer formatCoinsNavbar para uso en shop.html si fuera necesario. */
+window.formatCoinsNavbar = formatCoinsNavbar;
 
 function applyAvatar() {
     if (!store.userAvatar) return;
