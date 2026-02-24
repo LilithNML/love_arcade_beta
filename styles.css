@@ -256,7 +256,7 @@ body::before {
 .nav-brand {
     font-family: var(--font-display);
     font-weight: 900;
-    font-size: 1.35rem;
+    font-size: 1.15rem;
     letter-spacing: -0.3px;
     display: flex;
     align-items: center;
