@@ -114,6 +114,9 @@
                 </div>
                 <div class="filter-pills" id="filter-pills">
                     <button class="pill active" data-filter="Todos">Todos</button>
+                    <button class="pill" data-filter="NoObtenidos">
+                        <i data-lucide="sparkles" size="10"></i> Nuevos
+                    </button>
                     <button class="pill" data-filter="PC">
                         <i data-lucide="monitor" size="10"></i> PC
                     </button>
@@ -601,28 +604,12 @@
             reader.readAsText(file);
         });
 
-        // Theme buttons
+        // Theme buttons (app.js ya gestiona los temas vía setTheme; aquí refrescamos clases activas)
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const theme = btn.dataset.theme;
                 if (window.GameCenter) window.GameCenter.setTheme(theme);
-                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('theme-btn--active'));
-                btn.classList.add('theme-btn--active');
             });
-        });
-
-        // Moon blessing
-        document.getElementById('btn-moon-blessing')?.addEventListener('click', () => {
-            const result = window.GameCenter?.activateMoonBlessing?.();
-            const msg    = document.getElementById('moon-blessing-msg');
-            if (result?.success) {
-                showMsg(msg, result.message || 'Bendición Lunar activada.', 'var(--success)');
-                document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
-                renderMoonBlessingStatus();
-            } else {
-                showMsg(msg, result?.message || 'Monedas insuficientes.', 'var(--error)');
-                shakeElement(document.getElementById('btn-moon-blessing'));
-            }
         });
 
         if (window.lucide) lucide.createIcons();
@@ -658,12 +645,14 @@
                 matchesFilter = true;
             } else if (activeFilter === 'Wishlist') {
                 matchesFilter = GameCenter.isWishlisted(item.id);
+            } else if (activeFilter === 'NoObtenidos') {
+                matchesFilter = GameCenter.getBoughtCount(item.id) === 0;
             } else {
                 matchesFilter = Array.isArray(item.tags) && item.tags.includes(activeFilter);
             }
             const matchesSearch = !searchQuery ||
                 item.name.toLowerCase().includes(searchQuery) ||
-                item.desc.toLowerCase().includes(searchQuery) ||
+                (item.desc || '').toLowerCase().includes(searchQuery) ||
                 (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
             return matchesFilter && matchesSearch;
         });
@@ -817,7 +806,7 @@
                     <i data-lucide="heart" size="12"></i>
                 </button>` : ''}
 
-                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                <img src="${item.image}" alt="${item.name}" class="shop-img">
                 ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>' : ''}
                 ${eco.isSaleActive && !isOwned ? '<div class="sale-card-badge"><i data-lucide="zap" size="9" fill="currentColor" stroke="none"></i> OFERTA</div>' : ''}
 
@@ -890,7 +879,7 @@
             const card = document.createElement('article');
             card.className = 'glass-panel shop-card';
             card.innerHTML = `
-                <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+                <img src="${item.image}" alt="${item.name}" class="shop-img">
                 <div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>
                 <div style="width:100%;">
                     <h3 class="card-name">${item.name}</h3>
@@ -1003,6 +992,7 @@
         const result = GameCenter.buyItem(item);
         if (result.success) {
             filterItems();
+            renderLibrary(allItems); // actualización reactiva de Mis Tesoros
             document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
             fireConfetti();
             const cbNote = result.cashback > 0 ? ` <strong>+${result.cashback} cashback</strong> devueltas.` : '';
