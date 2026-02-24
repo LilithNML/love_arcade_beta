@@ -402,6 +402,94 @@
         </div>
     </div>
 
+    <!-- ── EMAIL MODAL ── -->
+    <div id="email-modal"
+         class="modal-overlay hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="email-modal-title">
+        <div class="modal-box" style="max-width:420px;">
+
+            <!-- Header con thumbnail del item -->
+            <div class="email-modal-header" id="email-modal-header" aria-hidden="true">
+                <img id="email-modal-thumb" src="" alt="" class="email-modal-thumb">
+                <div>
+                    <p class="email-modal-item-name" id="email-modal-item-name"></p>
+                    <p class="email-modal-item-sub">Enviar enlace de descarga</p>
+                </div>
+            </div>
+
+            <h3 id="email-modal-title" class="modal-title" style="margin-bottom:14px;">
+                Enviar por correo
+            </h3>
+
+            <!-- Campo de correo -->
+            <div class="email-input-wrap">
+                <i data-lucide="mail" size="15" class="email-input-icon"></i>
+                <input
+                    id="email-modal-input"
+                    type="email"
+                    class="email-input"
+                    placeholder="tu@correo.com"
+                    autocomplete="email"
+                    inputmode="email"
+                    aria-label="Correo electrónico destino"
+                    aria-describedby="email-modal-error"
+                >
+            </div>
+
+            <!-- Error inline (FR3) -->
+            <p id="email-modal-error" class="email-error-msg" role="alert" aria-live="polite">
+                <i data-lucide="alert-circle" size="12"></i>
+                <span id="email-modal-error-text">Introduce un correo válido.</span>
+            </p>
+
+            <!-- Checkbox: recordar correo (FR spec) -->
+            <div class="email-save-row">
+                <input type="checkbox" id="email-save-checkbox" checked>
+                <label for="email-save-checkbox">Recordar este correo para la próxima vez</label>
+            </div>
+
+            <!-- Fallback: mailto demasiado largo (FR7) -->
+            <div id="email-fallback" class="email-fallback" role="region" aria-label="Alternativa de copia">
+                <p class="email-fallback-title">
+                    <i data-lucide="alert-triangle" size="13"></i>
+                    Enlace demasiado largo para correo
+                </p>
+                <p class="email-fallback-desc">
+                    Algunos clientes de correo no admiten URLs muy largas en el asunto/cuerpo.
+                    Copia el enlace directamente y pégalo en tu mensaje:
+                </p>
+                <code id="email-fallback-url" class="email-fallback-url"></code>
+                <button id="email-copy-btn" class="btn-primary" style="width:100%; justify-content:center; font-size:0.82rem;">
+                    <i data-lucide="copy" size="14"></i>
+                    <span id="email-copy-label">Copiar enlace de descarga</span>
+                </button>
+            </div>
+
+            <!-- Tip informativo -->
+            <div class="email-tip" role="note">
+                <i data-lucide="info" size="13"></i>
+                <span>
+                    Se abrirá tu cliente de correo con el mensaje pre-rellenado.
+                    El archivo no se adjunta; solo se incluye el enlace de descarga.
+                </span>
+            </div>
+
+            <!-- Acciones -->
+            <div class="modal-actions" style="margin-top:18px;">
+                <button id="email-modal-cancel" class="btn-ghost" style="flex:1; justify-content:center;">
+                    Cancelar
+                </button>
+                <button id="email-modal-confirm" class="btn-primary" style="flex:2; justify-content:center;">
+                    <i data-lucide="send" size="14"></i>
+                    Abrir correo
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
     <script>
     // ================================================
@@ -508,10 +596,30 @@
             if (e.target === e.currentTarget) document.getElementById('preview-modal').classList.add('hidden');
         });
 
+        // Email modal close + keyboard
+        document.getElementById('email-modal-cancel').addEventListener('click', _closeEmailModal);
+        document.getElementById('email-modal').addEventListener('click', e => {
+            if (e.target === e.currentTarget) _closeEmailModal();
+        });
+
+        // Email confirm button
+        document.getElementById('email-modal-confirm').addEventListener('click', _handleEmailConfirm);
+
+        // Submit on Enter inside the email field
+        document.getElementById('email-modal-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') _handleEmailConfirm();
+        });
+
+        // Clear validation state while typing
+        document.getElementById('email-modal-input').addEventListener('input', () => {
+            _setEmailError(false);
+        });
+
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 document.getElementById('confirm-modal').classList.add('hidden');
                 document.getElementById('preview-modal').classList.add('hidden');
+                _closeEmailModal();
             }
         });
 
@@ -878,21 +986,49 @@
             const url  = GameCenter.getDownloadUrl(item.id, item.file);
             const card = document.createElement('article');
             card.className = 'glass-panel shop-card';
+
+            // Construir botonera: Descargar + Enviar por correo (FR1: solo si url existe)
+            const actionsHTML = url
+                ? `<div style="display:flex; gap:5px; width:100%; margin-top:8px;">
+                       <a href="${url}" download
+                          class="btn-primary vault-btn"
+                          style="flex:1; justify-content:center; font-size:0.78rem; padding:7px;">
+                           <i data-lucide="download" size="13"></i> Descargar
+                       </a>
+                       <button
+                           class="btn-mail library-mail-btn"
+                           data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'
+                           data-url="${url}"
+                           aria-label="Enviar enlace de descarga por correo para ${item.name.replace(/"/g, '&quot;')}"
+                           title="Enviar por correo">
+                           <i data-lucide="send" size="13"></i>
+                       </button>
+                   </div>`
+                : `<button class="btn-primary" style="margin-top:8px; width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;" disabled>
+                       <i data-lucide="check" size="13"></i> Sin archivo
+                   </button>`;
+
             card.innerHTML = `
                 <img src="${item.image}" alt="${item.name}" class="shop-img">
                 <div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>
                 <div style="width:100%;">
                     <h3 class="card-name">${item.name}</h3>
-                    ${url
-                        ? `<a href="${url}" download class="btn-primary vault-btn" style="margin-top:8px; width:100%; justify-content:center; font-size:0.78rem; padding:7px;">
-                               <i data-lucide="download" size="13"></i> Descargar
-                           </a>`
-                        : `<button class="btn-primary" style="margin-top:8px; width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;" disabled>
-                               <i data-lucide="check" size="13"></i> Sin archivo
-                           </button>`
-                    }
+                    ${actionsHTML}
                 </div>`;
             container.appendChild(card);
+        });
+
+        // Listeners para el botón de correo en cada tarjeta
+        container.querySelectorAll('.library-mail-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                try {
+                    const item       = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
+                    const relativeUrl = btn.dataset.url;
+                    // Construir URL absoluta (FR4: enlace absoluto)
+                    const absoluteUrl = new URL(relativeUrl, window.location.href).href;
+                    openEmailModal(item, absoluteUrl);
+                } catch (e) { console.error('MailBtn error', e); }
+            });
         });
         if (window.lucide) lucide.createIcons();
     }
@@ -1192,6 +1328,145 @@
         el.innerHTML   = text;
         el.style.color = color;
         el.style.opacity = '1';
+    }
+
+    // ================================================
+    // EMAIL MODAL — "Enviar por correo" (FR1–FR7)
+    // ================================================
+
+    /** Ítem y URL activos mientras el modal está abierto. */
+    let _emailItem       = null;
+    let _emailAbsoluteUrl = '';
+
+    /**
+     * Abre el modal de correo pre-rellenado con el último correo guardado.
+     * @param {{ name: string, image: string, tags?: string[] }} item
+     * @param {string} absoluteUrl  URL absoluta de descarga.
+     */
+    function openEmailModal(item, absoluteUrl) {
+        _emailItem        = item;
+        _emailAbsoluteUrl = absoluteUrl;
+
+        // Populate header
+        const thumbEl = document.getElementById('email-modal-thumb');
+        const nameEl  = document.getElementById('email-modal-item-name');
+        if (thumbEl) { thumbEl.src = item.image; thumbEl.alt = item.name; }
+        if (nameEl)  { nameEl.textContent = item.name; }
+
+        // Pre-fill last used email (FR spec)
+        const inputEl = document.getElementById('email-modal-input');
+        if (inputEl) {
+            inputEl.value = window.MailHelper.getLastMailRecipient();
+            _setEmailError(false);
+        }
+
+        // Reset fallback section
+        const fallbackEl = document.getElementById('email-fallback');
+        if (fallbackEl) fallbackEl.classList.remove('visible');
+
+        // Show modal and focus input
+        const modal = document.getElementById('email-modal');
+        modal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons({ nodes: [modal] });
+        requestAnimationFrame(() => {
+            if (inputEl) inputEl.focus();
+        });
+    }
+
+    /** Cierra el modal de correo limpiando su estado. */
+    function _closeEmailModal() {
+        document.getElementById('email-modal').classList.add('hidden');
+        _emailItem        = null;
+        _emailAbsoluteUrl = '';
+    }
+
+    /**
+     * Muestra u oculta el mensaje de error en el input de correo.
+     * @param {boolean} show
+     * @param {string}  [msg]
+     */
+    function _setEmailError(show, msg = 'Introduce un correo electrónico válido.') {
+        const errorEl   = document.getElementById('email-modal-error');
+        const errorText = document.getElementById('email-modal-error-text');
+        const inputEl   = document.getElementById('email-modal-input');
+        if (!errorEl || !inputEl) return;
+
+        if (show) {
+            if (errorText) errorText.textContent = msg;
+            errorEl.classList.add('visible');
+            inputEl.classList.add('email-input--error');
+            inputEl.setAttribute('aria-invalid', 'true');
+        } else {
+            errorEl.classList.remove('visible');
+            inputEl.classList.remove('email-input--error');
+            inputEl.setAttribute('aria-invalid', 'false');
+        }
+    }
+
+    /**
+     * Maneja el click en "Abrir correo":
+     *  1. Valida el correo (FR3).
+     *  2. Construye el mailto: (FR4).
+     *  3. Si es demasiado largo, muestra alternativa clipboard (FR7).
+     *  4. Si es válido, persiste opcionalmente el correo (FR spec) y lanza mailto: (FR5).
+     */
+    async function _handleEmailConfirm() {
+        if (!_emailItem || !_emailAbsoluteUrl) return;
+
+        const inputEl    = document.getElementById('email-modal-input');
+        const saveCb     = document.getElementById('email-save-checkbox');
+        const fallbackEl = document.getElementById('email-fallback');
+        const fallUrlEl  = document.getElementById('email-fallback-url');
+        const confirmBtn = document.getElementById('email-modal-confirm');
+
+        const email = (inputEl?.value || '').trim();
+
+        // FR3 — Validación sintáctica
+        if (!window.MailHelper.isValidEmail(email)) {
+            _setEmailError(true);
+            inputEl?.focus();
+            return;
+        }
+        _setEmailError(false);
+
+        // FR4 — Construir mailto:
+        const { uri, tooLong } = window.MailHelper.buildMailtoLink(_emailItem, _emailAbsoluteUrl, email);
+
+        // FR7 — Fallback si el URI es demasiado largo
+        if (tooLong) {
+            if (fallbackEl) fallbackEl.classList.add('visible');
+            if (fallUrlEl)  fallUrlEl.textContent = _emailAbsoluteUrl;
+            if (window.lucide) lucide.createIcons({ nodes: [fallbackEl] });
+
+            // Copiar enlace al portapapeles desde el botón de fallback
+            const copyBtn   = document.getElementById('email-copy-btn');
+            const copyLabel = document.getElementById('email-copy-label');
+            if (copyBtn) {
+                // Reemplazar listener previo clonando el nodo
+                const freshBtn = copyBtn.cloneNode(true);
+                copyBtn.parentNode.replaceChild(freshBtn, copyBtn);
+                document.getElementById('email-copy-btn').addEventListener('click', async () => {
+                    const ok = await window.MailHelper.copyToClipboard(_emailAbsoluteUrl);
+                    const lbl = document.getElementById('email-copy-label');
+                    if (lbl) lbl.textContent = ok ? '✓ Enlace copiado' : 'No se pudo copiar';
+                    setTimeout(() => {
+                        if (lbl) lbl.textContent = 'Copiar enlace de descarga';
+                    }, 2500);
+                });
+            }
+            // Persistir correo si el usuario lo pidió (incluso en fallback — fue su intención)
+            if (saveCb?.checked) window.MailHelper.saveLastMailRecipient(email);
+            return; // No lanzar mailto:; mostrar el fallback en su lugar
+        }
+
+        // Persistir correo si el checkbox está marcado (FR spec / FR6)
+        if (saveCb?.checked) window.MailHelper.saveLastMailRecipient(email);
+
+        // FR5 — Lanzar el cliente de correo
+        window.location.href = uri;
+
+        // Cerrar modal tras lanzar (pequeño delay para que el cliente de correo abra)
+        setTimeout(_closeEmailModal, 300);
     }
     </script>
 </body>
