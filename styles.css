@@ -1695,3 +1695,209 @@ details[open] summary::after { transform: rotate(45deg); }
 
 /* Lucide icon consistent stroke */
 svg { stroke-width: 2; }
+
+/* ================================================================
+   EMAIL MODAL — "Enviar por correo"
+   ================================================================ */
+
+/* Thumbnail + nombre del item en la cabecera del modal */
+.email-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--glass-base-bg);
+    border: 1px solid var(--glass-base-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 18px;
+}
+
+.email-modal-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--glass-float-border);
+}
+
+.email-modal-item-name {
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--text-high);
+    line-height: 1.2;
+    margin-bottom: 3px;
+}
+
+.email-modal-item-sub {
+    font-size: 0.7rem;
+    color: var(--text-low);
+}
+
+/* Email input field */
+.email-input {
+    width: 100%;
+    background: var(--glass-base-bg);
+    border: 1px solid var(--glass-base-border);
+    border-radius: var(--radius-md);
+    color: var(--text-high);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 11px 14px 11px 40px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    caret-color: var(--accent);
+}
+.email-input:focus {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.email-input::placeholder { color: var(--text-low); }
+.email-input--error {
+    border-color: rgba(255, 66, 102, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(255, 66, 102, 0.1) !important;
+}
+
+/* Input wrapper with icon */
+.email-input-wrap {
+    position: relative;
+    margin-bottom: 8px;
+}
+.email-input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-low);
+    pointer-events: none;
+    transition: color 0.2s;
+}
+.email-input-wrap:focus-within .email-input-icon {
+    color: var(--accent);
+}
+
+/* Inline error message */
+.email-error-msg {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--error);
+    min-height: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.2s, transform 0.2s;
+    margin-bottom: 4px;
+}
+.email-error-msg.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* "Guardar correo" checkbox row */
+.email-save-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--glass-base-bg);
+    border: 1px solid var(--glass-base-border);
+    cursor: pointer;
+    user-select: none;
+}
+.email-save-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.email-save-row label {
+    font-size: 0.78rem;
+    color: var(--text-med);
+    cursor: pointer;
+    flex: 1;
+}
+
+/* Fallback clipboard section (FR7 — mailto too long) */
+.email-fallback {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(251, 191, 36, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    display: none;
+}
+.email-fallback.visible { display: block; }
+.email-fallback-title {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.email-fallback-desc {
+    font-size: 0.75rem;
+    color: var(--text-low);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+.email-fallback-url {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-med);
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--glass-base-border);
+    border-radius: var(--radius-xs);
+    padding: 8px 10px;
+    word-break: break-all;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Tip box below the form */
+.email-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    margin-top: 14px;
+    font-size: 0.72rem;
+    color: var(--text-med);
+    line-height: 1.5;
+}
+.email-tip svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+
+/* "Send email" button in library cards — secondary accent style */
+.btn-mail {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    padding: 7px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.18s;
+    flex-shrink: 0;
+}
+.btn-mail:hover {
+    background: var(--accent-soft);
+    box-shadow: 0 0 10px var(--accent-glow);
+    transform: translateY(-1px);
+}
