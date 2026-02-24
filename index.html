@@ -80,8 +80,8 @@
                     <input type="file" id="avatar-upload-hud" hidden accept="image/*">
                 </div>
                 <div class="hud-info">
-                    <p class="hud-greeting">Bienvenida de vuelta</p>
-                    <p class="hud-name">Jugadora</p>
+                    <p class="hud-greeting">Bienvenido de vuelta</p>
+                    <p class="hud-name">Lilith</p>
                     <p class="hud-status">
                         <span class="hud-status-dot"></span>
                         <span>En línea · Love Arcade</span>
@@ -332,23 +332,24 @@
 
         // ── Streak bar ──
         function updateStreakBar() {
-            const state = window.GameCenter?.getState?.();
-            if (!state) return;
-            const streak = state.streak || 0;
-            const days = document.querySelectorAll('#streak-days .streak-day');
+            const info   = window.GameCenter?.getStreakInfo?.();
+            if (!info) return;
+            const streak = info.streak || 0;
+            const days   = document.querySelectorAll('#streak-days .streak-day');
             days.forEach((d, i) => {
                 d.classList.remove('active', 'today');
                 if (i < streak) d.classList.add('active');
-                if (i === streak && streak < 7) d.classList.add('today');
+                else if (i === streak && streak < 7) d.classList.add('today');
             });
             const countEl = document.getElementById('streak-count');
             if (countEl) countEl.textContent = `×${streak}`;
 
             // Update daily reward amount shown in HUD
             const rewardEl = document.getElementById('hud-reward-amount');
-            if (rewardEl) {
-                const reward = Math.min(20 + streak * 5, 60);
-                rewardEl.textContent = `+${reward}`;
+            if (rewardEl && window.GameCenter?.canClaimDaily?.()) {
+                const moonStatus = window.GameCenter.getMoonBlessingStatus?.();
+                const total = info.nextReward + ((moonStatus?.active) ? 90 : 0);
+                rewardEl.textContent = `+${total}`;
             }
         }
 
