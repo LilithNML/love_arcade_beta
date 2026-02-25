@@ -4,314 +4,314 @@
     "image": "./assets/Nivel1.webp",
     "thumbnail": "./assets/thumbnails/Nivel1_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 150,
     "description": "Introducción",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_2",
     "image": "./assets/Nivel2.webp",
     "thumbnail": "./assets/thumbnails/Nivel2_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 153,
     "description": "Primer desafío",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_3",
     "image": "./assets/Nivel3.webp",
     "thumbnail": "./assets/thumbnails/Nivel3_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 157,
     "description": "Un poco más complejo",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_4",
     "image": "./assets/Nivel4.webp",
     "thumbnail": "./assets/thumbnails/Nivel4_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 160,
     "description": "Atención al detalle",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_5",
     "image": "./assets/Nivel5.webp",
     "thumbnail": "./assets/thumbnails/Nivel5_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 163,
     "description": "Dificultad media",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_6",
     "image": "./assets/Nivel6.webp",
     "thumbnail": "./assets/thumbnails/Nivel6_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 167,
     "description": "Empieza el reto",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_7",
     "image": "./assets/Nivel7.webp",
     "thumbnail": "./assets/thumbnails/Nivel7_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 170,
     "description": "Nivel avanzado",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_8",
     "image": "./assets/Nivel8.webp",
     "thumbnail": "./assets/thumbnails/Nivel8_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 173,
     "description": "Alta concentración",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_9",
     "image": "./assets/Nivel9.webp",
     "thumbnail": "./assets/thumbnails/Nivel9_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 177,
     "description": "Desafío experto",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_10",
     "image": "./assets/Nivel10.webp",
     "thumbnail": "./assets/thumbnails/Nivel10_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 180,
     "description": "Reto final",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_11",
     "image": "./assets/Nivel11.webp",
     "thumbnail": "./assets/thumbnails/Nivel11_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 181,
     "description": "Precisión y paciencia",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_12",
     "image": "./assets/Nivel12.webp",
     "thumbnail": "./assets/thumbnails/Nivel12_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 184,
     "description": "Nada garantizado",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_13",
     "image": "./assets/Nivel13.webp",
     "thumbnail": "./assets/thumbnails/Nivel13_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 188,
     "description": "El doble golpe",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_14",
     "image": "./assets/Nivel14.webp",
     "thumbnail": "./assets/thumbnails/Nivel14_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 192,
     "description": "Constancia silenciosa",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_15",
     "image": "./assets/Nivel15.webp",
     "thumbnail": "./assets/thumbnails/Nivel15_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 195,
     "description": "Recompensa máxima",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_16",
     "image": "./assets/Nivel16.webp",
     "thumbnail": "./assets/thumbnails/Nivel16_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 198,
     "description": "El engaño",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_17",
     "image": "./assets/Nivel17.webp",
     "thumbnail": "./assets/thumbnails/Nivel17_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 202,
     "description": "Rebote inesperado",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_18",
     "image": "./assets/Nivel18.webp",
     "thumbnail": "./assets/thumbnails/Nivel18_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 206,
     "description": "Nada fácil",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_19",
     "image": "./assets/Nivel19.webp",
     "thumbnail": "./assets/thumbnails/Nivel19_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 209,
     "description": "Casi todo",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_20",
     "image": "./assets/Nivel20.webp",
     "thumbnail": "./assets/thumbnails/Nivel20_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 212,
     "description": "El cierre perfecto",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_21",
     "image": "./assets/Nivel21.webp",
     "thumbnail": "./assets/thumbnails/Nivel21_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 216,
     "description": "Nuevo amanecer",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_22",
     "image": "./assets/Nivel22.webp",
     "thumbnail": "./assets/thumbnails/Nivel22_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 220,
     "description": "Perspectiva clara",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_23",
     "image": "./assets/Nivel23.webp",
     "thumbnail": "./assets/thumbnails/Nivel23_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 223,
     "description": "Camino sinuoso",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_24",
     "image": "./assets/Nivel24.webp",
     "thumbnail": "./assets/thumbnails/Nivel24_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 226,
     "description": "Fragmentos del alma",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_25",
     "image": "./assets/Nivel25.webp",
     "thumbnail": "./assets/thumbnails/Nivel25_thumb.webp",
     "pieces": 16,
-    "rewardCoins": 100,
+    "rewardCoins": 230,
     "description": "Respiro táctico",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_26",
     "image": "./assets/Nivel26.webp",
     "thumbnail": "./assets/thumbnails/Nivel26_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 231,
     "description": "Gran maestro I",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_27",
     "image": "./assets/Nivel27.webp",
     "thumbnail": "./assets/thumbnails/Nivel27_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 235,
     "description": "Ilusión óptica",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_28",
     "image": "./assets/Nivel28.webp",
     "thumbnail": "./assets/thumbnails/Nivel28_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 240,
     "description": "Simetría oculta",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_29",
     "image": "./assets/Nivel29.webp",
     "thumbnail": "./assets/thumbnails/Nivel29_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 244,
     "description": "Desafío de medianoche",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_30",
     "image": "./assets/Nivel30.webp",
     "thumbnail": "./assets/thumbnails/Nivel30_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 248,
     "description": "Laberinto mental",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_31",
     "image": "./assets/Nivel31.webp",
     "thumbnail": "./assets/thumbnails/Nivel31_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 253,
     "description": "Cerca del límite",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_32",
     "image": "./assets/Nivel32.webp",
     "thumbnail": "./assets/thumbnails/Nivel32_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 257,
     "description": "Espejismo total",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_33",
     "image": "./assets/Nivel33.webp",
     "thumbnail": "./assets/thumbnails/Nivel33_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 261,
     "description": "Claridad necesaria",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_34",
     "image": "./assets/Nivel34.webp",
     "thumbnail": "./assets/thumbnails/Nivel34_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 266,
     "description": "Prueba de fe",
-    "timeLimit": 250
+    "timeLimit": 350
   },
   {
     "id": "lvl_35",
     "image": "./assets/Nivel35.webp",
     "thumbnail": "./assets/thumbnails/Nivel35_thumb.webp",
-    "pieces": 16,
-    "rewardCoins": 100,
+    "pieces": 25,
+    "rewardCoins": 270,
     "description": "El muro de cristal",
-    "timeLimit": 250
+    "timeLimit": 350
   }
 ]
