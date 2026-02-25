@@ -6,20 +6,27 @@ export default class EconomyManager {
     }
 
     calculateCoins(score) {
-    // CAMBIO: Umbral más bajo (de 30 a 15) para premiar partidas rápidas
+    // AJUSTE ELITE 1: Umbral reducido. 
+    // Ahora el jugador empieza a ganar monedas mucho antes (a los 15 puntos).
     if (score <= 15) return 0; 
     
-    // CAMBIO: Factor 0.85 (antes 0.45) para que las monedas suban rápido
-    const raw = Math.sqrt(score) * 0.85;
+    // AJUSTE ELITE 2: Multiplicador agresivo de 2.5 (antes 0.45).
+    // Esto hace que la progresión se sienta mucho más satisfactoria.
+    // Ejemplo: 10,639 pts -> sqrt(10639) * 2.5 = 257.8 monedas.
+    const raw = Math.sqrt(score) * 2.5;
     
-    // CAMBIO: Aumentamos el Soft Cap de 60 a 85 monedas
-    const performanceCoins = Math.min(raw, 85);
+    // AJUSTE ELITE 3: Soft Cap extendido a 500.
+    // Evitamos que los puntajes altos se estanquen prematuramente.
+    const performanceCoins = Math.min(raw, 500);
 
+    // Sumamos la baseReward (2) al cálculo de rendimiento.
     let total = this.baseReward + Math.floor(performanceCoins);
     
-    // Cap Global: Lo subimos a 150
-    return Math.min(total, 150); 
+    // AJUSTE ELITE 4: Cap Global de Seguridad aumentado a 1000.
+    // Elevamos el techo para permitir premios legendarios en partidas perfectas.
+    return Math.min(total, 1000); 
 }
+
 
     payout(score) {
         const coins = this.calculateCoins(score);
