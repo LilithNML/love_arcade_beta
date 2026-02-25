@@ -36,7 +36,7 @@
       "pattern": "zigzag",
       "fireRate": 0.8,
       "score": 10,
-      "coins": 3,
+      "coins": 5,
       "collisionRadius": 15
     },
     "shooter": {
@@ -45,7 +45,7 @@
       "pattern": "aimed_burst",
       "fireRate": 1.6,
       "score": 25,
-      "coins": 5,
+      "coins": 10,
       "collisionRadius": 18
     },
     "tank": {
@@ -54,7 +54,7 @@
       "pattern": "straight",
       "fireRate": 2.0,
       "score": 50,
-      "coins": 10,
+      "coins": 15,
       "collisionRadius": 25
     },
     "elite": {
@@ -63,7 +63,7 @@
       "pattern": "homing_slow",
       "fireRate": 1.2,
       "score": 100,
-      "coins": 15,
+      "coins": 20,
       "collisionRadius": 22
     },
     "boss": {
@@ -72,7 +72,7 @@
       "pattern": "boss_pattern",
       "fireRate": 0.8,
       "score": 500,
-      "coins": 20,
+      "coins": 40,
       "collisionRadius": 40
     }
   },
