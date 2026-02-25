@@ -1,31 +1,25 @@
 export default class EconomyManager {
     constructor() {
         this.gameId = 'dodger';
-        // AJUSTE 1: Bajamos la base para reducir inflación temprana.
-        // Antes 2, ahora 1.
-        this.baseReward = 1; 
+        // CAMBIO: Subimos la recompensa base de 1 a 2
+        this.baseReward = 2; 
     }
 
     calculateCoins(score) {
-        // AJUSTE 3: Umbral más permisivo para no frustrar en partidas cortas.
-        // Antes 50, ahora 30.
-        if (score <= 30) return 0; 
-        
-        // AJUSTE 2: Factor 0.45 para una curva más lenta y "arcade".
-        // Ejemplo: 266 pts -> sqrt(16.3) * 0.45 = 7.3 (+1 base) = 8 monedas. (Antes 11)
-        const raw = Math.sqrt(score) * 0.45;
-        
-        // AJUSTE 4: Soft Cap de rendimiento puro.
-        // Limitamos lo que el score puro puede dar a 60 monedas.
-        // Esto obliga a que, para llegar al Cap Global (100), se dependa de futuros bonos (Récords, etc).
-        const performanceCoins = Math.min(raw, 60);
+    // CAMBIO: Umbral más bajo (de 30 a 15) para premiar partidas rápidas
+    if (score <= 15) return 0; 
+    
+    // CAMBIO: Factor 0.85 (antes 0.45) para que las monedas suban rápido
+    const raw = Math.sqrt(score) * 0.85;
+    
+    // CAMBIO: Aumentamos el Soft Cap de 60 a 85 monedas
+    const performanceCoins = Math.min(raw, 85);
 
-        let total = this.baseReward + Math.floor(performanceCoins);
-        
-        // Cap Global de Seguridad (Anti-Exploit / God Mode)
-        // Mantenemos 100 como límite absoluto de la transacción.
-        return Math.min(total, 100); 
-    }
+    let total = this.baseReward + Math.floor(performanceCoins);
+    
+    // Cap Global: Lo subimos a 150
+    return Math.min(total, 150); 
+}
 
     payout(score) {
         const coins = this.calculateCoins(score);
