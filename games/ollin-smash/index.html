@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="description" content="Arkanoid — Love Arcade. Destruye todos los bloques.">
-  <title>Ollin Smash — Love Arcade</title>
+  <meta name="description" content="Arkanoid — Love Arcade. Modo infinito.">
+  <title>ARKANOID — Love Arcade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -13,413 +13,221 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --ark-bg:      #06010f;
       --ark-primary: #ff1f8f;
       --ark-cyan:    #00e8ff;
       --ark-yellow:  #ffe600;
-      --ark-green:   #00ff88;
-      --ark-purple:  #9900ff;
       --ark-text:    #e8d5ff;
-      --ark-dim:     rgba(255,255,255,0.15);
+      --ark-dim:     rgba(255,255,255,0.18);
     }
 
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      background: var(--ark-bg);
+      background: #06010f;
       font-family: 'Orbitron', sans-serif;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
     }
 
-    /* ── CANVAS WRAPPER ── */
-    #ARK_wrapper {
-      position: fixed;
-      inset: 0;
-    }
-    #ARK_canvas {
-      display: block;
-      cursor: none;
-      image-rendering: pixelated;
-    }
+    #ARK_wrapper { position: fixed; inset: 0; }
+    #ARK_canvas  { display: block; cursor: none; image-rendering: pixelated; }
 
-    /* ── SCANLINES ── */
+    /* CRT scanline overlay */
     #ARK_wrapper::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent, transparent 2px,
-        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
-      );
-      pointer-events: none;
-      z-index: 5;
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 5;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
     }
 
     /* ── SCREEN OVERLAYS ── */
     .ark-screen {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      z-index: 10;
-      padding: 24px;
-      pointer-events: none;
-      opacity: 0;
-      transform: scale(1.04);
-      transition: opacity 0.25s ease, transform 0.25s ease;
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0; padding: 24px;
+      pointer-events: none; opacity: 0; transform: scale(1.04);
+      transition: opacity 0.22s ease, transform 0.22s ease;
     }
-    .ark-screen.ark-visible {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: all;
-    }
+    .ark-screen.ark-visible { opacity: 1; transform: scale(1); pointer-events: all; }
 
-    /* Glassmorphism panel */
+    /* Glass panel */
     .ark-panel {
-      background: rgba(6,1,20,0.88);
-      border: 1px solid rgba(255,31,143,0.4);
-      border-radius: 16px;
-      padding: 36px 40px;
-      text-align: center;
-      max-width: 340px;
-      width: 100%;
-      box-shadow: 0 0 60px rgba(255,31,143,0.12),
-                  inset 0 0 40px rgba(0,232,255,0.03);
+      background: rgba(6,1,20,0.94);
+      border: 1px solid rgba(255,31,143,0.35);
+      border-radius: 16px; padding: 36px 40px;
+      text-align: center; max-width: 320px; width: 100%;
+      box-shadow: 0 0 60px rgba(255,31,143,0.10);
       backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
 
     /* ── TYPOGRAPHY ── */
     .ark-logo {
-      font-size: clamp(2.2rem, 8vw, 3.4rem);
-      font-weight: 900;
-      letter-spacing: 0.14em;
-      color: #fff;
-      text-shadow:
-        0 0 20px var(--ark-primary),
-        0 0 50px var(--ark-primary),
-        0 0 100px rgba(255,31,143,0.4);
-      line-height: 1;
-      margin-bottom: 4px;
+      font-size: clamp(2.4rem, 9vw, 3.6rem); font-weight: 900; letter-spacing: 0.14em;
+      color: #fff; line-height: 1;
+      text-shadow: 0 0 20px var(--ark-primary), 0 0 60px rgba(255,31,143,0.35);
     }
     .ark-sub {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.7rem;
-      color: var(--ark-cyan);
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      margin-bottom: 28px;
-      text-shadow: 0 0 12px var(--ark-cyan);
+      font-family: 'Share Tech Mono', monospace; font-size: 0.68rem;
+      color: var(--ark-cyan); letter-spacing: 0.3em;
+      text-shadow: 0 0 10px var(--ark-cyan);
     }
     .ark-title {
-      font-size: clamp(1.1rem, 4vw, 1.5rem);
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 0.1em;
-      text-shadow: 0 0 16px var(--ark-cyan);
-      margin-bottom: 8px;
+      font-size: clamp(1.1rem, 4vw, 1.4rem); font-weight: 700;
+      color: #fff; letter-spacing: 0.1em;
+      text-shadow: 0 0 14px var(--ark-cyan);
     }
-    .ark-body {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.78rem;
-      color: var(--ark-text);
-      line-height: 1.6;
-    }
-    .ark-score-display {
-      font-size: clamp(1.8rem, 6vw, 2.4rem);
-      font-weight: 900;
+    .ark-body { font-family: 'Share Tech Mono', monospace; font-size: 0.76rem; color: var(--ark-text); line-height: 1.6; }
+
+    /* Big coin display */
+    .ark-coins-big {
+      font-size: clamp(2.6rem, 10vw, 3.4rem); font-weight: 900;
       color: var(--ark-yellow);
-      text-shadow: 0 0 24px var(--ark-yellow);
-      margin: 8px 0;
+      text-shadow: 0 0 28px var(--ark-yellow), 0 0 60px rgba(255,230,0,0.3);
+      line-height: 1;
     }
-    .ark-coins-display {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.9rem;
-      color: var(--ark-cyan);
-      text-shadow: 0 0 12px var(--ark-cyan);
+    .ark-level-label {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.72rem;
+      color: var(--ark-cyan); letter-spacing: 0.2em;
     }
-    .ark-level-badge {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.68rem;
-      letter-spacing: 0.25em;
-      color: var(--ark-purple);
-      text-shadow: 0 0 10px var(--ark-purple);
-      margin-bottom: 6px;
-    }
-    .ark-divider {
-      width: 60px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--ark-cyan), transparent);
-      margin: 14px auto;
-    }
+    .ark-divider { width: 60px; height: 1px; background: linear-gradient(90deg,transparent,var(--ark-cyan),transparent); }
 
-    /* ── BUTTONS ── */
-    .ark-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      text-decoration: none;
-      padding: 14px 32px;
-      min-height: 52px;
-      min-width: 44px;
-      border: 2px solid currentColor;
-      border-radius: 8px;
-      background: transparent;
-      cursor: pointer;
-      transition: all 0.18s ease;
-      width: 100%;
-      position: relative;
-      overflow: hidden;
-    }
-    .ark-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: currentColor;
-      opacity: 0;
-      transition: opacity 0.18s ease;
-    }
-    .ark-btn:hover::before,
-    .ark-btn:active::before { opacity: 0.12; }
-    .ark-btn:active         { transform: scale(0.97); }
-
-    .ark-btn-primary { color: var(--ark-primary); }
-    .ark-btn-primary:hover {
-      box-shadow: 0 0 20px var(--ark-primary), 0 0 40px rgba(255,31,143,0.2);
-    }
-    .ark-btn-cyan { color: var(--ark-cyan); }
-    .ark-btn-cyan:hover {
-      box-shadow: 0 0 20px var(--ark-cyan), 0 0 40px rgba(0,232,255,0.2);
-    }
-    .ark-btn-dim { color: var(--ark-dim); border-color: var(--ark-dim); }
-
-    .ark-btn-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 100%;
-      margin-top: 16px;
-    }
-
-    /* ── POWER-UP GUIDE ── */
+    /* Power-up guide grid */
     .ark-guide {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px 16px;
-      margin-top: 10px;
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 6px 12px; padding-top: 2px;
     }
     .ark-guide-item {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--ark-text);
-      display: flex;
-      align-items: center;
-      gap: 5px;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.63rem;
+      color: var(--ark-text); display: flex; align-items: center; gap: 5px;
     }
     .ark-pw-badge {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      font-size: 0.6rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Orbitron', sans-serif;
-      flex-shrink: 0;
+      width: 18px; height: 18px; border-radius: 4px;
+      font-size: 0.6rem; font-weight: 700; font-family: 'Orbitron', sans-serif;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
 
-    /* ── BACK TO HUB LINK ── */
+    /* ── BUTTONS ──
+       touch-action: manipulation prevents 300ms tap delay and lets
+       pointerdown fire immediately without click-synthesis issues. */
+    .ark-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none;
+      padding: 14px 28px; min-height: 52px; width: 100%;
+      border: 2px solid currentColor; border-radius: 8px; background: transparent;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: box-shadow 0.16s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ark-btn::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: 0; transition: opacity 0.16s; }
+    .ark-btn:hover::before, .ark-btn:active::before { opacity: 0.10; }
+    .ark-btn:active { transform: scale(0.97); }
+
+    .ark-btn-primary { color: var(--ark-primary); }
+    .ark-btn-primary:hover { box-shadow: 0 0 20px var(--ark-primary), 0 0 40px rgba(255,31,143,0.2); }
+    .ark-btn-cyan    { color: var(--ark-cyan); }
+    .ark-btn-cyan:hover { box-shadow: 0 0 20px var(--ark-cyan); }
+    .ark-btn-dim     { color: var(--ark-dim); border-color: var(--ark-dim); }
+
+    .ark-btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+    /* ── HUB LINK ── */
     #ARK_hub-link {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 20;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.65rem;
-      letter-spacing: 0.15em;
-      color: rgba(255,255,255,0.35);
-      text-decoration: none;
-      border: 1px solid rgba(255,255,255,0.12);
-      padding: 8px 12px;
-      border-radius: 6px;
-      min-height: 44px;
-      min-width: 44px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
-      background: rgba(6,1,20,0.7);
-      opacity: 0.7;
+      position: fixed; top: 12px; left: 12px; z-index: 20;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.63rem; letter-spacing: 0.15em;
+      color: rgba(255,255,255,0.35); text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.12); padding: 8px 12px; border-radius: 6px;
+      min-height: 44px; min-width: 44px; display: flex; align-items: center; gap: 6px;
+      background: rgba(6,1,20,0.7); opacity: 0.7;
+      transition: color .2s, border-color .2s, box-shadow .2s, opacity .2s;
+      touch-action: manipulation;
     }
-    #ARK_hub-link:hover {
-      color: var(--ark-cyan);
-      border-color: var(--ark-cyan);
-      box-shadow: 0 0 12px rgba(0,232,255,0.2);
-    }
+    #ARK_hub-link:hover { color: var(--ark-cyan); border-color: var(--ark-cyan); box-shadow: 0 0 12px rgba(0,232,255,0.2); }
 
-    /* ── ACCESSIBILITY: visually hidden aria-live region ── */
+    /* ── ARIA LIVE (visually hidden) ── */
     #ARK_aria-status {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      white-space: nowrap;
-      border: 0;
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
   </style>
 </head>
 <body>
 
-  <!-- Accessibility: aria-live status region (Love Arcade spec §5 / WCAG 4.1.3) -->
-  <div
-    id="ARK_aria-status"
-    role="status"
-    aria-live="polite"
-    aria-atomic="true"
-  ></div>
+  <div id="ARK_aria-status" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Back to hub — required by Love Arcade spec §3.2 -->
-  <a id="ARK_hub-link" href="../../index.html" aria-label="Volver al menú principal de Love Arcade">
-    ← HUB
-  </a>
+  <a id="ARK_hub-link" href="../../index.html" aria-label="Volver al hub de Love Arcade">← HUB</a>
 
-  <!-- Canvas -->
   <div id="ARK_wrapper">
     <canvas id="ARK_canvas" role="img" aria-label="Pantalla de juego Arkanoid"></canvas>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════
-       SCREEN: START
-       ════════════════════════════════════════════════════════════ -->
-  <div id="ARK_screen-start" class="ark-screen" role="main" aria-label="Pantalla de inicio">
+
+  <!-- ══════════════════════════════════════
+       START
+       ══════════════════════════════════════ -->
+  <div id="ARK_screen-start" class="ark-screen" role="main">
     <div class="ark-panel">
       <div class="ark-logo">ARKANOID</div>
-      <div class="ark-sub">Love Arcade · 5 Worlds</div>
-      <p class="ark-body">¡Destruye todos los bloques!<br>Mueve la paleta y no dejes caer la bola.</p>
-
-      <div class="ark-guide" aria-label="Guía de power-ups">
-        <div class="ark-guide-item">
-          <span class="ark-pw-badge" style="background:#00cc66;color:#000;">E</span> Paleta ancha
-        </div>
-        <div class="ark-guide-item">
-          <span class="ark-pw-badge" style="background:#00e8ff;color:#000;">M</span> Multi-bola
-        </div>
-        <div class="ark-guide-item">
-          <span class="ark-pw-badge" style="background:#4488ff;color:#fff;">S</span> Cámara lenta
-        </div>
-        <div class="ark-guide-item">
-          <span class="ark-pw-badge" style="background:#ff1f8f;color:#fff;">♥</span> Vida extra
-        </div>
-        <div class="ark-guide-item">
-          <span class="ark-pw-badge" style="background:#ffe600;color:#000;">🛡</span> Escudo
-        </div>
+      <div class="ark-sub">LOVE ARCADE · MODO INFINITO</div>
+      <div class="ark-divider"></div>
+      <p class="ark-body">Destruye los bloques.<br>Los niveles no terminan. ¿Hasta dónde llegarás?</p>
+      <div class="ark-guide" aria-label="Power-ups">
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#00cc66;color:#000">E</span>Paleta ancha</div>
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#00e8ff;color:#000">M</span>Multi-bola</div>
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#4488ff;color:#fff">S</span>Cámara lenta</div>
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#ff1f8f;color:#fff">♥</span>Vida extra</div>
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#ffe600;color:#000">🛡</span>Escudo</div>
+        <div class="ark-guide-item"><span class="ark-pw-badge" style="background:#ff6600;color:#fff">🔥</span>Bola de fuego</div>
       </div>
-
-      <div class="ark-btn-group">
+      <div class="ark-btn-group" style="margin-top:8px">
         <button class="ark-btn ark-btn-primary" id="ARK_btn-start">▶ JUGAR</button>
-        <a class="ark-btn ark-btn-dim" href="../../index.html" aria-label="Volver al hub de Love Arcade">← VOLVER AL HUB</a>
+        <a class="ark-btn ark-btn-dim" href="../../index.html">← HUB</a>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════
-       SCREEN: PAUSE
-       ════════════════════════════════════════════════════════════ -->
-  <div id="ARK_screen-pause" class="ark-screen" role="dialog" aria-modal="true" aria-label="Juego pausado">
+
+  <!-- ══════════════════════════════════════
+       PAUSE
+       ══════════════════════════════════════ -->
+  <div id="ARK_screen-pause" class="ark-screen" role="dialog" aria-modal="true">
     <div class="ark-panel">
       <div class="ark-title">⏸ PAUSA</div>
       <div class="ark-divider"></div>
       <p class="ark-body" id="ARK_pause-info">Nivel 1</p>
-      <div class="ark-btn-group">
+      <div class="ark-btn-group" style="margin-top:8px">
         <button class="ark-btn ark-btn-primary" id="ARK_btn-resume">▶ CONTINUAR</button>
         <button class="ark-btn ark-btn-dim"     id="ARK_btn-quit-pause">✕ SALIR AL HUB</button>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════
-       SCREEN: LEVEL COMPLETE
-       ════════════════════════════════════════════════════════════ -->
-  <div id="ARK_screen-levelcomplete" class="ark-screen" role="dialog" aria-modal="true" aria-label="Nivel completado">
-    <div class="ark-panel">
-      <div class="ark-level-badge" id="ARK_lc-level">NIVEL 1 COMPLETADO</div>
-      <div class="ark-title">¡VICTORIA!</div>
-      <div class="ark-divider"></div>
-      <div class="ark-score-display" id="ARK_lc-score">0</div>
-      <div class="ark-coins-display" id="ARK_lc-coins">+0 🪙</div>
-      <div class="ark-btn-group">
-        <button class="ark-btn ark-btn-cyan" id="ARK_btn-next">SIGUIENTE NIVEL ▶</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- ════════════════════════════════════════════════════════════
-       SCREEN: GAME OVER
-       ════════════════════════════════════════════════════════════ -->
-  <div id="ARK_screen-gameover" class="ark-screen" role="dialog" aria-modal="true" aria-label="Fin del juego">
+  <!-- ══════════════════════════════════════
+       GAME OVER — coins only
+       ══════════════════════════════════════ -->
+  <div id="ARK_screen-gameover" class="ark-screen" role="dialog" aria-modal="true">
     <div class="ark-panel">
-      <div class="ark-title" style="color:var(--ark-primary);">GAME OVER</div>
+      <div class="ark-title" style="color:var(--ark-primary)">GAME OVER</div>
       <div class="ark-divider"></div>
-      <div class="ark-score-display" id="ARK_go-score">0</div>
-      <p class="ark-body" style="margin:4px 0 8px;">puntos finales</p>
-      <p class="ark-body" id="ARK_go-record" style="color:var(--ark-yellow);font-size:0.7rem;" aria-live="polite"></p>
-      <div class="ark-btn-group">
-        <button class="ark-btn ark-btn-primary" id="ARK_btn-restart">↺ REINTENTAR</button>
+      <div class="ark-coins-big" id="ARK_go-coins">0 🪙</div>
+      <div class="ark-level-label" id="ARK_go-level">Nivel 1</div>
+      <div class="ark-btn-group" style="margin-top:14px">
+        <button class="ark-btn ark-btn-primary" id="ARK_btn-restart">↺ JUGAR DE NUEVO</button>
         <a class="ark-btn ark-btn-dim" href="../../index.html">← HUB</a>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════
-       SCREEN: WIN
-       ════════════════════════════════════════════════════════════ -->
-  <div id="ARK_screen-win" class="ark-screen" role="dialog" aria-modal="true" aria-label="¡Juego completado!">
-    <div class="ark-panel">
-      <div class="ark-logo" style="font-size:2rem;">🏆</div>
-      <div class="ark-title">¡JUEGO COMPLETADO!</div>
-      <div class="ark-sub">TODOS LOS MUNDOS CONQUISTADOS</div>
-      <div class="ark-score-display" id="ARK_win-score">0</div>
-      <div class="ark-coins-display" id="ARK_win-coins">Total: 0 🪙</div>
-      <div class="ark-btn-group">
-        <button class="ark-btn ark-btn-primary" id="ARK_btn-play-again">↺ JUGAR DE NUEVO</button>
-        <a class="ark-btn ark-btn-dim" href="../../index.html">← HUB</a>
-      </div>
-    </div>
-  </div>
 
-  <!--
-    Entry point — ES Module.
-    Modules are deferred by the browser, so app.js (synchronous, below)
-    executes first, making window.GameCenter available when our module runs.
-    This also satisfies Love Arcade spec §3.3 (app.js is the last <script> tag).
-  -->
+  <!-- ES Module entry point -->
   <script type="module">
     import { ARK_UI } from './js/ark.ui.js';
     ARK_UI.init();
   </script>
 
-  <!--
-    Love Arcade Core Engine — MUST be the last <script> tag.
-    (Love Arcade spec §3.3)
-    Synchronous scripts run before deferred modules, so GameCenter
-    is guaranteed to be defined when ark.integration.js calls it.
-  -->
+  <!-- Love Arcade Core — MUST be last (spec §3.3) -->
   <script src="../../js/app.js"></script>
 </body>
 </html>
