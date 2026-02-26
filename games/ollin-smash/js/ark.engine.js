@@ -288,9 +288,9 @@ function _step(subDt, recordTrail) {
     ball.y += ball.vy * subDt;
 
     // ── Walls ─────────────────────────────────────────────────
-    if (ball.x - r < 0)    { ball.x = r;        ball.vx =  Math.abs(ball.vx); }
-    if (ball.x + r > C.LW) { ball.x = C.LW - r; ball.vx = -Math.abs(ball.vx); }
-    if (ball.y - r < 0)    { ball.y = r;         ball.vy =  Math.abs(ball.vy); }
+    if (ball.x - r < 0)    { ball.x = r;        ball.vx =  Math.abs(ball.vx); S.screenShake = Math.min(S.screenShake + 3, 8); }
+    if (ball.x + r > C.LW) { ball.x = C.LW - r; ball.vx = -Math.abs(ball.vx); S.screenShake = Math.min(S.screenShake + 3, 8); }
+    if (ball.y - r < 0)    { ball.y = r;         ball.vy =  Math.abs(ball.vy); S.screenShake = Math.min(S.screenShake + 3, 8); }
 
     // ── Bottom ────────────────────────────────────────────────
     if (ball.y - r > C.LH) { dead.add(bi); continue; }
@@ -318,6 +318,7 @@ function _step(subDt, recordTrail) {
           S.score += C.SCORE_BRICK_FIRE;
           const color = ARK_BRICK_COLORS[brick.gy % ARK_BRICK_COLORS.length];
           _spawnFireParticles(rect.x + rect.w / 2, rect.y + rect.h / 2, 6);
+          S.screenShake = Math.min(S.screenShake + 5, 15);
           if (brick.hp <= 0) {
             brick.dead = true;
             if (Math.random() < C.PW_CHANCE)
@@ -338,6 +339,7 @@ function _step(subDt, recordTrail) {
           S.score   += Math.round(base * (1 + Math.min(S.combo - 1, 8) * C.SCORE_COMBO_MULT));
           const color = ARK_BRICK_COLORS[brick.gy % ARK_BRICK_COLORS.length];
           _spawnParticles(rect.x + rect.w / 2, rect.y + rect.h / 2, color, brick.hp <= 0 ? 14 : 6);
+          S.screenShake = Math.min(S.screenShake + 5, 15);
           if (brick.hp <= 0) {
             brick.dead = true;
             if (Math.random() < C.PW_CHANCE)
