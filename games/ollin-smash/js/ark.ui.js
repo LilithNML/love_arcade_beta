@@ -36,6 +36,7 @@ import {
 
 import { ARK_Engine } from './ark.engine.js';
 import { ARK_Integration } from './ark.integration.js';
+import { ARK_Audio } from './ark.audio.js';
 
 const C = ARK_CONFIG;
 
@@ -75,7 +76,10 @@ let _lastTime    = 0;
 // § INPUT
 // ─────────────────────────────────────────────────────────────────
 const _keys = {};
-let _touchLogicalX = null;
+let _touchLogicalX    = null;
+let _touchStartX      = null;   // clientX of the initial touch contact
+let _initialPaddleX   = null;   // paddle position at touch start
+const _TOUCH_SENSITIVITY = 1.0; // multiplier — 1.0 = 1:1 relative mapping
 
 // ─────────────────────────────────────────────────────────────────
 // § ACCESSIBILITY
@@ -109,9 +113,14 @@ function _toLogicalX(clientX) { return (clientX - _offsetX) / _scale; }
 const _elCache = {};
 function _el(id) { return (_elCache[id] = _elCache[id] || document.getElementById(id)); }
 
-function showScreen(id) {
+function _executeChange(id) {
   document.querySelectorAll('.ark-screen').forEach(s => s.classList.remove('ark-visible'));
   const sc = _el(id); if (sc) sc.classList.add('ark-visible');
+}
+
+function showScreen(id) {
+  if (!document.startViewTransition) { _executeChange(id); return; }
+  document.startViewTransition(() => _executeChange(id));
 }
 function hideAllScreens() {
   document.querySelectorAll('.ark-screen').forEach(s => s.classList.remove('ark-visible'));
@@ -139,13 +148,45 @@ function _roundRect(x, y, w, h, r) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// § DRAW — BACKGROUND
+// § PARALLAX STATE
 // ─────────────────────────────────────────────────────────────────
-function _drawBg() {
+let _parallaxX = 0;  // smoothed parallax offset derived from paddle position
+
+// ─────────────────────────────────────────────────────────────────
+// § DRAW — BACKGROUND  (grid layer + nebula parallax layer)
+// ─────────────────────────────────────────────────────────────────
+function _drawBg(paddleX) {
+  // Solid fill
   ctx.fillStyle = '#06010f'; ctx.fillRect(0, 0, C.LW, C.LH);
+
+  // Smooth parallax offset (10% of paddle deviation from centre)
+  const targetPX = ((paddleX ?? C.LW / 2) - C.LW / 2) * 0.10;
+  _parallaxX += (targetPX - _parallaxX) * 0.08;
+
+  // Layer 1: Static grid (very subtle)
   ctx.strokeStyle = 'rgba(100,50,180,0.06)'; ctx.lineWidth = 0.5;
   for (let x = 0; x < C.LW; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, C.LH); ctx.stroke(); }
   for (let y = 0; y < C.LH; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(C.LW, y); ctx.stroke(); }
+
+  // Layer 2: Nebula/stars — offset by parallax
+  const px = _parallaxX;
+  ctx.save();
+  ctx.translate(px, 0);
+  // Scatter dots of two colours to simulate depth
+  const seed = 42; // deterministic-ish using sin hash
+  for (let i = 0; i < 60; i++) {
+    const sx = ((Math.sin(i * 127.1) * 0.5 + 0.5) * (C.LW + 40)) - 20;
+    const sy = (Math.sin(i * 311.7) * 0.5 + 0.5) * C.LH;
+    const br = 0.15 + 0.35 * (Math.sin(i * 73.3) * 0.5 + 0.5);
+    const sz = 0.5 + 1.0 * (Math.sin(i * 199.9) * 0.5 + 0.5);
+    ctx.beginPath();
+    ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+    ctx.fillStyle = i % 3 === 0 ? `rgba(0,232,255,${br})` : `rgba(187,134,252,${br})`;
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Vignette
   const vig = ctx.createRadialGradient(C.LW/2, C.LH/2, C.LH*0.2, C.LW/2, C.LH/2, C.LH*0.8);
   vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.5)');
   ctx.fillStyle = vig; ctx.fillRect(0, 0, C.LW, C.LH);
@@ -158,6 +199,17 @@ function _drawHUD(state) {
   ctx.fillStyle = 'rgba(6,1,20,0.85)'; ctx.fillRect(0, 0, C.LW, 56);
   ctx.strokeStyle = 'rgba(255,31,143,0.3)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, 56); ctx.lineTo(C.LW, 56); ctx.stroke();
+
+  // ── Top-edge progress bar (bricks destroyed) ────────────────
+  const totalD = state.totalDestructible || 1;
+  const destroyed = Math.max(0, totalD - (state.bricks?.filter(b => !b.dead && b.hp !== Infinity).length ?? 0));
+  const prog = destroyed / totalD;
+  ctx.fillStyle = 'rgba(0,232,255,0.15)';
+  ctx.fillRect(0, 0, C.LW, 3);
+  _glow('#00e8ff', 6);
+  ctx.fillStyle = '#00e8ff';
+  ctx.fillRect(0, 0, C.LW * prog, 3);
+  _noGlow();
 
   const ld = state.levelData;
   ctx.font = '600 8px "Share Tech Mono",monospace'; ctx.fillStyle = 'rgba(187,134,252,0.7)'; ctx.textAlign = 'left';
@@ -181,24 +233,51 @@ function _drawHUD(state) {
     ctx.textAlign = 'left'; ctx.fillText(`×${state.combo} COMBO`, 12, 38);
   }
 
-  // Power-up badges
-  const nt = performance.now() * 0.005;
-  let bx = 12;
+  // ── Radial power-up timers (top-right cluster) ──────────────
+  const nt  = performance.now() * 0.005;
+  const R   = 10;         // circle radius
+  const icY = 47;         // vertical centre of icon row
+  let   ix  = C.LW - 14; // right-anchored x cursor
+
+  function _radialTimer(x, y, label, color, ratio, pulse) {
+    // Background ring
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.globalAlpha = 1;
+    // Progress arc
+    _glow(color, 8);
+    ctx.beginPath();
+    ctx.arc(x, y, R, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    _noGlow();
+    // Icon
+    ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = color;
+    ctx.globalAlpha = pulse ? (0.6 + 0.4 * Math.abs(Math.sin(nt * 2))) : 1;
+    ctx.fillText(label, x, y + 3);
+    ctx.globalAlpha = 1;
+  }
+
   if (state.shield) {
-    ctx.font = '700 9px "Orbitron",sans-serif';
-    ctx.fillStyle = `rgba(255,230,0,${0.6 + 0.4 * Math.sin(nt)})`;
-    ctx.textAlign = 'left'; ctx.fillText('🛡', bx, 50); bx += 18;
+    _radialTimer(ix, icY, '🛡', '#ffe600',
+      state.shieldTimer / (C.PW_DURATION * C.PW_SHIELD_MULT), true);
+    ix -= R * 2 + 6;
   }
   if (state.fireTimer > 0) {
-    ctx.font = '700 9px "Orbitron",sans-serif';
-    ctx.fillStyle = `rgba(255,102,0,${0.6 + 0.4 * Math.abs(Math.sin(nt * 2))})`;
-    ctx.textAlign = 'left'; ctx.fillText('🔥', bx, 50); bx += 18;
-    ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#ff6600';
-    ctx.fillText(`${(state.fireTimer / 1000).toFixed(1)}s`, bx, 50); bx += 28;
+    _radialTimer(ix, icY, '🔥', '#ff6600',
+      state.fireTimer / C.PW_FIRE_DURATION, true);
+    ix -= R * 2 + 6;
   }
-  let tx = C.LW - 12; ctx.textAlign = 'right';
-  if (state.expandTimer > 0) { ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#00cc66'; ctx.fillText(`E:${(state.expandTimer/1000).toFixed(1)}s`, tx, 50); tx -= 48; }
-  if (state.slowTimer   > 0) { ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#4488ff'; ctx.fillText(`S:${(state.slowTimer/1000).toFixed(1)}s`, tx, 50); }
+  if (state.expandTimer > 0) {
+    _radialTimer(ix, icY, 'E', '#00cc66',
+      state.expandTimer / C.PW_DURATION, false);
+    ix -= R * 2 + 6;
+  }
+  if (state.slowTimer > 0) {
+    _radialTimer(ix, icY, 'S', '#4488ff',
+      state.slowTimer / C.PW_DURATION, false);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -329,7 +408,29 @@ function _drawBalls(balls) {
       _glow('#ff1f8f', 16 * p);
       ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
       ctx.font = '700 8px "Share Tech Mono"'; ctx.fillStyle = `rgba(255,255,255,${p*0.6})`; ctx.textAlign = 'center';
-      ctx.fillText('TAP / SPACE', ball.x, ball.y - 18); _noGlow(); continue;
+      ctx.fillText('TAP / SPACE', ball.x, ball.y - 18); _noGlow();
+
+      // ── Launch guide — 45° dotted trajectory ──────────────────
+      ctx.save();
+      ctx.setLineDash([5, 10]);
+      ctx.strokeStyle = `rgba(255,255,255,${p * 0.35})`;
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      let lx = ball.x, ly = ball.y - r - 1;
+      let ldx = 1, ldy = -1;   // normalised 45° direction
+      const step = 10, steps = 30;
+      ctx.moveTo(lx, ly);
+      for (let s = 0; s < steps; s++) {
+        lx += ldx * step; ly += ldy * step;
+        if (lx <= 0)     { lx = 0;    ldx =  1; }
+        if (lx >= C.LW)  { lx = C.LW; ldx = -1; }
+        if (ly <= 56)    { ly = 56;   ldy =  1; }
+        ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      continue;
     }
     for (let ti = 0; ti < ball.trail.length; ti++) {
       const t = ball.trail[ti], prog = ti / ball.trail.length;
@@ -392,7 +493,7 @@ function _drawShockwaves(sw) {
 // § MAIN RENDER
 // ─────────────────────────────────────────────────────────────────
 function _render(state) {
-  _drawBg();
+  _drawBg(state.paddleX);
   if (_phase === 'IDLE') return;
 
   if (state.screenShake > 0) {
@@ -512,6 +613,8 @@ function _onGameOver() {
   _txActive = false;
   _phase    = 'GAME_OVER';
 
+  ARK_Audio.play('game_over');
+
   _el('ARK_go-coins').textContent = `${_totalCoins} 🪙`;
   _el('ARK_go-level').textContent = `Nivel ${_currentLevel + 1}`;
 
@@ -526,6 +629,13 @@ function _onGameOver() {
 function _wireEngineEvents() {
   ARK_Engine.on('levelComplete', _onLevelComplete);
   ARK_Engine.on('gameOver',      _onGameOver);
+  ARK_Engine.on('powerUp',       () => ARK_Audio.play('powerup_collect'));
+  // brick audio — throttled to avoid per-frame spam
+  let _lastBrickSound = 0;
+  ARK_Engine.on('brickDestroyed', () => {
+    const now = performance.now();
+    if (now - _lastBrickSound > 35) { ARK_Audio.play('brick_hit'); _lastBrickSound = now; }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -548,8 +658,11 @@ function _setupInput() {
     const active = _phase === 'PLAYING' || _phase === 'READY';
     if (active) e.preventDefault();
     const touch = e.touches[0];
-    _touchLogicalX = _toLogicalX(touch.clientX);
-    if (_phase === 'READY') { ARK_Engine.launchBall(); _phase = 'PLAYING'; }
+    // Store relative drag anchor
+    _touchStartX    = touch.clientX;
+    _initialPaddleX = ARK_Engine.getState().paddleX;
+    _touchLogicalX  = _toLogicalX(touch.clientX);
+    if (_phase === 'READY') { ARK_Engine.launchBall(); ARK_Audio.init(); _phase = 'PLAYING'; }
     else if (_phase === 'PLAYING') {
       if ((touch.clientY - _offsetY) / _scale < 56) _pauseGame();
     }
@@ -558,21 +671,30 @@ function _setupInput() {
   canvas.addEventListener('touchmove', (e) => {
     if (_phase === 'PLAYING' || _phase === 'READY') {
       e.preventDefault();
-      _touchLogicalX = _toLogicalX(e.touches[0].clientX);
-      ARK_Engine.setPaddleX(_touchLogicalX);
+      const touch = e.touches[0];
+      if (_touchStartX !== null && _initialPaddleX !== null) {
+        const deltaClientX = (touch.clientX - _touchStartX) * _TOUCH_SENSITIVITY;
+        const deltaLogical  = deltaClientX / _scale;
+        ARK_Engine.setPaddleX(_initialPaddleX + deltaLogical);
+      } else {
+        ARK_Engine.setPaddleX(_toLogicalX(touch.clientX));
+      }
+      _touchLogicalX = _toLogicalX(touch.clientX);
     }
   }, { passive: false });
 
   canvas.addEventListener('touchend', (e) => {
     if (_phase === 'PLAYING' || _phase === 'READY') e.preventDefault();
-    _touchLogicalX = null;
+    _touchLogicalX  = null;
+    _touchStartX    = null;
+    _initialPaddleX = null;
   }, { passive: false });
 
   canvas.addEventListener('mousemove', (e) => {
     if (_phase === 'PLAYING' || _phase === 'READY') ARK_Engine.setPaddleX(_toLogicalX(e.clientX));
   });
   canvas.addEventListener('click', () => {
-    if (_phase === 'READY') { ARK_Engine.launchBall(); _phase = 'PLAYING'; }
+    if (_phase === 'READY') { ARK_Audio.init(); ARK_Engine.launchBall(); _phase = 'PLAYING'; }
   });
 }
 
