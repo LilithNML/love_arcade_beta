@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="description" content="Arkanoid — Love Arcade. Modo infinito.">
-  <title>ARKANOID — Love Arcade</title>
+  <meta name="description" content="Ollin Smash — Love Arcade. Modo infinito. Destruye bloques en ritmo neon.">
+  <title>Ollin Smash</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -49,14 +49,15 @@
     }
     .ark-screen.ark-visible { opacity: 1; transform: scale(1); pointer-events: all; }
 
-    /* Glass panel */
+    /* Glass panel — premium glassmorphism */
     .ark-panel {
-      background: rgba(6,1,20,0.94);
-      border: 1px solid rgba(255,31,143,0.35);
+      background: rgba(15, 2, 25, 0.70);
+      border: 1px solid rgba(255, 255, 255, 0.10);
       border-radius: 16px; padding: 36px 40px;
       text-align: center; max-width: 320px; width: 100%;
-      box-shadow: 0 0 60px rgba(255,31,143,0.10);
-      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,31,143,0.10);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
       display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
 
@@ -72,9 +73,10 @@
       text-shadow: 0 0 10px var(--ark-cyan);
     }
     .ark-title {
-      font-size: clamp(1.1rem, 4vw, 1.4rem); font-weight: 700;
-      color: #fff; letter-spacing: 0.1em;
-      text-shadow: 0 0 14px var(--ark-cyan);
+      font-size: clamp(1.8rem, 10vw, 3rem); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.15em;
+      color: #fff;
+      filter: drop-shadow(0 0 10px var(--ark-primary));
     }
     .ark-body { font-family: 'Share Tech Mono', monospace; font-size: 0.76rem; color: var(--ark-text); line-height: 1.6; }
 
@@ -150,6 +152,17 @@
       position: absolute; width: 1px; height: 1px; overflow: hidden;
       clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
+
+    /* ── VIEW TRANSITIONS ── */
+    @keyframes ark-vt-fade-scale-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+    @keyframes ark-vt-fade-scale-out { from { opacity: 1; transform: scale(1); }   to { opacity: 0; transform: scale(1.04); } }
+
+    ::view-transition-old(root) {
+      animation: 0.22s ease both ark-vt-fade-scale-out;
+    }
+    ::view-transition-new(root) {
+      animation: 0.22s ease both ark-vt-fade-scale-in;
+    }
   </style>
 </head>
 <body>
@@ -168,7 +181,7 @@
        ══════════════════════════════════════ -->
   <div id="ARK_screen-start" class="ark-screen" role="main">
     <div class="ark-panel">
-      <div class="ark-logo">ARKANOID</div>
+      <div class="ark-logo">OLLIN SMASH</div>
       <div class="ark-sub">LOVE ARCADE · MODO INFINITO</div>
       <div class="ark-divider"></div>
       <p class="ark-body">Destruye los bloques.<br>Los niveles no terminan. ¿Hasta dónde llegarás?</p>
