@@ -12,7 +12,7 @@
 // § GLOBAL CONFIG
 // ─────────────────────────────────────────────────────────────────
 export const ARK_CONFIG = Object.freeze({
-  GAME_ID:          'arkanoid',
+  GAME_ID:          'ollin_smash',
   COINS_DIVISOR:    100,          // 100 internal pts = 1 Love Arcade coin
 
   TOTAL_LIVES:      3,
