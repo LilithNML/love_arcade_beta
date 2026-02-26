@@ -1,27 +1,28 @@
 /**
- * ark.ui.js — Arkanoid · Love Arcade  v3.0.0
+ * ark.ui.js — Arkanoid · Love Arcade  v3.1.0
  * Module D: Rendering, input, screen management, RAF loop.
  *
- * ── Touch bug fix ─────────────────────────────────────────────────
- * Root cause: body { touch-action: none } + unconditional
- * e.preventDefault() in the canvas touchstart handler suppresses
- * the browser's synthetic "click" event generation for ALL HTML
- * elements, including the overlay screen buttons (iOS Safari).
+ * ── FREEZE FIX ───────────────────────────────────────────────────
+ * Root cause: _onLevelComplete set _phase = 'LEVEL_COMPLETE', which
+ * broke the RAF condition (_phase === 'PLAYING' || 'READY'), halting
+ * tick() forever. The HTML overlay waited for a button no one tapped.
  *
- * Fix (two parts):
- *  1. Canvas touchstart only calls e.preventDefault() when the
- *     game is in an active phase (READY or PLAYING). In terminal
- *     phases (GAME_OVER, WIN, IDLE, PAUSED) the event is not
- *     prevented, so the browser can process taps on screen buttons.
- *  2. All button event listeners use `pointerdown` instead of
- *     `click`. `pointerdown` fires natively for both mouse presses
- *     and touch taps without requiring synthetic click generation.
- *     CSS adds `touch-action: manipulation` on .ark-btn to ensure
- *     immediate pointer events without scroll-delay.
+ * Fix: the HTML ARK_screen-levelcomplete is REMOVED.
+ * Level transitions happen entirely on canvas while the engine keeps
+ * running:
+ *   1. _phase stays 'PLAYING'. tick() continues uninterrupted.
+ *   2. A canvas banner is drawn for TRANSITION_MS (2 s).
+ *   3. setTimeout auto-calls startLevel(next) → _phase = 'READY'.
+ *   4. Ball appears on paddle. Player taps / presses SPACE to launch.
  *
- * ── Double-init safety ────────────────────────────────────────────
- *  • _initialized flag — all addEventListener wiring runs once.
- *  • cancelAnimationFrame(_rafId) — kills stale loop before restart.
+ * ── GAME OVER ────────────────────────────────────────────────────
+ * Simplified: shows only coins earned + level reached.
+ * No scores, records, or "best level" clutter.
+ *
+ * ── TOUCH FIX (v3.0) ────────────────────────────────────────────
+ * • pointerdown on all buttons (no synthetic-click dependency)
+ * • e.preventDefault() only in PLAYING / READY phases
+ * • touch-action: manipulation on .ark-btn (CSS)
  */
 
 'use strict';
@@ -38,6 +39,9 @@ import { ARK_Integration } from './ark.integration.js';
 
 const C = ARK_CONFIG;
 
+// ms the between-level banner stays visible before new bricks load
+const TRANSITION_MS = 2000;
+
 // ─────────────────────────────────────────────────────────────────
 // § CANVAS / VIEWPORT
 // ─────────────────────────────────────────────────────────────────
@@ -47,12 +51,18 @@ let _offsetX = 0;
 let _offsetY = 0;
 
 // ─────────────────────────────────────────────────────────────────
-// § GAME PHASE
+// § GAME PHASE  IDLE | READY | PLAYING | PAUSED | GAME_OVER
 // ─────────────────────────────────────────────────────────────────
 let _phase        = 'IDLE';
 let _currentLevel = 0;
-let _totalScore   = 0;
 let _totalCoins   = 0;
+
+// ── Level transition overlay state ──────────────────────────────
+let _txActive    = false;   // true while banner is showing
+let _txUntil     = 0;       // performance.now() when banner ends
+let _txCoins     = 0;       // coins earned in completed level
+let _txIsBoss    = false;
+let _txTimer     = null;    // setTimeout handle
 
 // ─────────────────────────────────────────────────────────────────
 // § DOUBLE-INIT GUARDS
@@ -108,28 +118,24 @@ function hideAllScreens() {
 }
 function _hubVisible(v) {
   const el = _el('ARK_hub-link'); if (!el) return;
-  el.style.opacity = v ? '0.7' : '0'; el.style.pointerEvents = v ? 'all' : 'none';
+  el.style.opacity = v ? '0.7' : '0';
+  el.style.pointerEvents = v ? 'all' : 'none';
 }
 
 // ─────────────────────────────────────────────────────────────────
 // § RENDERING HELPERS
 // ─────────────────────────────────────────────────────────────────
-function _glow(color, r)  { ctx.shadowColor = color; ctx.shadowBlur = r; }
-function _noGlow()         { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; }
+function _glow(color, r) { ctx.shadowColor = color; ctx.shadowBlur = r; }
+function _noGlow()        { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; }
 
 function _roundRect(x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y,     x + w, y + r,     r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x,     y + h, x,     y + h - r, r);
-  ctx.lineTo(x,     y + r);
-  ctx.arcTo(x,     y,     x + r, y,          r);
-  ctx.closePath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r); ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -146,56 +152,112 @@ function _drawBg() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// § DRAW — HUD
+// § DRAW — HUD  (shows coins, not internal score)
 // ─────────────────────────────────────────────────────────────────
 function _drawHUD(state) {
   ctx.fillStyle = 'rgba(6,1,20,0.85)'; ctx.fillRect(0, 0, C.LW, 56);
   ctx.strokeStyle = 'rgba(255,31,143,0.3)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, 56); ctx.lineTo(C.LW, 56); ctx.stroke();
 
-  // World / level label
-  const ld  = state.levelData;
-  const lvl = state.levelIndex + 1;
-  const worldLabel = ld ? ld.name : `NIVEL ${lvl}`;
+  const ld = state.levelData;
   ctx.font = '600 8px "Share Tech Mono",monospace'; ctx.fillStyle = 'rgba(187,134,252,0.7)'; ctx.textAlign = 'left';
-  ctx.fillText(`NV.${lvl}${ld?.isBoss ? ' ⚡JEFE' : ''} · ${worldLabel}`, 12, 14);
+  ctx.fillText(`NV.${state.levelIndex + 1}${ld?.isBoss ? ' ⚡JEFE' : ''} · ${ld?.name || ''}`, 12, 14);
 
-  // Score
-  _glow('#ffe600', 12); ctx.font = '900 22px "Orbitron",sans-serif'; ctx.fillStyle = '#ffe600'; ctx.textAlign = 'center';
-  ctx.fillText(String(state.score || 0).padStart(7, '0'), C.LW / 2, 38); _noGlow();
+  // Centre: total coins (the currency players care about)
+  _glow('#ffe600', 12);
+  ctx.font = '900 20px "Orbitron",sans-serif'; ctx.fillStyle = '#ffe600'; ctx.textAlign = 'center';
+  ctx.fillText(`${_totalCoins} 🪙`, C.LW / 2, 38);
+  _noGlow();
 
-  // Lives
+  // Lives (right)
   ctx.textAlign = 'right'; ctx.font = '14px sans-serif';
   for (let i = 0; i < (state.lives || 0); i++) { _glow('#ff1f8f', 8); ctx.fillStyle = '#ff1f8f'; ctx.fillText('♥', C.LW - 12 - i * 20, 38); }
   _noGlow();
 
-  // Combo
+  // Combo (left, second line)
   if (state.combo > 1) {
     ctx.font = '700 9px "Orbitron",sans-serif';
     ctx.fillStyle = `rgba(0,232,255,${Math.min(1, state.combo / 8)})`;
     ctx.textAlign = 'left'; ctx.fillText(`×${state.combo} COMBO`, 12, 38);
   }
 
-  // Status badges (bottom of HUD, left)
-  let bx = 12;
+  // Power-up badges
   const nt = performance.now() * 0.005;
+  let bx = 12;
   if (state.shield) {
-    const p = 0.6 + 0.4 * Math.sin(nt);
-    ctx.font = '700 9px "Orbitron",sans-serif'; ctx.fillStyle = `rgba(255,230,0,${p})`; ctx.textAlign = 'left';
-    ctx.fillText('🛡', bx, 50); bx += 18;
+    ctx.font = '700 9px "Orbitron",sans-serif';
+    ctx.fillStyle = `rgba(255,230,0,${0.6 + 0.4 * Math.sin(nt)})`;
+    ctx.textAlign = 'left'; ctx.fillText('🛡', bx, 50); bx += 18;
   }
   if (state.fireTimer > 0) {
-    const p = 0.6 + 0.4 * Math.abs(Math.sin(nt * 2));
-    ctx.font = '700 9px "Orbitron",sans-serif'; ctx.fillStyle = `rgba(255,102,0,${p})`; ctx.textAlign = 'left';
-    ctx.fillText('🔥', bx, 50); bx += 18;
+    ctx.font = '700 9px "Orbitron",sans-serif';
+    ctx.fillStyle = `rgba(255,102,0,${0.6 + 0.4 * Math.abs(Math.sin(nt * 2))})`;
+    ctx.textAlign = 'left'; ctx.fillText('🔥', bx, 50); bx += 18;
     ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#ff6600';
     ctx.fillText(`${(state.fireTimer / 1000).toFixed(1)}s`, bx, 50); bx += 28;
   }
-
-  // Timer badges (right)
   let tx = C.LW - 12; ctx.textAlign = 'right';
   if (state.expandTimer > 0) { ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#00cc66'; ctx.fillText(`E:${(state.expandTimer/1000).toFixed(1)}s`, tx, 50); tx -= 48; }
   if (state.slowTimer   > 0) { ctx.font = '700 7px "Share Tech Mono"'; ctx.fillStyle = '#4488ff'; ctx.fillText(`S:${(state.slowTimer/1000).toFixed(1)}s`, tx, 50); }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// § DRAW — LEVEL TRANSITION BANNER
+// Drawn on top of the live game (engine keeps ticking underneath).
+// Shows for TRANSITION_MS then disappears as new bricks load.
+// ─────────────────────────────────────────────────────────────────
+function _drawTransitionBanner() {
+  const now      = performance.now();
+  const elapsed  = now - (_txUntil - TRANSITION_MS);
+  const t        = Math.min(1, elapsed / TRANSITION_MS);  // 0 → 1
+
+  // Alpha: fade-in first 15%, full for middle, fade-out last 15%
+  const alpha = t < 0.15 ? t / 0.15 : t > 0.85 ? (1 - t) / 0.15 : 1;
+  if (alpha <= 0.01) return;
+
+  const cx    = C.LW / 2;
+  const cy    = C.LH / 2;
+  const bw    = 300, bh = 140;
+  const accent = _txIsBoss ? '#ff6600' : '#00e8ff';
+
+  // Card background
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.fillStyle   = 'rgba(6,1,20,0.96)';
+  _roundRect(cx - bw/2, cy - bh/2, bw, bh, 14);
+  ctx.fill();
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+  _roundRect(cx - bw/2, cy - bh/2, bw, bh, 14);
+  ctx.stroke();
+
+  ctx.globalAlpha = alpha;
+
+  // Title
+  _glow(accent, 16);
+  ctx.font = '900 12px "Orbitron",sans-serif'; ctx.fillStyle = accent; ctx.textAlign = 'center';
+  ctx.fillText(_txIsBoss ? '⚡ JEFE DERROTADO' : '✓ NIVEL COMPLETADO', cx, cy - 38);
+  _noGlow();
+
+  // Level number
+  ctx.font = '700 26px "Orbitron",sans-serif'; ctx.fillStyle = '#ffffff';
+  ctx.fillText(`NIVEL ${_currentLevel + 1}`, cx, cy - 4);
+
+  // Coins earned
+  _glow('#ffe600', 10);
+  ctx.font = '700 15px "Share Tech Mono",monospace'; ctx.fillStyle = '#ffe600';
+  ctx.fillText(`+${_txCoins} 🪙`, cx, cy + 28);
+  _noGlow();
+
+  // Loading bar (progress toward next level)
+  const barW = 220, barH = 6;
+  const barX = cx - barW / 2, barY = cy + 50;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  _roundRect(barX, barY, barW, barH, 3); ctx.fill();
+  _glow(accent, 6);
+  ctx.fillStyle = accent;
+  _roundRect(barX, barY, barW * t, barH, 3); ctx.fill();
+  _noGlow();
+
+  ctx.globalAlpha = 1;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -204,8 +266,8 @@ function _drawHUD(state) {
 function _drawBricks(bricks) {
   for (const b of bricks) {
     if (b.dead || b.hp <= 0) continue;
-    const rx = b.gx * (C.BRICK_W + C.BRICK_GAP) + C.BRICK_START_X;
-    const ry = b.gy * (C.BRICK_H + C.BRICK_GAP) + C.BRICK_START_Y;
+    const rx    = b.gx * (C.BRICK_W + C.BRICK_GAP) + C.BRICK_START_X;
+    const ry    = b.gy * (C.BRICK_H + C.BRICK_GAP) + C.BRICK_START_Y;
     const color = ARK_BRICK_COLORS[b.gy % ARK_BRICK_COLORS.length];
     if (b.hp === Infinity) {
       const g = ctx.createLinearGradient(rx, ry, rx, ry + C.BRICK_H);
@@ -236,9 +298,7 @@ function _drawBricks(bricks) {
 // § DRAW — PADDLE
 // ─────────────────────────────────────────────────────────────────
 function _drawPaddle(state) {
-  const pw  = state.paddleW;
-  const px  = state.paddleX - pw / 2;
-  const py  = C.PADDLE_Y - C.PADDLE_H / 2;
+  const pw = state.paddleW, px = state.paddleX - pw/2, py = C.PADDLE_Y - C.PADDLE_H/2;
   const onFire = state.fireTimer > 0;
   const color  = onFire ? '#ff6600' : (state.expandTimer > 0 ? '#00cc66' : '#00e8ff');
   const rgb    = onFire ? '255,102,0' : (state.expandTimer > 0 ? '0,204,102' : '0,232,255');
@@ -249,11 +309,12 @@ function _drawPaddle(state) {
   ctx.strokeStyle = color; ctx.lineWidth = 1; _roundRect(px, py, pw, C.PADDLE_H, 5); ctx.stroke();
   _noGlow();
   if (state.shield) {
-    const pct = state.shieldTimer / (C.PW_DURATION * C.PW_SHIELD_MULT);
-    const p   = 0.6 + 0.4 * Math.sin(performance.now() * 0.005);
-    _glow('#ffe600', 10); ctx.strokeStyle = `rgba(255,230,0,${p})`; ctx.lineWidth = 2.5;
-    const sw = pw * pct;
-    ctx.beginPath(); ctx.moveTo(px+(pw-sw)/2, py+C.PADDLE_H+4); ctx.lineTo(px+(pw+sw)/2, py+C.PADDLE_H+4); ctx.stroke(); _noGlow();
+    const sw = pw * (state.shieldTimer / (C.PW_DURATION * C.PW_SHIELD_MULT));
+    _glow('#ffe600', 10);
+    ctx.strokeStyle = `rgba(255,230,0,${0.6 + 0.4 * Math.sin(performance.now() * 0.005)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(px+(pw-sw)/2, py+C.PADDLE_H+4); ctx.lineTo(px+(pw+sw)/2, py+C.PADDLE_H+4); ctx.stroke();
+    _noGlow();
   }
 }
 
@@ -265,23 +326,21 @@ function _drawBalls(balls) {
   for (const ball of balls) {
     if (ball.stuck) {
       const p = 0.7 + 0.3 * Math.sin(performance.now() * 0.008);
-      _glow('#ff1f8f', 16 * p); ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-      ctx.font='700 8px "Share Tech Mono"'; ctx.fillStyle=`rgba(255,255,255,${p*0.6})`; ctx.textAlign='center';
+      _glow('#ff1f8f', 16 * p);
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.font = '700 8px "Share Tech Mono"'; ctx.fillStyle = `rgba(255,255,255,${p*0.6})`; ctx.textAlign = 'center';
       ctx.fillText('TAP / SPACE', ball.x, ball.y - 18); _noGlow(); continue;
     }
-    // Trail
     for (let ti = 0; ti < ball.trail.length; ti++) {
-      const t = ball.trail[ti]; const prog = ti / ball.trail.length;
+      const t = ball.trail[ti], prog = ti / ball.trail.length;
       ctx.beginPath(); ctx.arc(t.x, t.y, r * prog * 0.8, 0, Math.PI*2);
-      ctx.fillStyle = ball.fire ? `rgba(255,102,0,${prog * 0.6})` : `rgba(255,31,143,${prog * 0.5})`; ctx.fill();
+      ctx.fillStyle = ball.fire ? `rgba(255,102,0,${prog*0.6})` : `rgba(255,31,143,${prog*0.5})`; ctx.fill();
     }
-    // Ball body
-    const gc = ball.fire ? '#ff6600' : '#ff88cc';
-    _glow(gc, 18);
+    _glow(ball.fire ? '#ff6600' : '#ff88cc', 18);
     const bg = ctx.createRadialGradient(ball.x-2, ball.y-2, 0, ball.x, ball.y, r);
     if (ball.fire) { bg.addColorStop(0,'#fff'); bg.addColorStop(0.4,'#ffcc00'); bg.addColorStop(1,'#ff3300'); }
     else           { bg.addColorStop(0,'#fff'); bg.addColorStop(0.5,'#ffccee'); bg.addColorStop(1,'#ff1f8f'); }
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI*2); ctx.fillStyle=bg; ctx.fill(); _noGlow();
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI*2); ctx.fillStyle = bg; ctx.fill(); _noGlow();
   }
 }
 
@@ -291,9 +350,9 @@ function _drawBalls(balls) {
 function _drawParticles(pool) {
   for (const p of pool) {
     if (!p.alive) continue;
-    const a = Math.max(0, p.life); ctx.globalAlpha = a;
+    ctx.globalAlpha = Math.max(0, p.life);
     _glow(p.color, p.size * 2); ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * a, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha = 1; _noGlow();
 }
@@ -304,9 +363,8 @@ function _drawParticles(pool) {
 function _drawPowerUps(powerUps) {
   for (const pw of powerUps) {
     if (!pw.alive) continue;
-    const def = ARK_PW_TYPES[pw.type];
-    if (!def) continue;
-    const x = pw.x - C.PW_W / 2, y = pw.y - C.PW_H / 2;
+    const def = ARK_PW_TYPES[pw.type]; if (!def) continue;
+    const x = pw.x - C.PW_W/2, y = pw.y - C.PW_H/2;
     _glow(def.color, 12); ctx.fillStyle = def.bg; _roundRect(x, y, C.PW_W, C.PW_H, 4); ctx.fill();
     ctx.strokeStyle = def.color; ctx.lineWidth = 1.5; _roundRect(x, y, C.PW_W, C.PW_H, 4); ctx.stroke();
     ctx.fillStyle = def.color; ctx.font = '700 9px "Orbitron"'; ctx.textAlign = 'center';
@@ -321,9 +379,11 @@ function _drawShockwaves(sw) {
   for (const s of sw) {
     if (s.life <= 0) continue;
     const a = s.life * s.life;
-    _glow(`rgba(255,230,0,${a})`, 14 * a); ctx.strokeStyle=`rgba(255,230,0,${a*0.9})`; ctx.lineWidth = 3*a+1;
+    _glow(`rgba(255,230,0,${a})`, 14*a);
+    ctx.strokeStyle = `rgba(255,230,0,${a*0.9})`; ctx.lineWidth = 3*a+1;
     ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle=`rgba(255,255,200,${a*0.08})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r*0.85, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgba(255,255,200,${a*0.08})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r*0.85, 0, Math.PI*2); ctx.fill();
     _noGlow();
   }
 }
@@ -334,7 +394,11 @@ function _drawShockwaves(sw) {
 function _render(state) {
   _drawBg();
   if (_phase === 'IDLE') return;
-  if (state.screenShake > 0) { ctx.save(); ctx.translate((Math.random()-.5)*state.screenShake*1.2, (Math.random()-.5)*state.screenShake*1.2); }
+
+  if (state.screenShake > 0) {
+    ctx.save();
+    ctx.translate((Math.random()-.5)*state.screenShake*1.2, (Math.random()-.5)*state.screenShake*1.2);
+  }
   _drawBricks(state.bricks);
   _drawParticles(state.particles);
   _drawShockwaves(state.shockwaves);
@@ -343,20 +407,28 @@ function _render(state) {
   _drawBalls(state.balls);
   if (state.screenShake > 0) ctx.restore();
   _drawHUD(state);
+
+  // Canvas banner overlay — drawn last so it sits on top of everything
+  if (_txActive) _drawTransitionBanner();
 }
 
 // ─────────────────────────────────────────────────────────────────
 // § RAF LOOP
 // ─────────────────────────────────────────────────────────────────
 function _frame(ts) {
-  _rafId = requestAnimationFrame(_frame);
-  const dt = Math.min((ts - _lastTime) / 1000, 0.05);
+  _rafId    = requestAnimationFrame(_frame);
+  const dt  = Math.min((ts - _lastTime) / 1000, 0.05);
   _lastTime = ts;
+
   if (_phase === 'PLAYING' || _phase === 'READY') {
     if (_keys['ArrowLeft']  || _keys['a'] || _keys['A']) ARK_Engine.movePaddle(-C.PADDLE_SPEED * dt);
     if (_keys['ArrowRight'] || _keys['d'] || _keys['D']) ARK_Engine.movePaddle( C.PADDLE_SPEED * dt);
     ARK_Engine.tick(dt);
   }
+
+  // Hide banner once its timer has elapsed
+  if (_txActive && performance.now() >= _txUntil) _txActive = false;
+
   _render(ARK_Engine.getState());
 }
 
@@ -364,67 +436,88 @@ function _frame(ts) {
 // § GAME PHASE TRANSITIONS
 // ─────────────────────────────────────────────────────────────────
 function _startGame(levelIndex) {
+  // Cancel any pending auto-advance from a previous run
+  if (_txTimer !== null) { clearTimeout(_txTimer); _txTimer = null; }
+  _txActive = false;
+
   _currentLevel = levelIndex || 0;
+  _totalCoins   = 0;
+
   ARK_Engine.startLevel(_currentLevel);
   hideAllScreens();
   _phase = 'READY';
   _hubVisible(false);
-  const ld = ARK_Engine.getState().levelData;
-  _announce(`Nivel ${_currentLevel + 1}: ${ld?.name || ''}`);
+  _announce(`Nivel ${_currentLevel + 1}`);
 }
 
 function _pauseGame() {
   if (_phase !== 'PLAYING') return;
   _phase = 'PAUSED'; ARK_Engine.pause();
   const s = ARK_Engine.getState();
-  _el('ARK_pause-info').textContent = `Nivel ${s.levelIndex + 1} · ${s.score} puntos`;
+  _el('ARK_pause-info').textContent = `Nivel ${s.levelIndex + 1}  ·  ${_totalCoins} 🪙`;
   showScreen('ARK_screen-pause'); _announce('Pausa');
 }
 
-function _resumeGame() { hideAllScreens(); _phase = 'PLAYING'; ARK_Engine.resume(); _announce('Continuando'); }
+function _resumeGame() {
+  hideAllScreens(); _phase = 'PLAYING'; ARK_Engine.resume(); _announce('Continuando');
+}
 
+// ─────────────────────────────────────────────────────────────────
+// § LEVEL COMPLETE  — THE KEY FIX
+//
+// Phase stays 'PLAYING'. Engine keeps ticking (ball bounces freely
+// on empty board — looks intentional, fills the gap nicely).
+// Canvas banner appears for TRANSITION_MS.
+// setTimeout fires → startLevel(next) → _phase = 'READY'.
+// ─────────────────────────────────────────────────────────────────
 function _onLevelComplete(data) {
-  _phase = 'LEVEL_COMPLETE';
-  const s          = ARK_Engine.getState();
-  const lifeBonus  = s.lives * C.SCORE_LIFE_BONUS;
-  const finalScore = data.score + C.SCORE_LEVEL_BONUS + lifeBonus;
-  _totalScore     += finalScore;
-  const coins      = ARK_Integration.reportReward(`level_${_currentLevel + 1}`, finalScore);
-  _totalCoins     += coins;
+  // Guard: ignore if a transition is already running (double-fire safety)
+  if (_txActive && performance.now() < _txUntil) return;
 
-  // Save best level reached
-  const bestLevel = ARK_Integration.getBestLevel ? ARK_Integration.getBestLevel() : 0;
-  if (_currentLevel + 1 > bestLevel)
-    try { localStorage.setItem(C.LS_BEST_LEVEL, String(_currentLevel + 1)); } catch {}
+  // Report coins
+  const s    = ARK_Engine.getState();
+  const pts  = data.score + C.SCORE_LEVEL_BONUS + s.lives * C.SCORE_LIFE_BONUS;
+  const coins = ARK_Integration.reportReward(`level_${_currentLevel + 1}`, pts);
+  _totalCoins += coins;
 
-  const ld = s.levelData;
-  _el('ARK_lc-level').textContent = `${ld?.isBoss ? '⚡ JEFE DERROTADO — ' : ''}NIVEL ${_currentLevel + 1} COMPLETADO`;
-  _el('ARK_lc-score').textContent = finalScore.toLocaleString();
-  _el('ARK_lc-coins').textContent = `+${coins} 🪙 LOVE ARCADE`;
-  _el('ARK_lc-next-info').textContent = `SIGUIENTE: NIVEL ${_currentLevel + 2}`;
-  showScreen('ARK_screen-levelcomplete');
-  _announce(`¡Nivel ${_currentLevel + 1} completado! +${coins} monedas.`);
+  // Save best level
+  try {
+    const best = parseInt(localStorage.getItem(C.LS_BEST_LEVEL) || '0', 10);
+    if (_currentLevel + 1 > best) localStorage.setItem(C.LS_BEST_LEVEL, String(_currentLevel + 1));
+  } catch {}
+
+  // Show canvas banner
+  _txCoins   = coins;
+  _txIsBoss  = !!s.levelData?.isBoss;
+  _txUntil   = performance.now() + TRANSITION_MS;
+  _txActive  = true;
+
+  _announce(`Nivel ${_currentLevel + 1} completado. +${coins} monedas. Cargando nivel ${_currentLevel + 2}.`);
+
+  // Auto-advance: phase remains 'PLAYING' until the timer fires
+  _txTimer = setTimeout(() => {
+    _txTimer = null;
+    _currentLevel++;
+    ARK_Engine.startLevel(_currentLevel);
+    _phase = 'READY';   // ball placed on paddle — tap/SPACE to launch
+    _announce(`Nivel ${_currentLevel + 1}`);
+  }, TRANSITION_MS);
 }
 
-function _onGameOver(data) {
-  _phase = 'GAME_OVER'; _totalScore += data.score;
-  const isNew = ARK_Integration.saveHighscore(_totalScore);
-  const best  = parseInt(localStorage.getItem(C.LS_BEST_LEVEL) || '0', 10);
-  _el('ARK_go-score').textContent   = _totalScore.toLocaleString();
-  _el('ARK_go-level').textContent   = `Llegaste al nivel ${_currentLevel + 1}`;
-  _el('ARK_go-record').textContent  = isNew ? '🏆 ¡NUEVO RÉCORD!' : `Récord: ${ARK_Integration.getHighscore().toLocaleString()}`;
-  _el('ARK_go-best').textContent    = best > 0 ? `Mejor nivel: ${best}` : '';
-  showScreen('ARK_screen-gameover'); _hubVisible(true);
-  _announce('Game Over');
-}
+// ─────────────────────────────────────────────────────────────────
+// § GAME OVER — coins only, clean layout
+// ─────────────────────────────────────────────────────────────────
+function _onGameOver() {
+  if (_txTimer !== null) { clearTimeout(_txTimer); _txTimer = null; }
+  _txActive = false;
+  _phase    = 'GAME_OVER';
 
-function _onWin() {
-  // In infinite mode "WIN" only fires if triggered manually — not used
-  _phase = 'WIN';
-  _el('ARK_win-score').textContent = _totalScore.toLocaleString();
-  _el('ARK_win-coins').textContent = `Total: ${_totalCoins} 🪙`;
-  showScreen('ARK_screen-win'); _hubVisible(true);
-  _announce('¡Récord impresionante!');
+  _el('ARK_go-coins').textContent = `${_totalCoins} 🪙`;
+  _el('ARK_go-level').textContent = `Nivel ${_currentLevel + 1}`;
+
+  showScreen('ARK_screen-gameover');
+  _hubVisible(true);
+  _announce(`Game Over. ${_totalCoins} monedas ganadas.`);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -449,22 +542,16 @@ function _setupInput() {
   });
   window.addEventListener('keyup', (e) => { _keys[e.key] = false; });
 
-  // ── Touch on canvas ─────────────────────────────────────────
-  // FIX: e.preventDefault() is only called in active phases.
-  // In GAME_OVER / WIN / IDLE / PAUSED phases the event is NOT
-  // prevented, allowing the browser to deliver pointer events to
-  // the overlay screen buttons sitting above the canvas.
+  // Touch: preventDefault only during active gameplay to avoid
+  // blocking button taps on overlay screens (GAME_OVER, PAUSED, etc.)
   canvas.addEventListener('touchstart', (e) => {
-    const activePhase = _phase === 'PLAYING' || _phase === 'READY';
-    if (activePhase) e.preventDefault();
-
+    const active = _phase === 'PLAYING' || _phase === 'READY';
+    if (active) e.preventDefault();
     const touch = e.touches[0];
     _touchLogicalX = _toLogicalX(touch.clientX);
-
     if (_phase === 'READY') { ARK_Engine.launchBall(); _phase = 'PLAYING'; }
     else if (_phase === 'PLAYING') {
-      const logY = (touch.clientY - _offsetY) / _scale;
-      if (logY < 56) _pauseGame();
+      if ((touch.clientY - _offsetY) / _scale < 56) _pauseGame();
     }
   }, { passive: false });
 
@@ -490,25 +577,17 @@ function _setupInput() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// § BUTTON WIRING
-// FIX: Using `pointerdown` instead of `click`.
-// `pointerdown` fires immediately for both mouse and touch without
-// requiring the browser to synthesize a click event — which is
-// blocked by touch-action:none on the body during game phases.
+// § BUTTON WIRING  (pointerdown — works for mouse and touch)
 // ─────────────────────────────────────────────────────────────────
 function _wireButtons() {
-  function _btn(id, handler) {
-    const el = _el(id);
-    if (!el) return;
-    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); handler(); });
+  function _btn(id, fn) {
+    const el = _el(id); if (!el) return;
+    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); fn(); });
   }
-
-  _btn('ARK_btn-start', () => { _totalScore = 0; _totalCoins = 0; _startGame(0); });
-  _btn('ARK_btn-resume', _resumeGame);
+  _btn('ARK_btn-start',      () => _startGame(0));
+  _btn('ARK_btn-resume',     _resumeGame);
   _btn('ARK_btn-quit-pause', () => { window.location.href = '../../index.html'; });
-  _btn('ARK_btn-next', () => { _startGame(_currentLevel + 1); });
-  _btn('ARK_btn-restart', () => { _totalScore = 0; _totalCoins = 0; _startGame(0); });
-  _btn('ARK_btn-play-again', () => { _totalScore = 0; _totalCoins = 0; _startGame(0); });
+  _btn('ARK_btn-restart',    () => _startGame(0));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -537,8 +616,7 @@ export function init() {
   if (_rafId !== null) cancelAnimationFrame(_rafId);
   _lastTime = performance.now();
   _rafId    = requestAnimationFrame(_frame);
-
-  console.log('[ARK] Arkanoid v3.0.0 — Love Arcade · Infinite mode');
+  console.log('[ARK] Arkanoid v3.1.0 — Love Arcade');
 }
 
 export const ARK_UI = { init, showScreen, hideAllScreens };
