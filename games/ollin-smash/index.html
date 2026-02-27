@@ -3,1282 +3,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ollin Smash</title>
+  <title>Ollin Smash — Love Arcade</title>
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap"
+        rel="stylesheet">
 
-    :root {
-      --os-crimson: #DC2626;
-      --os-violet: #7C3AED;
-      --os-gold: #FACC15;
-      --os-cyan: #06B6D4;
-      --os-dark: #07000F;
-      --os-darker: #030007;
-      --os-text: #F0E8FF;
-    }
-
-    html, body {
-      width: 100%; height: 100%;
-      overflow: hidden;
-      background: var(--os-darker);
-      font-family: 'Exo 2', sans-serif;
-      color: var(--os-text);
-      touch-action: none;
-    }
-
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        repeating-linear-gradient(0deg, rgba(124,58,237,0.05) 0, rgba(124,58,237,0.05) 1px, transparent 1px, transparent 24px),
-        repeating-linear-gradient(90deg, rgba(220,38,38,0.04) 0, rgba(220,38,38,0.04) 1px, transparent 1px, transparent 24px);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    #os-wrapper {
-      position: relative;
-      width: 100%; height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1;
-    }
-
-    #os-canvas {
-      display: block;
-      max-height: 100vh;
-      max-width: calc(100vh * 390 / 700);
-      width: 100%;
-      height: auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    /* ── BACK BUTTON ── */
-    #os-back {
-      position: absolute;
-      top: 10px; left: 10px;
-      z-index: 30;
-      background: transparent;
-      border: 1px solid rgba(220,38,38,0.4);
-      color: rgba(220,38,38,0.7);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 5px 10px;
-      cursor: pointer;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      transition: all 0.2s;
-    }
-    #os-back:hover { color: var(--os-crimson); border-color: var(--os-crimson); box-shadow: 0 0 10px rgba(220,38,38,0.3); }
-
-    /* ── HUD ── */
-    #os-hud {
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: min(390px, calc(100vh * 390 / 700));
-      height: min(700px, 100vh);
-      pointer-events: none;
-      z-index: 5;
-      display: none;
-    }
-    #os-hud.active { display: block; }
-
-    .os-hud-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 10px 14px 0;
-      font-family: 'Share Tech Mono', monospace;
-    }
-
-    .os-hud-col { font-size: 9px; letter-spacing: 2px; color: rgba(240,232,255,0.45); line-height: 1.8; }
-    .os-hud-col span { display: block; font-size: 16px; letter-spacing: 0; color: var(--os-text); }
-    .os-hud-col .gold { color: var(--os-gold); }
-
-    .os-lives-row { display: flex; gap: 5px; align-items: center; margin-top: 4px; }
-    .os-life-dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: var(--os-crimson);
-      box-shadow: 0 0 8px rgba(220,38,38,0.8);
-    }
-    .os-life-dot.empty { background: rgba(220,38,38,0.15); box-shadow: none; }
-
-    #os-mult-badge {
-      position: absolute;
-      top: 40px; left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--os-gold);
-      text-shadow: 0 0 12px var(--os-gold);
-      transition: opacity 0.3s;
-    }
-
-    /* ── POWER-UP BAR ── */
-    #os-pu-bar {
-      position: absolute;
-      bottom: 28px; left: 50%;
-      transform: translateX(-50%);
-      display: none;
-      gap: 6px;
-      align-items: center;
-      pointer-events: none;
-      z-index: 5;
-    }
-    #os-pu-bar.active { display: flex; }
-
-    .os-pu-pill {
-      display: none;
-      align-items: center;
-      gap: 4px;
-      background: rgba(3,0,7,0.85);
-      border: 1px solid rgba(250,204,21,0.35);
-      padding: 3px 7px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      color: var(--os-gold);
-      letter-spacing: 1px;
-    }
-    .os-pu-pill.on { display: flex; }
-    .os-pu-pill svg { flex-shrink: 0; }
-
-    /* ── WAVE LABEL ── */
-    #os-wave-lbl {
-      position: absolute;
-      bottom: 10px; left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: rgba(124,58,237,0.45);
-      pointer-events: none;
-      z-index: 5;
-      white-space: nowrap;
-    }
-
-    /* ── OVERLAY BASE ── */
-    .os-overlay {
-      position: absolute; inset: 0;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-      background: rgba(3,0,7,0.92);
-    }
-    .os-overlay.hidden { display: none; }
-
-    /* ── MENU ── */
-    .os-logo-eye { font-size: 10px; letter-spacing: 5px; color: rgba(124,58,237,0.7); text-transform: uppercase; }
-    .os-logo-main {
-      font-size: 52px; font-weight: 800;
-      line-height: 0.9;
-      letter-spacing: 3px;
-      text-align: center;
-      background: linear-gradient(150deg, var(--os-crimson) 30%, var(--os-violet));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .os-logo-tag { font-size: 10px; letter-spacing: 6px; color: var(--os-gold); text-transform: uppercase; margin-top: 6px; }
-
-    .os-rule {
-      width: 180px; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--os-crimson), var(--os-violet), transparent);
-    }
-
-    .os-btn {
-      background: transparent;
-      border: 1px solid var(--os-crimson);
-      color: var(--os-crimson);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      padding: 12px 36px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: color 0.18s, box-shadow 0.18s;
-    }
-    .os-btn::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: var(--os-crimson);
-      transform: scaleX(0); transform-origin: left;
-      transition: transform 0.18s;
-      z-index: -1;
-    }
-    .os-btn:hover, .os-btn:active { color: #000; box-shadow: 0 0 24px rgba(220,38,38,0.5); }
-    .os-btn:hover::before, .os-btn:active::before { transform: scaleX(1); }
-
-    .os-btn-sm {
-      border-color: rgba(124,58,237,0.6);
-      color: rgba(124,58,237,0.8);
-      font-size: 10px;
-      letter-spacing: 3px;
-      padding: 8px 22px;
-    }
-    .os-btn-sm::before { background: var(--os-violet); }
-    .os-btn-sm:hover { color: #fff; box-shadow: 0 0 18px rgba(124,58,237,0.4); }
-
-    .os-hs-line {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: rgba(240,232,255,0.3);
-      letter-spacing: 2px;
-    }
-
-    .os-standalone-notice {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: rgba(124,58,237,0.6);
-      text-align: center;
-      border: 1px solid rgba(124,58,237,0.25);
-      padding: 6px 14px;
-      display: none;
-    }
-    .os-standalone-notice.visible { display: block; }
-
-    /* ── PAUSED ── */
-    #os-paused.os-overlay {
-      background: rgba(3,0,7,0.75);
-      font-size: 30px;
-      font-weight: 800;
-      letter-spacing: 8px;
-      color: var(--os-violet);
-      text-shadow: 0 0 30px rgba(124,58,237,0.6);
-      gap: 16px;
-    }
-    #os-paused .os-pause-hint {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: rgba(124,58,237,0.5);
-    }
-
-    /* ── GAME OVER ── */
-    .os-go-title {
-      font-size: 38px; font-weight: 800;
-      letter-spacing: 5px;
-      color: var(--os-crimson);
-      text-shadow: 0 0 40px rgba(220,38,38,0.7);
-    }
-    .os-go-stats {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 12px;
-      text-align: center;
-      line-height: 2.2;
-      color: rgba(240,232,255,0.55);
-      letter-spacing: 2px;
-    }
-    .os-go-stats strong { color: var(--os-gold); font-size: 18px; display: block; letter-spacing: 0; }
-
-    /* ── WAVE TRANSITION ── */
-    #os-wave-flash {
-      position: absolute; inset: 0;
-      z-index: 15;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: 6px;
-      color: var(--os-gold);
-      text-shadow: 0 0 30px var(--os-gold);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    #os-wave-flash.show { opacity: 1; }
-  </style>
+  <!-- Game stylesheet -->
+  <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
 
-<div id="os-wrapper">
-  <canvas id="os-canvas" width="390" height="700"></canvas>
+  <div id="os-wrapper">
 
-  <!-- Back button -->
-  <a id="os-back" href="../../index.html">
-    <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1L1 6l6 5"/></svg>
-    HUB
-  </a>
+    <!-- Game canvas — logical size 390×700, CSS scales it -->
+    <canvas id="os-canvas" width="390" height="700"></canvas>
 
-  <!-- HUD -->
-  <div id="os-hud">
-    <div class="os-hud-top">
-      <div class="os-hud-col">SCORE<span id="os-h-score">0</span></div>
-      <div class="os-hud-col" style="text-align:center;">
-        VIDAS
-        <div class="os-lives-row" id="os-h-lives"></div>
+    <!-- Back to hub -->
+    <a id="os-back" href="../../index.html">
+      <svg width="8" height="12" viewBox="0 0 8 12" fill="none"
+           stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M7 1L1 6l6 5"/>
+      </svg>
+      HUB
+    </a>
+
+    <!-- ── HUD ──────────────────────────────────────────────────────────────── -->
+    <div id="os-hud">
+      <div class="os-hud-top">
+        <div class="os-hud-col">
+          SCORE
+          <span id="os-h-score">0</span>
+        </div>
+        <div class="os-hud-col" style="text-align:center;">
+          VIDAS
+          <div class="os-lives-row" id="os-h-lives"></div>
+        </div>
+        <div class="os-hud-col" style="text-align:right;">
+          MONEDAS
+          <span class="gold" id="os-h-coins">0</span>
+        </div>
       </div>
-      <div class="os-hud-col" style="text-align:right;">MONEDAS<span class="gold" id="os-h-coins">0</span></div>
+      <div id="os-mult-badge"></div>
     </div>
-    <div id="os-mult-badge"></div>
-  </div>
 
-  <!-- Power-up pills -->
-  <div id="os-pu-bar">
-    <div class="os-pu-pill" id="os-pill-long">
-      <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M1 5h12M3 2L1 5l2 3M11 2l2 3-2 3"/>
-      </svg>
-      <span id="os-pill-long-t">20s</span>
+    <!-- ── Power-up pills ───────────────────────────────────────────────────── -->
+    <div id="os-pu-bar">
+
+      <!-- PU_LONG — double-headed arrow -->
+      <div class="os-pu-pill" id="os-pill-long">
+        <svg width="14" height="10" viewBox="0 0 14 10" fill="none"
+             stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M1 5h12M3 2L1 5l2 3M11 2l2 3-2 3"/>
+        </svg>
+        <span id="os-pill-long-t">20s</span>
+      </div>
+
+      <!-- PU_FIRE — flame -->
+      <div class="os-pu-pill" id="os-pill-fire">
+        <svg width="12" height="14" viewBox="0 0 12 14" fill="none"
+             stroke="#DC2626" stroke-width="1.4" aria-hidden="true">
+          <path d="M6 1c-1 3-4 3-4 6a4 4 0 008 0c0-3-3-3-3-6z"/>
+          <path d="M6 8c-.5 1-1.5 1.5-1.5 2"/>
+        </svg>
+        <span id="os-pill-fire-t">30s</span>
+      </div>
+
+      <!-- PU_SLOW — hourglass -->
+      <div class="os-pu-pill" id="os-pill-slow">
+        <svg width="12" height="14" viewBox="0 0 12 14" fill="none"
+             stroke="#7C3AED" stroke-width="1.4" aria-hidden="true">
+          <rect x="2" y="1" width="8" height="12" rx="1"/>
+          <path d="M3 1h6M3 13h6M4 1l2 5 2-5M4 13l2-5 2 5"/>
+        </svg>
+        <span id="os-pill-slow-t">15s</span>
+      </div>
+
+      <!-- PU_MAGNET — magnet -->
+      <div class="os-pu-pill" id="os-pill-magnet">
+        <svg width="14" height="12" viewBox="0 0 14 12" fill="none"
+             stroke="#06B6D4" stroke-width="1.4" aria-hidden="true">
+          <path d="M2 2v4a5 5 0 0010 0V2"/>
+          <line x1="2"  y1="2" x2="2"  y2="5"/>
+          <line x1="12" y1="2" x2="12" y2="5"/>
+          <line x1="2"  y1="9" x2="2"  y2="12"/>
+          <line x1="12" y1="9" x2="12" y2="12"/>
+        </svg>
+        <span id="os-pill-mag-t">5</span>
+      </div>
+
+    </div><!-- /os-pu-bar -->
+
+    <!-- ── Wave label ────────────────────────────────────────────────────────── -->
+    <div id="os-wave-lbl">OLEADA 1</div>
+
+    <!-- ── Wave flash ────────────────────────────────────────────────────────── -->
+    <div id="os-wave-flash"></div>
+
+    <!-- ── MENU ──────────────────────────────────────────────────────────────── -->
+    <div class="os-overlay" id="os-menu">
+      <div style="text-align:center;">
+        <div class="os-logo-eye">Neo-Mexica Arcade</div>
+        <div class="os-logo-main">OLLIN<br>SMASH</div>
+        <div class="os-logo-tag">Movimiento Infinito</div>
+      </div>
+      <div class="os-rule"></div>
+      <button class="os-btn" id="os-btn-start">INICIAR</button>
+      <div class="os-hs-line">RECORD: <span id="os-hs">0</span></div>
+      <button class="os-btn os-btn-sm"
+              onclick="window.location.href='../../index.html'">
+        VOLVER AL HUB
+      </button>
+      <div class="os-standalone-notice" id="os-notice-menu">
+        MODO PRACTICA — LAS MONEDAS NO SE GUARDARAN
+      </div>
     </div>
-    <div class="os-pu-pill" id="os-pill-fire">
-      <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#DC2626" stroke-width="1.4">
-        <path d="M6 1c-1 3-4 3-4 6a4 4 0 008 0c0-3-3-3-3-6z"/>
-        <path d="M6 8c-.5 1-1.5 1.5-1.5 2"/>
-      </svg>
-      <span id="os-pill-fire-t">30s</span>
+
+    <!-- ── PAUSE ─────────────────────────────────────────────────────────────── -->
+    <div class="os-overlay hidden" id="os-paused">
+      PAUSA
+      <div class="os-pause-hint">TOCA PARA CONTINUAR</div>
+      <button class="os-btn" id="os-btn-resume">CONTINUAR</button>
     </div>
-    <div class="os-pu-pill" id="os-pill-slow">
-      <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#7C3AED" stroke-width="1.4">
-        <rect x="2" y="1" width="8" height="12" rx="1"/>
-        <path d="M3 1h6M3 13h6M4 1l2 5 2-5M4 13l2-5 2 5"/>
-      </svg>
-      <span id="os-pill-slow-t">15s</span>
+
+    <!-- ── GAME OVER ──────────────────────────────────────────────────────────── -->
+    <div class="os-overlay hidden" id="os-gameover">
+      <div class="os-go-title">GAME OVER</div>
+      <div class="os-rule"></div>
+      <div class="os-go-stats">
+        PUNTUACION
+        <strong id="os-go-score">0</strong>
+        OLEADA ALCANZADA
+        <strong id="os-go-wave">1</strong>
+        MONEDAS GANADAS
+        <strong id="os-go-coins">0</strong>
+      </div>
+      <button class="os-btn"    id="os-btn-retry">REINTENTAR</button>
+      <button class="os-btn os-btn-sm" id="os-btn-menu">MENU</button>
     </div>
-    <div class="os-pu-pill" id="os-pill-magnet">
-      <svg width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="#06B6D4" stroke-width="1.4">
-        <path d="M2 2v4a5 5 0 0010 0V2"/>
-        <line x1="2" y1="2" x2="2" y2="5"/><line x1="12" y1="2" x2="12" y2="5"/>
-        <line x1="2" y1="9" x2="2" y2="12"/><line x1="12" y1="9" x2="12" y2="12"/>
-      </svg>
-      <span id="os-pill-mag-t">5</span>
-    </div>
-  </div>
 
-  <!-- Wave label -->
-  <div id="os-wave-lbl">OLEADA 1</div>
+  </div><!-- /os-wrapper -->
+
+  <!--
+    ┌─────────────────────────────────────────────────────────────────┐
+    │  Script loading order — DO NOT change                           │
+    │                                                                 │
+    │  1. main.js (type="module")                                     │
+    │     Deferred by the browser; executes AFTER full DOM parse      │
+    │     and AFTER synchronous classic scripts below.                │
+    │                                                                 │
+    │  2. app.js (classic synchronous)                                │
+    │     Runs immediately when the parser reaches this tag.          │
+    │     Sets window.GameCenter before main.js initialises.          │
+    │                                                                 │
+    │  Result: window.GameCenter is always available when boot()      │
+    │  runs inside main.js.                                           │
+    └─────────────────────────────────────────────────────────────────┘
+  -->
+  <script type="module" src="./js/main.js"></script>
+
+  <!-- Love Arcade Core — must stay last, must stay a classic script -->
+  <script src="../../js/app.js"></script>
 
-  <!-- Wave flash -->
-  <div id="os-wave-flash"></div>
-
-  <!-- MENU -->
-  <div class="os-overlay" id="os-menu">
-    <div style="text-align:center;">
-      <div class="os-logo-eye">Neo-Mexica Arcade</div>
-      <div class="os-logo-main">OLLIN<br>SMASH</div>
-      <div class="os-logo-tag">Movimiento Infinito</div>
-    </div>
-    <div class="os-rule"></div>
-    <button class="os-btn" id="os-btn-start">INICIAR</button>
-    <div class="os-hs-line">RECORD: <span id="os-hs">0</span></div>
-    <button class="os-btn os-btn-sm" onclick="window.location.href='../../index.html'">VOLVER AL HUB</button>
-    <div class="os-standalone-notice" id="os-notice-menu">
-      MODO PRACTICA — LAS MONEDAS NO SE GUARDARAN
-    </div>
-  </div>
-
-  <!-- PAUSED -->
-  <div class="os-overlay hidden" id="os-paused">
-    PAUSA
-    <div class="os-pause-hint">TOCA PARA CONTINUAR</div>
-    <button class="os-btn os-btn-sm" id="os-btn-resume">CONTINUAR</button>
-  </div>
-
-  <!-- GAME OVER -->
-  <div class="os-overlay hidden" id="os-gameover">
-    <div class="os-go-title">GAME OVER</div>
-    <div class="os-rule"></div>
-    <div class="os-go-stats">
-      PUNTUACION<strong id="os-go-score">0</strong>
-      OLEADA ALCANZADA<strong id="os-go-wave">1</strong>
-      MONEDAS GANADAS<strong id="os-go-coins">0</strong>
-    </div>
-    <button class="os-btn" id="os-btn-retry">REINTENTAR</button>
-    <button class="os-btn os-btn-sm" id="os-btn-menu">MENU</button>
-  </div>
-</div>
-
-<script>
-(function () {
-  'use strict';
-
-  // ════════════════════════════════════════
-  // NAMESPACE
-  // ════════════════════════════════════════
-  window.OllinSmashGame = {};
-
-  // ════════════════════════════════════════
-  // CONFIG
-  // ════════════════════════════════════════
-  const OS_CFG = {
-    gameId:       'ollin_smash',
-    W: 390, H: 700,
-    paddleH:      12,
-    paddleInitW:  72,
-    ballR:        7,
-    ballBaseSpeed: 5.0,
-    brickCols:    6,
-    brickW:       52,
-    brickH:       18,
-    brickGapX:    9,
-    brickGapY:    7,
-    brickTopY:    82,
-    brickRowBase: 5,
-    paddleY:      648,
-    puFallSpeed:  2.6,
-    C: {
-      crimson: '#DC2626',
-      violet:  '#7C3AED',
-      gold:    '#FACC15',
-      cyan:    '#06B6D4',
-      green:   '#22C55E',
-      pink:    '#EC4899',
-    }
-  };
-
-  // ════════════════════════════════════════
-  // STATE
-  // ════════════════════════════════════════
-  let OS_state     = 'MENU';   // MENU | PLAYING | PAUSED | GAMEOVER
-  let OS_score     = 0;
-  let OS_lives     = 3;
-  let OS_wave      = 1;
-  let OS_combo     = 0;
-  let OS_mult      = 1;
-  let OS_sessionId = '';
-
-  // Paddle
-  const OS_paddle = { x: OS_CFG.W / 2, y: OS_CFG.paddleY, w: OS_CFG.paddleInitW, h: OS_CFG.paddleH };
-
-  // Balls
-  let OS_balls = [];
-
-  // Bricks
-  let OS_bricks = [];
-
-  // Falling power-ups
-  let OS_drops = [];
-
-  // Active effects
-  const OS_fx = {
-    long:   { on: false, t: 0 },
-    fire:   { on: false, t: 0 },
-    slow:   { on: false, t: 0 },
-    magnet: { on: false, shots: 0, held: false, heldBall: null },
-  };
-
-  // ════════════════════════════════════════
-  // PARTICLE POOL
-  // ════════════════════════════════════════
-  const OS_POOL = Array.from({ length: 220 }, () =>
-    ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 0, size: 0, color: '#fff', alpha: 1 })
-  );
-
-  function OS_emit(x, y, color, n = 10) {
-    let s = 0;
-    for (const p of OS_POOL) {
-      if (!p.active && s < n) {
-        p.active = true; p.x = x; p.y = y; p.color = color;
-        const a = Math.random() * Math.PI * 2, spd = 1.5 + Math.random() * 3.5;
-        p.vx = Math.cos(a) * spd; p.vy = Math.sin(a) * spd;
-        p.max = p.life = 28 + Math.random() * 30;
-        p.size = 2 + Math.random() * 3.5;
-        p.alpha = 1; s++;
-      }
-    }
-  }
-
-  // ════════════════════════════════════════
-  // FLOATING TEXTS
-  // ════════════════════════════════════════
-  let OS_floats = [];
-
-  function OS_float(x, y, txt, col = OS_CFG.C.gold) {
-    OS_floats.push({ x, y, txt, col, life: 55, vy: -1.1 });
-  }
-
-  // ════════════════════════════════════════
-  // AUDIO ENGINE
-  // ════════════════════════════════════════
-  let OS_actx = null;
-
-  function OS_ac() {
-    if (!OS_actx) try { OS_actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
-    return OS_actx;
-  }
-
-  function OS_tone(freq, type, dur, gain = 0.25, detune = 0) {
-    const ctx = OS_ac(); if (!ctx) return;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type = type; o.frequency.value = freq;
-    if (detune) o.detune.value = detune;
-    g.gain.setValueAtTime(gain, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    o.start(); o.stop(ctx.currentTime + dur);
-  }
-
-  const OS_sfx = {
-    bounce:  () => OS_tone(750 + Math.random() * 250, 'triangle', 0.06, 0.18),
-    brick:   () => { const d = (Math.random() - 0.5) * 200; OS_tone(320, 'sawtooth', 0.1, 0.14, d); OS_tone(640, 'triangle', 0.07, 0.09, d); },
-    pu:      () => [400,600,850,1050].forEach((f, i) => setTimeout(() => OS_tone(f, 'sine', 0.1, 0.18), i * 55)),
-    combo:   (m) => { const f = { 2:880, 4:1100, 8:1350 }[m]; if (f) OS_tone(f, 'sine', 0.18, 0.22); },
-    lose:    () => [220,196,165].forEach((f, i) => setTimeout(() => { OS_tone(f, 'sawtooth', 1.5, 0.2); OS_tone(f*1.5, 'sawtooth', 1.5, 0.08); }, i * 180)),
-  };
-
-  // ════════════════════════════════════════
-  // BRICK GENERATION
-  // ════════════════════════════════════════
-  const OS_BRICK_COLS = [
-    OS_CFG.C.crimson, OS_CFG.C.violet,
-    '#9333EA', '#BE185D', '#0891B2', '#047857',
-  ];
-  const OS_PU_TYPES = ['multi', 'long', 'fire', 'slow', 'magnet'];
-
-  function OS_genBricks(wave) {
-    const rows   = OS_CFG.brickRowBase + Math.min(wave - 1, 7);
-    const cols   = OS_CFG.brickCols;
-    const totalW = cols * OS_CFG.brickW + (cols - 1) * OS_CFG.brickGapX;
-    const startX = (OS_CFG.W - totalW) / 2;
-
-    const puCount = Math.min(wave, 3);
-    const puSet   = new Set();
-    while (puSet.size < puCount) puSet.add(Math.floor(Math.random() * rows * cols));
-
-    const out = []; let idx = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const hard = wave > 3 && Math.random() < 0.18;
-        out.push({
-          x: startX + c * (OS_CFG.brickW + OS_CFG.brickGapX),
-          y: OS_CFG.brickTopY + r * (OS_CFG.brickH + OS_CFG.brickGapY),
-          w: OS_CFG.brickW, h: OS_CFG.brickH,
-          hp: hard ? 2 : 1, maxHp: hard ? 2 : 1,
-          color: OS_BRICK_COLS[(r + c + wave) % OS_BRICK_COLS.length],
-          pu:    puSet.has(idx) ? OS_PU_TYPES[Math.floor(Math.random() * OS_PU_TYPES.length)] : null,
-          alive: true, flash: 0,
-        });
-        idx++;
-      }
-    }
-    return out;
-  }
-
-  // ════════════════════════════════════════
-  // BALL CREATION
-  // ════════════════════════════════════════
-  function OS_mkBall(x, y, angle) {
-    const spd = OS_CFG.ballBaseSpeed * (1 + (OS_wave - 1) * 0.07) * (OS_fx.slow.on ? 0.7 : 1);
-    return {
-      x, y,
-      vx: Math.cos(angle) * spd,
-      vy: Math.sin(angle) * spd,
-      r:  OS_CFG.ballR,
-      trail: [],
-      fire: OS_fx.fire.on,
-    };
-  }
-
-  function OS_launch() {
-    const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.55;
-    OS_balls.push(OS_mkBall(OS_paddle.x, OS_paddle.y - OS_paddle.h / 2 - OS_CFG.ballR, angle));
-  }
-
-  // ════════════════════════════════════════
-  // AABB COLLISION
-  // ════════════════════════════════════════
-  function OS_aabb(ball, rect) {
-    const { x, y, r } = ball;
-    if (x + r < rect.x || x - r > rect.x + rect.w) return null;
-    if (y + r < rect.y || y - r > rect.y + rect.h) return null;
-    const oL = x + r - rect.x, oR = rect.x + rect.w - (x - r);
-    const oT = y + r - rect.y, oB = rect.y + rect.h - (y - r);
-    const m  = Math.min(oL, oR, oT, oB);
-    if (m === oL) return 'left';
-    if (m === oR) return 'right';
-    if (m === oT) return 'top';
-    return 'bottom';
-  }
-
-  // ════════════════════════════════════════
-  // COMBO
-  // ════════════════════════════════════════
-  function OS_refreshMult() {
-    if      (OS_combo >= 20) OS_mult = 8;
-    else if (OS_combo >= 10) OS_mult = 4;
-    else if (OS_combo >= 5)  OS_mult = 2;
-    else                     OS_mult = 1;
-  }
-
-  // ════════════════════════════════════════
-  // POWER-UP ACTIVATION
-  // ════════════════════════════════════════
-  function OS_activatePU(type) {
-    OS_sfx.pu();
-    switch (type) {
-      case 'multi': {
-        const src = [...OS_balls];
-        for (const b of src) {
-          for (const delta of [0.42, -0.42]) {
-            const a = Math.atan2(b.vy, b.vx) + delta;
-            const s = Math.hypot(b.vx, b.vy);
-            const nb = OS_mkBall(b.x, b.y, a);
-            nb.vx = Math.cos(a)*s; nb.vy = Math.sin(a)*s;
-            OS_balls.push(nb);
-          }
-        }
-        OS_float(OS_CFG.W/2, OS_CFG.H/2 - 20, 'FRAGMENTACION');
-        break;
-      }
-      case 'long':
-        OS_fx.long.on = true; OS_fx.long.t = 20 * 60;
-        OS_paddle.w = OS_CFG.paddleInitW * 1.4;
-        OS_float(OS_CFG.W/2, OS_CFG.H/2 - 20, 'EXPANSION OLLIN');
-        break;
-      case 'fire':
-        OS_fx.fire.on = true; OS_fx.fire.t = 30 * 60;
-        for (const b of OS_balls) b.fire = true;
-        OS_float(OS_CFG.W/2, OS_CFG.H/2 - 20, 'ALIENTO DE QUETZALCOATL', OS_CFG.C.crimson);
-        break;
-      case 'slow':
-        OS_fx.slow.on = true; OS_fx.slow.t = 15 * 60;
-        for (const b of OS_balls) { b.vx *= 0.7; b.vy *= 0.7; }
-        OS_float(OS_CFG.W/2, OS_CFG.H/2 - 20, 'TIEMPO DE OBSIDIANA', OS_CFG.C.violet);
-        break;
-      case 'magnet':
-        OS_fx.magnet.on = true; OS_fx.magnet.shots = 5;
-        OS_float(OS_CFG.W/2, OS_CFG.H/2 - 20, 'ATRACCION TLALOC', OS_CFG.C.cyan);
-        break;
-    }
-  }
-
-  // ════════════════════════════════════════
-  // LOVE ARCADE INTEGRATION
-  // ════════════════════════════════════════
-  function OS_reportCoins() {
-    const coins = Math.floor(OS_score / 10);
-    if (coins <= 0) return;
-    const levelId = `wave_${OS_wave}_${OS_sessionId}`;
-    if (typeof window.GameCenter !== 'undefined') {
-      window.GameCenter.completeLevel(OS_CFG.gameId, levelId, coins);
-      console.log('[OllinSmash] Reportadas', coins, 'monedas al GameCenter.');
-    } else {
-      console.warn('[OllinSmash] Modo standalone — monedas no acumuladas.');
-    }
-  }
-
-  // ════════════════════════════════════════
-  // GAME OVER
-  // ════════════════════════════════════════
-  function OS_doGameOver() {
-    OS_state = 'GAMEOVER';
-    OS_sfx.lose();
-    OS_reportCoins();
-
-    const hs = parseInt(localStorage.getItem('OS_highscore') || '0');
-    if (OS_score > hs) localStorage.setItem('OS_highscore', String(OS_score));
-
-    document.getElementById('os-go-score').textContent = OS_score.toLocaleString();
-    document.getElementById('os-go-wave').textContent  = OS_wave;
-    document.getElementById('os-go-coins').textContent = Math.floor(OS_score / 10);
-
-    document.getElementById('os-gameover').classList.remove('hidden');
-    document.getElementById('os-hud').classList.remove('active');
-    document.getElementById('os-pu-bar').classList.remove('active');
-  }
-
-  // ════════════════════════════════════════
-  // NEXT WAVE
-  // ════════════════════════════════════════
-  function OS_nextWave() {
-    OS_wave++;
-    OS_bricks = OS_genBricks(OS_wave);
-    OS_drops  = [];
-
-    // Reset effects
-    OS_fx.long.on = false; OS_fx.fire.on = false; OS_fx.slow.on = false;
-    OS_fx.magnet.on = false; OS_fx.magnet.held = false; OS_fx.magnet.heldBall = null;
-    OS_paddle.w = OS_CFG.paddleInitW;
-
-    // Relaunch with current balls replaced
-    OS_balls = [];
-    OS_launch();
-
-    // Flash
-    const flash = document.getElementById('os-wave-flash');
-    flash.textContent = `OLEADA ${OS_wave}`;
-    flash.classList.add('show');
-    setTimeout(() => flash.classList.remove('show'), 900);
-    document.getElementById('os-wave-lbl').textContent = `OLEADA ${OS_wave}`;
-  }
-
-  // ════════════════════════════════════════
-  // HUD HELPERS
-  // ════════════════════════════════════════
-  function OS_refreshHUD() {
-    document.getElementById('os-h-score').textContent = OS_score.toLocaleString();
-    document.getElementById('os-h-coins').textContent = Math.floor(OS_score / 10);
-    const mb = document.getElementById('os-mult-badge');
-    mb.textContent = OS_mult > 1 ? `x${OS_mult} COMBO` : '';
-  }
-
-  function OS_refreshLives() {
-    const el = document.getElementById('os-h-lives');
-    el.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
-      const d = document.createElement('div');
-      d.className = 'os-life-dot' + (i >= OS_lives ? ' empty' : '');
-      el.appendChild(d);
-    }
-  }
-
-  function OS_refreshPills() {
-    const pill = (id, cond, t) => {
-      const el = document.getElementById(id);
-      el.classList.toggle('on', cond);
-      if (t != null) el.querySelector('span').textContent = t;
-    };
-    pill('os-pill-long',   OS_fx.long.on,   Math.ceil(OS_fx.long.t/60) + 's');
-    pill('os-pill-fire',   OS_fx.fire.on,   Math.ceil(OS_fx.fire.t/60) + 's');
-    pill('os-pill-slow',   OS_fx.slow.on,   Math.ceil(OS_fx.slow.t/60) + 's');
-    pill('os-pill-magnet', OS_fx.magnet.on, OS_fx.magnet.shots);
-  }
-
-  // ════════════════════════════════════════
-  // UPDATE
-  // ════════════════════════════════════════
-  function OS_update() {
-    if (OS_state !== 'PLAYING') return;
-
-    // Power-up timers
-    if (OS_fx.long.on && --OS_fx.long.t <= 0) {
-      OS_fx.long.on = false; OS_paddle.w = OS_CFG.paddleInitW;
-    }
-    if (OS_fx.fire.on && --OS_fx.fire.t <= 0) {
-      OS_fx.fire.on = false; for (const b of OS_balls) b.fire = false;
-    }
-    if (OS_fx.slow.on && --OS_fx.slow.t <= 0) {
-      OS_fx.slow.on = false;
-      const target = OS_CFG.ballBaseSpeed * (1 + (OS_wave - 1) * 0.07);
-      for (const b of OS_balls) {
-        const spd = Math.hypot(b.vx, b.vy);
-        if (spd > 0) { b.vx = b.vx/spd*target; b.vy = b.vy/spd*target; }
-      }
-    }
-
-    // Update balls
-    const dead = [];
-    for (const ball of OS_balls) {
-      // Magnet hold
-      if (OS_fx.magnet.held && OS_fx.magnet.heldBall === ball) {
-        ball.x = OS_paddle.x;
-        ball.y = OS_paddle.y - OS_paddle.h/2 - ball.r;
-        continue;
-      }
-
-      // Trail
-      ball.trail.push({ x: ball.x, y: ball.y });
-      if (ball.trail.length > 9) ball.trail.shift();
-
-      ball.x += ball.vx; ball.y += ball.vy;
-
-      // Walls
-      if (ball.x - ball.r < 0)           { ball.x = ball.r;           ball.vx =  Math.abs(ball.vx); OS_sfx.bounce(); }
-      if (ball.x + ball.r > OS_CFG.W)    { ball.x = OS_CFG.W - ball.r; ball.vx = -Math.abs(ball.vx); OS_sfx.bounce(); }
-      if (ball.y - ball.r < 0)           { ball.y = ball.r;            ball.vy =  Math.abs(ball.vy); OS_sfx.bounce(); }
-
-      // Paddle
-      const pr = { x: OS_paddle.x - OS_paddle.w/2, y: OS_paddle.y - OS_paddle.h/2, w: OS_paddle.w, h: OS_paddle.h };
-      const ps = OS_aabb(ball, pr);
-      if (ps && ball.vy > 0) {
-        OS_combo = 0; OS_refreshMult();
-        if (OS_fx.magnet.on && OS_fx.magnet.shots > 0) {
-          OS_fx.magnet.held = true; OS_fx.magnet.heldBall = ball;
-          ball.vx = 0; ball.vy = 0;
-        } else {
-          const hit = (ball.x - pr.x) / OS_paddle.w; // 0..1
-          const angle = -Math.PI/2 + (hit - 0.5) * Math.PI * 0.78;
-          const spd   = Math.hypot(ball.vx, ball.vy);
-          ball.vx = Math.cos(angle) * spd;
-          ball.vy = Math.sin(angle) * spd;
-          ball.y  = OS_paddle.y - OS_paddle.h/2 - ball.r - 1;
-          OS_sfx.bounce();
-        }
-      }
-
-      // Bricks
-      for (const bk of OS_bricks) {
-        if (!bk.alive) continue;
-        const side = OS_aabb(ball, bk);
-        if (!side) continue;
-
-        bk.hp--;  bk.flash = 9;
-        if (bk.hp <= 0) {
-          bk.alive = false;
-          OS_score += 10 * OS_mult;
-          OS_combo++;  OS_refreshMult();
-          OS_emit(bk.x + bk.w/2, bk.y + bk.h/2, bk.color, 9);
-          OS_sfx.brick();
-          if (OS_mult > 1) {
-            OS_float(bk.x + bk.w/2, bk.y, `COMBO x${OS_mult}`);
-            OS_sfx.combo(OS_mult);
-          }
-          if (bk.pu) {
-            OS_drops.push({ x: bk.x + bk.w/2, y: bk.y + bk.h/2, type: bk.pu, w: 22, h: 22 });
-          }
-        }
-
-        if (!ball.fire) {
-          if (side === 'left' || side === 'right') ball.vx = -ball.vx;
-          else                                     ball.vy = -ball.vy;
-          break;
-        }
-      }
-
-      if (ball.y - ball.r > OS_CFG.H) dead.push(ball);
-    }
-
-    for (const db of dead) {
-      if (OS_fx.magnet.heldBall === db) { OS_fx.magnet.held = false; OS_fx.magnet.heldBall = null; }
-      OS_balls.splice(OS_balls.indexOf(db), 1);
-    }
-
-    if (OS_balls.length === 0) {
-      OS_lives--;  OS_refreshLives();
-      if (OS_lives <= 0) { OS_doGameOver(); return; }
-      OS_launch();
-    }
-
-    // Falling drops
-    for (let i = OS_drops.length - 1; i >= 0; i--) {
-      const d = OS_drops[i];
-      d.y += OS_CFG.puFallSpeed;
-      const pL = OS_paddle.x - OS_paddle.w/2, pR = OS_paddle.x + OS_paddle.w/2;
-      if (d.y + d.h/2 >= OS_paddle.y - OS_paddle.h/2 &&
-          d.y - d.h/2 <= OS_paddle.y + OS_paddle.h/2 &&
-          d.x >= pL && d.x <= pR) {
-        OS_activatePU(d.type); OS_drops.splice(i, 1); continue;
-      }
-      if (d.y > OS_CFG.H + 20) OS_drops.splice(i, 1);
-    }
-
-    // Particles
-    for (const p of OS_POOL) {
-      if (!p.active) continue;
-      p.x += p.vx; p.y += p.vy; p.vy += 0.12;
-      p.alpha = --p.life / p.max;
-      if (p.life <= 0) p.active = false;
-    }
-
-    // Float texts
-    for (let i = OS_floats.length - 1; i >= 0; i--) {
-      const f = OS_floats[i]; f.y += f.vy; f.life--;
-      if (f.life <= 0) OS_floats.splice(i, 1);
-    }
-
-    for (const b of OS_bricks) if (b.flash > 0) b.flash--;
-
-    // Wave clear
-    if (OS_bricks.every(b => !b.alive)) OS_nextWave();
-
-    OS_refreshHUD();
-    OS_refreshPills();
-  }
-
-  // ════════════════════════════════════════
-  // DRAW
-  // ════════════════════════════════════════
-  const OS_cv  = document.getElementById('os-canvas');
-  const OS_cx  = OS_cv.getContext('2d');
-  let   OS_bgV = 0; // smooth ball speed for bg
-
-  function OS_draw() {
-    const ctx = OS_cx;
-    const W = OS_CFG.W, H = OS_CFG.H;
-
-    // Smooth bg intensity
-    if (OS_balls.length > 0) {
-      const avgSpd = OS_balls.reduce((a, b) => a + Math.hypot(b.vx, b.vy), 0) / OS_balls.length;
-      OS_bgV += (avgSpd - OS_bgV) * 0.04;
-    }
-    const itv = Math.min(OS_bgV / 10, 1);
-
-    // Background
-    const bgG = ctx.createLinearGradient(0, 0, W, H);
-    bgG.addColorStop(0, `rgb(${7 + itv*28},0,${15 + itv*40})`);
-    bgG.addColorStop(1, `rgb(${3 + itv*12},0,${8 + itv*22})`);
-    ctx.fillStyle = bgG; ctx.fillRect(0, 0, W, H);
-
-    // Aztec grid
-    ctx.lineWidth = 0.5;
-    ctx.strokeStyle = `rgba(124,58,237,${0.045 + itv * 0.045})`;
-    for (let x = 0; x < W; x += 24) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    ctx.strokeStyle = `rgba(220,38,38,${0.03 + itv * 0.03})`;
-    for (let y = 0; y < H; y += 24) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-    // Top grecan border
-    OS_drawGrecan(ctx, 0, 70, W);
-    // Bottom grecan border
-    OS_drawGrecan(ctx, 0, H - 20, W, true);
-
-    if (OS_state === 'PLAYING' || OS_state === 'PAUSED') {
-      OS_drawBricks(ctx);
-      OS_drawDrops(ctx);
-      OS_drawParticles(ctx);
-      for (const b of OS_balls) OS_drawTrail(ctx, b);
-      OS_drawPaddle(ctx);
-      for (const b of OS_balls) OS_drawBall(ctx, b);
-      OS_drawFloats(ctx);
-    }
-  }
-
-  function OS_drawGrecan(ctx, x, y, w, flip = false) {
-    const step = 14;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(220,38,38,0.22)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    const fy = flip ? -1 : 1;
-    ctx.moveTo(x, y);
-    let cx = x;
-    while (cx < x + w) {
-      ctx.lineTo(cx + step,    y);
-      ctx.lineTo(cx + step,    y + fy * 5);
-      ctx.lineTo(cx + step*2,  y + fy * 5);
-      ctx.lineTo(cx + step*2,  y + fy * 10);
-      ctx.lineTo(cx + step*3,  y + fy * 10);
-      ctx.lineTo(cx + step*3,  y + fy * 5);
-      ctx.lineTo(cx + step*4,  y + fy * 5);
-      ctx.lineTo(cx + step*4,  y);
-      cx += step * 4;
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function OS_drawBricks(ctx) {
-    for (const bk of OS_bricks) {
-      if (!bk.alive) continue;
-      ctx.save();
-      const flash = bk.flash / 9;
-      ctx.shadowColor = bk.color;
-      ctx.shadowBlur  = 8 + flash * 15;
-      const alpha = flash > 0 ? 0.5 + flash * 0.5 : 0.82;
-      ctx.fillStyle = flash > 0
-        ? `rgba(255,255,255,${0.25 + flash * 0.65})`
-        : bk.color + Math.round(alpha * 255).toString(16).padStart(2,'0');
-      ctx.fillRect(bk.x, bk.y, bk.w, bk.h);
-
-      // Border
-      ctx.strokeStyle = bk.color;
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 0;
-      ctx.strokeRect(bk.x, bk.y, bk.w, bk.h);
-
-      // Hard tick marks
-      if (bk.maxHp > 1 && bk.hp === bk.maxHp) {
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillRect(bk.x + bk.w - 9, bk.y + 2, 3, bk.h - 4);
-        ctx.fillRect(bk.x + bk.w - 14, bk.y + 2, 3, bk.h - 4);
-      }
-
-      // Power-up indicator
-      if (bk.pu) {
-        ctx.fillStyle = OS_CFG.C.gold;
-        ctx.shadowColor = OS_CFG.C.gold; ctx.shadowBlur = 5;
-        ctx.beginPath();
-        ctx.arc(bk.x + bk.w/2, bk.y + bk.h/2, 3, 0, Math.PI*2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-
-  function OS_drawPaddle(ctx) {
-    const { x, y, w, h } = OS_paddle;
-    ctx.save();
-    const col = OS_fx.fire.on ? OS_CFG.C.crimson : OS_fx.magnet.on ? OS_CFG.C.cyan : OS_CFG.C.violet;
-    ctx.shadowColor = col; ctx.shadowBlur = 22;
-
-    const g = ctx.createLinearGradient(x - w/2, y - h/2, x + w/2, y + h/2);
-    if (OS_fx.fire.on) { g.addColorStop(0,'#DC2626'); g.addColorStop(1,'#7F1D1D'); }
-    else if (OS_fx.magnet.on) { g.addColorStop(0,'#0E7490'); g.addColorStop(1,'#164E63'); }
-    else { g.addColorStop(0,'#7C3AED'); g.addColorStop(1,'#4C1D95'); }
-
-    ctx.fillStyle = g;
-    ctx.fillRect(x - w/2, y - h/2, w, h);
-
-    // Highlight strip
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.fillRect(x - w/2 + 2, y - h/2 + 1, w - 4, 3);
-
-    // Border
-    ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.shadowBlur = 0;
-    ctx.strokeRect(x - w/2, y - h/2, w, h);
-
-    // Aztec tick marks
-    const marks = 7, spacing = w / (marks + 1);
-    ctx.fillStyle = 'rgba(250,204,21,0.55)';
-    for (let i = 1; i <= marks; i++) {
-      ctx.fillRect(x - w/2 + spacing * i - 1, y - h/2, 2, 5);
-    }
-    ctx.restore();
-  }
-
-  function OS_drawBall(ctx, ball) {
-    ctx.save();
-    const col = ball.fire ? OS_CFG.C.crimson : OS_CFG.C.gold;
-    ctx.shadowColor = col; ctx.shadowBlur = ball.fire ? 22 : 14;
-
-    const g = ctx.createRadialGradient(ball.x - ball.r*.3, ball.y - ball.r*.3, 1, ball.x, ball.y, ball.r);
-    g.addColorStop(0, 'rgba(255,255,255,0.92)');
-    g.addColorStop(0.4, col);
-    g.addColorStop(1, col + '80');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function OS_drawTrail(ctx, ball) {
-    const n = ball.trail.length;
-    for (let i = 0; i < n; i++) {
-      const t = ball.trail[i], prog = i / n;
-      const col = ball.fire ? `rgba(220,38,38,${prog * 0.28})` : `rgba(250,204,21,${prog * 0.25})`;
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, ball.r * prog * 0.55, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-
-  function OS_drawParticles(ctx) {
-    ctx.save();
-    for (const p of OS_POOL) {
-      if (!p.active) continue;
-      ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color; ctx.shadowBlur = 4;
-      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-    }
-    ctx.restore();
-  }
-
-  // Power-up drop icons drawn with canvas
-  const OS_DROP_DRAW = {
-    multi: (ctx, x, y) => {
-      ctx.fillStyle = OS_CFG.C.gold; ctx.shadowColor = OS_CFG.C.gold; ctx.shadowBlur = 6;
-      for (const ox of [-7, 0, 7]) { ctx.beginPath(); ctx.arc(x+ox, y, 4, 0, Math.PI*2); ctx.fill(); }
-    },
-    long: (ctx, x, y) => {
-      ctx.strokeStyle = OS_CFG.C.gold; ctx.lineWidth = 2; ctx.shadowColor = OS_CFG.C.gold; ctx.shadowBlur = 6;
-      ctx.beginPath(); ctx.moveTo(x-9,y); ctx.lineTo(x+9,y);
-      ctx.moveTo(x-6,y-4); ctx.lineTo(x-9,y); ctx.lineTo(x-6,y+4);
-      ctx.moveTo(x+6,y-4); ctx.lineTo(x+9,y); ctx.lineTo(x+6,y+4);
-      ctx.stroke();
-    },
-    fire: (ctx, x, y) => {
-      ctx.strokeStyle = OS_CFG.C.crimson; ctx.lineWidth = 1.6; ctx.shadowColor = OS_CFG.C.crimson; ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.moveTo(x, y+8);
-      ctx.bezierCurveTo(x-7, y+1, x-3, y-4, x, y-9);
-      ctx.bezierCurveTo(x+3, y-4, x+7, y+1, x, y+8);
-      ctx.stroke();
-    },
-    slow: (ctx, x, y) => {
-      ctx.strokeStyle = OS_CFG.C.violet; ctx.lineWidth = 1.5; ctx.shadowColor = OS_CFG.C.violet; ctx.shadowBlur = 6;
-      ctx.strokeRect(x-6, y-9, 12, 18);
-      ctx.beginPath();
-      ctx.moveTo(x-5, y-8); ctx.lineTo(x+5, y-8);
-      ctx.moveTo(x-5, y+8); ctx.lineTo(x+5, y+8);
-      ctx.moveTo(x-4, y-8); ctx.lineTo(x, y-1); ctx.lineTo(x+4, y-8);
-      ctx.moveTo(x-4, y+8); ctx.lineTo(x, y+1); ctx.lineTo(x+4, y+8);
-      ctx.stroke();
-    },
-    magnet: (ctx, x, y) => {
-      ctx.strokeStyle = OS_CFG.C.cyan; ctx.lineWidth = 2; ctx.shadowColor = OS_CFG.C.cyan; ctx.shadowBlur = 7;
-      ctx.beginPath(); ctx.arc(x, y+3, 6, Math.PI, 0); ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x-6, y+3); ctx.lineTo(x-6, y-8);
-      ctx.moveTo(x+6, y+3); ctx.lineTo(x+6, y-8);
-      ctx.stroke();
-    },
-  };
-
-  function OS_drawDrops(ctx) {
-    for (const d of OS_drops) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(3,0,7,0.82)';
-      const col = d.type === 'fire' ? OS_CFG.C.crimson :
-                  d.type === 'magnet' ? OS_CFG.C.cyan :
-                  d.type === 'slow' ? OS_CFG.C.violet : OS_CFG.C.gold;
-      ctx.strokeStyle = col; ctx.lineWidth = 1;
-      ctx.shadowColor = col; ctx.shadowBlur = 10;
-      ctx.fillRect(d.x - d.w/2, d.y - d.h/2, d.w, d.h);
-      ctx.strokeRect(d.x - d.w/2, d.y - d.h/2, d.w, d.h);
-      ctx.shadowBlur = 0;
-      const fn = OS_DROP_DRAW[d.type];
-      if (fn) fn(ctx, d.x, d.y);
-      ctx.restore();
-    }
-  }
-
-  function OS_drawFloats(ctx) {
-    for (const f of OS_floats) {
-      const alpha = Math.min(1, f.life / 18);
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = f.col;
-      ctx.shadowColor = f.col; ctx.shadowBlur = 12;
-      ctx.font = 'bold 11px "Share Tech Mono",monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(f.txt, f.x, f.y);
-      ctx.restore();
-    }
-  }
-
-  // ════════════════════════════════════════
-  // INPUT
-  // ════════════════════════════════════════
-  function OS_toCanvasX(clientX) {
-    const r = OS_cv.getBoundingClientRect();
-    return (clientX - r.left) * (OS_CFG.W / r.width);
-  }
-
-  function OS_movePaddle(clientX) {
-    if (OS_state !== 'PLAYING') return;
-    OS_paddle.x = Math.max(OS_paddle.w/2, Math.min(OS_CFG.W - OS_paddle.w/2, OS_toCanvasX(clientX)));
-    if (OS_fx.magnet.held && OS_fx.magnet.heldBall) OS_fx.magnet.heldBall.x = OS_paddle.x;
-  }
-
-  function OS_tap(clientX) {
-    if (OS_state === 'PLAYING' && OS_fx.magnet.held && OS_fx.magnet.heldBall) {
-      const ball  = OS_fx.magnet.heldBall;
-      const angle = -Math.PI/2 + (Math.random() - 0.5) * 0.4;
-      const spd   = OS_CFG.ballBaseSpeed * (1 + (OS_wave - 1) * 0.07);
-      ball.vx = Math.cos(angle) * spd; ball.vy = Math.sin(angle) * spd;
-      OS_fx.magnet.heldBall = null; OS_fx.magnet.held = false;
-      OS_fx.magnet.shots--;
-      if (OS_fx.magnet.shots <= 0) OS_fx.magnet.on = false;
-    }
-  }
-
-  // Bind input on wrapper for full-viewport coverage
-  const wr = document.getElementById('os-wrapper');
-  wr.addEventListener('mousemove', e => OS_movePaddle(e.clientX));
-  wr.addEventListener('touchmove', e => { e.preventDefault(); OS_movePaddle(e.touches[0].clientX); }, { passive: false });
-  wr.addEventListener('click', e => OS_tap(e.clientX));
-  wr.addEventListener('touchend', e => { if (e.changedTouches.length) OS_tap(e.changedTouches[0].clientX); }, { passive: false });
-
-  document.addEventListener('keydown', e => {
-    if (e.code === 'Space' || e.code === 'Escape') {
-      if (OS_state === 'PLAYING') OS_setPaused(true);
-      else if (OS_state === 'PAUSED') OS_setPaused(false);
-    }
-    if (OS_state !== 'PLAYING') return;
-    const step = 18;
-    if (e.code === 'ArrowLeft'  || e.code === 'KeyA') OS_paddle.x = Math.max(OS_paddle.w/2, OS_paddle.x - step);
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') OS_paddle.x = Math.min(OS_CFG.W - OS_paddle.w/2, OS_paddle.x + step);
-  });
-
-  function OS_setPaused(v) {
-    OS_state = v ? 'PAUSED' : 'PLAYING';
-    document.getElementById('os-paused').classList.toggle('hidden', !v);
-  }
-
-  // ════════════════════════════════════════
-  // GAME START
-  // ════════════════════════════════════════
-  function OS_startGame() {
-    OS_score = 0; OS_lives = 3; OS_wave = 1;
-    OS_combo = 0; OS_mult  = 1;
-    OS_sessionId = Date.now().toString(36);
-
-    OS_paddle.x = OS_CFG.W/2; OS_paddle.w = OS_CFG.paddleInitW;
-    OS_balls = []; OS_drops = []; OS_floats = [];
-    for (const p of OS_POOL) p.active = false;
-
-    OS_fx.long.on = false; OS_fx.fire.on = false; OS_fx.slow.on = false;
-    OS_fx.magnet.on = false; OS_fx.magnet.held = false; OS_fx.magnet.heldBall = null;
-
-    OS_bricks = OS_genBricks(OS_wave);
-    OS_state  = 'PLAYING';
-
-    document.getElementById('os-menu').classList.add('hidden');
-    document.getElementById('os-gameover').classList.add('hidden');
-    document.getElementById('os-paused').classList.add('hidden');
-    document.getElementById('os-hud').classList.add('active');
-    document.getElementById('os-pu-bar').classList.add('active');
-    document.getElementById('os-wave-lbl').textContent = 'OLEADA 1';
-
-    OS_refreshLives();
-    OS_refreshHUD();
-
-    setTimeout(() => {
-      OS_launch();
-      OS_float(OS_CFG.W/2, OS_CFG.H/2, 'OLEADA 1');
-    }, 300);
-  }
-
-  // ════════════════════════════════════════
-  // GAME LOOP
-  // ════════════════════════════════════════
-  function OS_loop() {
-    OS_update();
-    OS_draw();
-    requestAnimationFrame(OS_loop);
-  }
-
-  // ════════════════════════════════════════
-  // BOOT
-  // ════════════════════════════════════════
-  function OS_boot() {
-    // Standalone check
-    if (typeof window.GameCenter === 'undefined') {
-      document.getElementById('os-notice-menu').classList.add('visible');
-    }
-
-    // Load highscore
-    const hs = parseInt(localStorage.getItem('OS_highscore') || '0');
-    document.getElementById('os-hs').textContent = hs.toLocaleString();
-
-    // Button bindings
-    document.getElementById('os-btn-start').addEventListener('click', () => { OS_ac(); OS_startGame(); });
-    document.getElementById('os-btn-retry').addEventListener('click', () => { OS_ac(); OS_startGame(); });
-    document.getElementById('os-btn-resume').addEventListener('click', () => OS_setPaused(false));
-    document.getElementById('os-btn-menu').addEventListener('click', () => {
-      OS_state = 'MENU';
-      document.getElementById('os-gameover').classList.add('hidden');
-      document.getElementById('os-hud').classList.remove('active');
-      document.getElementById('os-pu-bar').classList.remove('active');
-      document.getElementById('os-menu').classList.remove('hidden');
-      const hs2 = parseInt(localStorage.getItem('OS_highscore') || '0');
-      document.getElementById('os-hs').textContent = hs2.toLocaleString();
-    });
-
-    requestAnimationFrame(OS_loop);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', OS_boot);
-  } else {
-    OS_boot();
-  }
-
-  // Public API
-  window.OllinSmashGame.getScore = () => OS_score;
-  window.OllinSmashGame.getWave  = () => OS_wave;
-  window.OllinSmashGame.getState = () => OS_state;
-
-})();
-</script>
-
-<!-- Love Arcade Core — must be last in body -->
-<script src="../../js/app.js"></script>
 </body>
 </html>
