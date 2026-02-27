@@ -229,7 +229,7 @@ function _applyPU(type) {
       break;
     }
     case 'SLOW':
-      S.slowTimer = C.PW_DURATION;
+      S.slowTimer = C.PW_SLOW_DURATION;
       S.balls.forEach(b => {
         const slow = b.speed * 0.58, len = Math.hypot(b.vx, b.vy);
         if (len > 0) { b.vx = (b.vx / len) * slow; b.vy = (b.vy / len) * slow; }
