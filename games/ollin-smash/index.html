@@ -21,7 +21,9 @@
     }
 
     html, body {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100vh;        /* fallback for old browsers */
+      height: 100dvh;       /* Dynamic viewport height — accounts for mobile browser chrome */
       overflow: hidden;
       background: #06010f;
       font-family: 'Orbitron', sans-serif;
@@ -166,6 +168,65 @@
   </style>
 </head>
 <body>
+
+  <!-- ══════════════════════════════════════
+       SVG SPRITE — cross-platform icons
+       Hidden from layout; referenced via JS drawImage / USE
+       ══════════════════════════════════════ -->
+  <svg id="ARK_svg-sprite" xmlns="http://www.w3.org/2000/svg" width="0" height="0"
+       style="position:absolute;overflow:hidden" aria-hidden="true">
+    <defs>
+      <!-- Coin -->
+      <symbol id="icon-coin" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="9" fill="#ffe600" stroke="#cc9900" stroke-width="1.2"/>
+        <text x="10" y="14.5" text-anchor="middle" font-family="Orbitron,sans-serif"
+              font-size="10" font-weight="900" fill="#7a5c00">$</text>
+      </symbol>
+      <!-- Heart -->
+      <symbol id="icon-heart" viewBox="0 0 20 20">
+        <path d="M10 17 C10 17 2 11 2 6.5 A4 4 0 0 1 10 5 A4 4 0 0 1 18 6.5 C18 11 10 17 10 17Z"
+              fill="#ff1f8f"/>
+      </symbol>
+      <!-- Bolt (boss) -->
+      <symbol id="icon-bolt" viewBox="0 0 20 20">
+        <polygon points="12,1 5,11 10,11 8,19 15,9 10,9" fill="#ffe600"/>
+      </symbol>
+      <!-- Fire -->
+      <symbol id="icon-fire" viewBox="0 0 20 20">
+        <path d="M10 18 C5 18 3 14 5 10 C6 8 8 8 8 6 C8 4 9 2 10 1
+                 C11 4 11 5 13 6 C15 8 16 11 14 14 C13 16 12 18 10 18Z"
+              fill="#ff6600"/>
+        <path d="M10 16 C8 16 7 14 8 12 C9 11 10 12 10 10
+                 C11 12 12 12 12 14 C12 15.5 11 16 10 16Z"
+              fill="#ffcc00"/>
+      </symbol>
+      <!-- Shield -->
+      <symbol id="icon-shield" viewBox="0 0 20 20">
+        <path d="M10 2 L17 5 L17 11 C17 15 13.5 18 10 19 C6.5 18 3 15 3 11 L3 5 Z"
+              fill="#ffe600" stroke="#cc9900" stroke-width="0.8"/>
+        <path d="M10 6 L13 8 L13 11 C13 13 11.5 14.5 10 15 C8.5 14.5 7 13 7 11 L7 8 Z"
+              fill="rgba(255,255,255,0.3)"/>
+      </symbol>
+      <!-- E Expand -->
+      <symbol id="icon-expand" viewBox="0 0 20 20">
+        <rect x="2" y="8" width="16" height="4" rx="2" fill="#00cc66"/>
+        <polygon points="1,10 5,7 5,13" fill="#00cc66"/>
+        <polygon points="19,10 15,7 15,13" fill="#00cc66"/>
+      </symbol>
+      <!-- S Slow -->
+      <symbol id="icon-slow" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill="none" stroke="#4488ff" stroke-width="2"/>
+        <path d="M10 5 L10 10 L14 12" stroke="#4488ff" stroke-width="1.8"
+              stroke-linecap="round" fill="none"/>
+      </symbol>
+      <!-- M Multi -->
+      <symbol id="icon-multi" viewBox="0 0 20 20">
+        <circle cx="6"  cy="13" r="3.5" fill="#00e8ff" opacity="0.9"/>
+        <circle cx="14" cy="13" r="3.5" fill="#00e8ff" opacity="0.9"/>
+        <circle cx="10" cy="7"  r="3.5" fill="#00e8ff"/>
+      </symbol>
+    </defs>
+  </svg>
 
   <div id="ARK_aria-status" role="status" aria-live="polite" aria-atomic="true"></div>
 
