@@ -84,8 +84,8 @@ body::before {
 
 #os-back {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: max(10px, env(safe-area-inset-top, 10px));
+  left: max(12px, env(safe-area-inset-left, 12px));
   z-index: 30;
   background: transparent;
   border: 1px solid rgba(220,38,38,0.4);
@@ -127,7 +127,9 @@ body::before {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 10px 14px 0;
+  /* top: 48px deja espacio al botón HUB (~28px alto + margen);
+     lateral: 22px evita que los marcadores queden pegados al borde */
+  padding: 48px 22px 0;
   font-family: 'Share Tech Mono', monospace;
 }
 
