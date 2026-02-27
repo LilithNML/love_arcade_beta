@@ -51,9 +51,10 @@ export const ARK_CONFIG = Object.freeze({
   PW_W:             22,
   PW_H:             22,
   PW_CHANCE:        0.22,
-  PW_DURATION:      8000,         // ms — base duration for timed power-ups
+  PW_DURATION:      10000,        // ms — base duration for timed power-ups (EXPAND, SHIELD)
   PW_SHIELD_MULT:   1.5,
-  PW_FIRE_DURATION: 6000,         // ms — FIRE power-up shorter but impactful
+  PW_FIRE_DURATION: 8000,         // ms — FIRE power-up (increased from 6000 for better feel)
+  PW_SLOW_DURATION: 10000,        // ms — SLOW power-up (separate, longer duration)
 
   // Scoring
   SCORE_BRICK_1:    10,
@@ -63,8 +64,8 @@ export const ARK_CONFIG = Object.freeze({
   SCORE_LEVEL_BONUS:500,
   SCORE_LIFE_BONUS: 300,
 
-  // Particles
-  PARTICLE_POOL:    220,
+  // Particles — capped at 20 for low-end GPU performance
+  PARTICLE_POOL:    20,
 
   // Shockwave (shield-break)
   SHOCKWAVE_DURATION: 0.55,
