@@ -346,7 +346,47 @@ body::before {
 }
 .os-standalone-notice.visible { display: block; }
 
-/* ── Pause Screen ─────────────────────────────────────────────────────────── */
+/* ── Pause Button (HUD) ───────────────────────────────────────────────────── */
+
+#os-btn-pause {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top, 10px));
+  right: max(12px, env(safe-area-inset-right, 12px));
+  z-index: 30;
+  /* reset pointer-events blocked by #os-hud */
+  pointer-events: auto;
+  background: transparent;
+  border: 1px solid rgba(124,58,237,0.45);
+  color: rgba(124,58,237,0.75);
+  width: 32px;
+  height: 28px;
+  display: none;           /* shown only when PLAYING or PAUSED */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  padding: 0;
+}
+#os-btn-pause:hover,
+#os-btn-pause:active {
+  color: var(--os-violet);
+  border-color: var(--os-violet);
+  box-shadow: 0 0 10px rgba(124,58,237,0.4);
+}
+#os-btn-pause.visible { display: flex; }
+
+/* When paused, show "play" triangle instead of pause bars */
+#os-btn-pause.is-paused svg rect {
+  display: none;
+}
+#os-btn-pause.is-paused::after {
+  content: '▶';
+  font-size: 11px;
+  line-height: 1;
+  color: currentColor;
+}
+
+
 
 #os-paused.os-overlay {
   background: rgba(3,0,7,0.75);
