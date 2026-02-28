@@ -5,8 +5,11 @@
  *
  * ⚠️ Todas las variables usan prefijo JD_ — regla de namespacing obligatoria.
  *
- * v1.1.0 — Añade soporte Fullscreen API + orientation lock en primera interacción.
- *           El botón de mute se gestiona desde #jd-mute-container (fuera del HUD).
+ * v1.2.0 — Lógica "Permitir para Transformar":
+ *   · El juego permanece visible en portrait para que el usuario pueda interactuar.
+ *   · La primera interacción desencadena requestFullscreen() + orientation.lock().
+ *   · El overlay de rotación solo se muestra si orientation.lock() es rechazado.
+ *   · El HUD de puntuación migró del canvas al DOM HTML (ver JD_Renderer.js).
  */
 
 // ── Estados del juego ─────────────────────────────────────────────────────────
@@ -117,11 +120,9 @@ const JD_Core = {
     _update(delta) {
 
         // ── Incremento de puntuación ─────────────────────────────────────────
-        //    +1 punto base por tick a 60fps, sin multiplicador de velocidad
         JD_score += delta * 0.85;
 
         // ── Escalado progresivo de velocidad ─────────────────────────────────
-        //    Cada 500 puntos: +0.5 velocidad; techo en 13
         JD_gameSpeed = Math.min(4.0 + Math.floor(JD_score / 500) * 0.55, 13.0);
 
         // ── Parallax ──────────────────────────────────────────────────────────
@@ -172,15 +173,15 @@ const JD_Core = {
     },
 
     // ── Acción unificada de inicio/salto ──────────────────────────────────────
+    // La primera interacción desbloquea simultáneamente el AudioContext y la
+    // Fullscreen API, ya que ambas exigen un gesto de usuario explícito.
+    // Mantener el juego visible en portrait es lo que hace posible este gesto:
+    // sin él, el usuario no puede tocar la pantalla para iniciar el flujo.
     _onActionStart() {
-        // ── Primera interacción ───────────────────────────────────────────────
-        // Los navegadores exigen un gesto de usuario para desbloquear tanto el
-        // AudioContext como la Fullscreen API. Ambas se activan aquí de forma
-        // simultánea para no requerir un segundo gesto.
         if (!JD_firstInteract) {
             JD_firstInteract = true;
             JD_Audio.init();
-            JD_Core._requestFullscreen(); // Fullscreen + orientation lock
+            JD_Core._requestFullscreen(); // fullscreen + orientation lock
         }
 
         if (JD_currentState === JD_STATES.START) {
@@ -192,12 +193,23 @@ const JD_Core = {
         }
     },
 
-    // ── Fullscreen + orientation lock ─────────────────────────────────────────
-    // Se aplica sobre #jd-container (no el canvas) para que el HUD HTML
-    // permanezca visible en modo pantalla completa.
-    // Compatibilidad: prefijo webkit para Safari en macOS/iPadOS.
-    // Nota iOS: screen.orientation.lock solo funciona en PWA instaladas;
-    //           en Safari web se silencia el error sin romper el flujo.
+    // ── Fullscreen + Orientation Lock ─────────────────────────────────────────
+    //
+    // Estrategia "Permitir para Transformar":
+    //
+    //   1. Solicitar fullscreen sobre #jd-container (no el canvas) para que el
+    //      HUD HTML siga siendo visible y accesible dentro del fullscreen.
+    //   2. Tras activar fullscreen, intentar fijar la orientación en landscape.
+    //   3. Solo si orientation.lock() es RECHAZADO (ej. iOS Safari web), mostrar
+    //      el overlay visual de rotación como instrucción de fallback al usuario.
+    //
+    // Este diseño respeta la limitación técnica de los navegadores modernos:
+    // ninguna API puede forzar la rotación sin un gesto previo del usuario.
+    // Al mantener el juego visible en portrait, el usuario puede tocar, y ese
+    // toque desencadena el flujo completo.
+    //
+    // Compatibilidad: prefijos webkit/moz/ms para cobertura máxima.
+    // iOS Safari web: orientation.lock no está soportado → overlay de fallback.
     _requestFullscreen() {
         const JD_el = document.getElementById('jd-container');
         if (!JD_el) return;
@@ -208,33 +220,55 @@ const JD_Core = {
                     || JD_el.msRequestFullscreen;
 
         if (!JD_rfs) {
-            console.info('[JD] Fullscreen API no disponible en este navegador.');
+            // Fullscreen API no disponible (ej. iframe sin permiso allowfullscreen)
+            console.info('[JD] Fullscreen API no disponible — mostrando overlay si es necesario.');
+            JD_Core._showRotateOverlayIfPortrait();
             return;
         }
 
         JD_rfs.call(JD_el)
             .then(() => {
                 console.log('[JD] Fullscreen activado.');
-                // Intentar fijar la orientación en landscape
+
+                // Intentar fijar orientación en landscape
                 if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    screen.orientation.lock('landscape').catch((JD_err) => {
-                        // iOS/Safari web lanza NotSupportedError — es comportamiento esperado.
-                        console.info('[JD] orientation.lock no soportado (probablemente iOS Safari):', JD_err.message);
-                    });
+                    screen.orientation.lock('landscape')
+                        .then(() => {
+                            console.log('[JD] Orientación fijada en landscape.');
+                        })
+                        .catch((JD_err) => {
+                            // Comportamiento esperado en iOS Safari web y algunos Android.
+                            // El overlay guía al usuario para que rote manualmente.
+                            console.info('[JD] orientation.lock rechazado:', JD_err.message);
+                            JD_Core._showRotateOverlayIfPortrait();
+                        });
+                } else {
+                    // API no disponible en este navegador
+                    JD_Core._showRotateOverlayIfPortrait();
                 }
             })
             .catch((JD_err) => {
-                // El usuario puede haber denegado el fullscreen o el navegador
-                // puede rechazarlo en ciertos contextos (iframe sin permiso).
+                // El usuario denegó el fullscreen o el contexto no lo permite.
+                // El juego continúa en modo ventana; mostramos overlay si hace falta.
                 console.info('[JD] Fullscreen rechazado:', JD_err.message);
+                JD_Core._showRotateOverlayIfPortrait();
             });
     },
 
+    // ── Mostrar overlay de rotación solo si el dispositivo está en portrait ────
+    // Evita mostrar el overlay en escritorio o en dispositivos ya en landscape.
+    _showRotateOverlayIfPortrait() {
+        if (window.innerWidth >= window.innerHeight) return; // ya en landscape
+        const JD_overlay = document.getElementById('jd-rotate-overlay');
+        if (JD_overlay) {
+            JD_overlay.classList.add('jd-visible');
+        }
+    },
+
     // ── Botón de mute ─────────────────────────────────────────────────────────
-    // El botón ahora reside en #jd-mute-container (fuera del HUD superior)
-    // para evitar activaciones accidentales durante el juego.
-    // Su visibilidad según el estado del juego se gestiona desde el glue
-    // script de index.html a través de la clase CSS .jd-hidden.
+    // Reside en #jd-mute-container (desacoplado del HUD superior).
+    // La visibilidad según el estado de juego la gestiona el glue script
+    // de index.html a través de la clase CSS .jd-hidden.
     _setupMuteBtn() {
         const JD_muteBtn = document.getElementById('jd-mute-btn');
         if (!JD_muteBtn) return;
