@@ -288,47 +288,118 @@
 <script src="js/JD_Renderer.js"></script>
 <script src="js/JD_Core.js"></script>
 
-<!-- Glue: sincronización del HUD HTML con el estado del canvas ─────────── -->
+<!-- Glue: Fullscreen/Orientación + sincronización del HUD HTML ────────────
+     v1.2.1 — Patrón no-bloqueante para preservar el User Gesture Token en
+     Android. Se eliminó el await en requestFullscreen y se añade un listener
+     fullscreenchange como reintento crítico para el lock de orientación.    -->
 <script>
 (function () {
     'use strict';
 
+    const JD_container     = document.getElementById('jd-container');
+    const JD_overlay       = document.getElementById('jd-rotate-overlay');
     const JD_hsDisplay     = document.getElementById('jd-highscore-display');
     const JD_scoreDisplay  = document.getElementById('jd-score-display');
     const JD_muteContainer = document.getElementById('jd-mute-container');
 
-    // Visibilidad del botón de mute:
-    // Solo se muestra en START y GAMEOVER para evitar toques accidentales.
-    function JD_syncMuteVisibility() {
-        if (!JD_muteContainer || typeof JD_Core === 'undefined') return;
-        const JD_playing = JD_Core.state === 'PLAYING';
-        if (JD_playing) {
-            JD_muteContainer.classList.add('jd-hidden');
-        } else {
-            JD_muteContainer.classList.remove('jd-hidden');
+    // ── 1. Función atómica de lock de orientación ────────────────────────────
+    // Sin await: la invocación ocurre dentro del mismo ciclo de evento del
+    // gesto de usuario, preservando el User Gesture Token del navegador.
+    // El .catch vacío evita errores en consola cuando el API no está soportada.
+    function JD_tryLock() {
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+            screen.orientation.lock('landscape').catch(() => {});
         }
     }
 
-    // Ticker de UI (~10 fps es suficiente para etiquetas y badges)
+    // ── 2. Función principal de inmersión ────────────────────────────────────
+    function JD_activateImmersion() {
+        // A. Solicitar pantalla completa (Standard + Webkit) — SIN await
+        //    El .then dispara tryLock cuando el fullscreen ya está confirmado.
+        const JD_reqFS = JD_container
+            ? (JD_container.requestFullscreen || JD_container.webkitRequestFullscreen)
+            : null;
+
+        if (JD_reqFS) {
+            JD_reqFS.call(JD_container)
+                .then(() => { JD_tryLock(); })
+                .catch(e => console.info('[JD] Fullscreen rechazado:', e.message));
+        }
+
+        // B. Intento inmediato de lock (navegadores que lo aceptan antes del
+        //    cambio de pantalla completa, o dispositivos sin fullscreen API).
+        JD_tryLock();
+
+        // C. Si el dispositivo ya está en landscape, asegurarse de que el
+        //    overlay esté oculto (puede haber quedado visible por portrait).
+        if (JD_overlay && window.innerWidth >= window.innerHeight) {
+            JD_overlay.style.display = 'none';
+        }
+    }
+
+    // ── 3. Listener de respaldo: fullscreenchange ────────────────────────────
+    // Android puede rechazar el primer tryLock porque "aún no era fullscreen".
+    // Este listener dispara cuando el navegador confirma la pantalla completa
+    // (~200–500 ms después del toque) y reintenta el lock.
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) {
+            JD_tryLock();
+        }
+    });
+    // Prefijo webkit para Safari macOS/iPadOS
+    document.addEventListener('webkitfullscreenchange', () => {
+        if (document.webkitFullscreenElement) {
+            JD_tryLock();
+        }
+    });
+
+    // ── 4. Listener de orientación: auto-ocultar overlay ─────────────────────
+    // Cuando el usuario gira el dispositivo manualmente, ocultar el overlay
+    // de "Gira tu dispositivo" sin requerir un nuevo toque.
+    window.addEventListener('resize', () => {
+        if (!JD_overlay) return;
+        if (window.innerWidth >= window.innerHeight) {
+            JD_overlay.style.display = 'none';
+        } else if (JD_overlay.style.display === 'flex') {
+            // Ya era visible: mantener visible (el usuario no giró aún)
+        }
+    });
+
+    // ── 5. Activar en la primera interacción (una sola vez) ──────────────────
+    // Se escucha sobre window (no el canvas) para capturar el gesto antes de
+    // que JD_Core lo consuma y para dar soporte a toque en cualquier zona.
+    function JD_handleFirstInteraction() {
+        JD_activateImmersion();
+        window.removeEventListener('touchstart', JD_handleFirstInteraction);
+        window.removeEventListener('click',      JD_handleFirstInteraction);
+    }
+
+    window.addEventListener('touchstart', JD_handleFirstInteraction, { passive: true });
+    window.addEventListener('click',      JD_handleFirstInteraction);
+
+    // ── 6. Ticker de UI: score, récord y visibilidad del mute (~10 fps) ──────
     setInterval(() => {
-        // ── Puntuación en tiempo real ────────────────────────────────────────
+        // Puntuación en tiempo real (solo en PLAYING / GAMEOVER)
         if (JD_scoreDisplay && typeof JD_Core !== 'undefined') {
-            const JD_s = JD_Core.state === 'PLAYING' || JD_Core.state === 'GAMEOVER'
+            const JD_s = (JD_Core.state === 'PLAYING' || JD_Core.state === 'GAMEOVER')
                 ? Math.floor(JD_Core.score)
                 : 0;
             JD_scoreDisplay.textContent = JD_s.toString().padStart(6, '0');
         }
 
-        // ── Récord en el badge ───────────────────────────────────────────────
+        // Récord personal en el badge inferior
         if (JD_hsDisplay) {
             const JD_hs = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
             JD_hsDisplay.textContent = JD_hs.toString().padStart(6, '0');
         }
 
-        // ── Visibilidad del mute ─────────────────────────────────────────────
-        JD_syncMuteVisibility();
+        // Botón de mute: oculto durante PLAYING para evitar toques accidentales
+        if (JD_muteContainer && typeof JD_Core !== 'undefined') {
+            JD_muteContainer.classList.toggle('jd-hidden', JD_Core.state === 'PLAYING');
+        }
 
     }, 100);
+
 })();
 </script>
 
