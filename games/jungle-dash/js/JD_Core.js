@@ -4,6 +4,9 @@
  * el input táctil y de teclado, y la integración con la API de Love Arcade.
  *
  * ⚠️ Todas las variables usan prefijo JD_ — regla de namespacing obligatoria.
+ *
+ * v1.1.0 — Añade soporte Fullscreen API + orientation lock en primera interacción.
+ *           El botón de mute se gestiona desde #jd-mute-container (fuera del HUD).
  */
 
 // ── Estados del juego ─────────────────────────────────────────────────────────
@@ -170,10 +173,14 @@ const JD_Core = {
 
     // ── Acción unificada de inicio/salto ──────────────────────────────────────
     _onActionStart() {
-        // Primera interacción: inicializar audio (política Autoplay)
+        // ── Primera interacción ───────────────────────────────────────────────
+        // Los navegadores exigen un gesto de usuario para desbloquear tanto el
+        // AudioContext como la Fullscreen API. Ambas se activan aquí de forma
+        // simultánea para no requerir un segundo gesto.
         if (!JD_firstInteract) {
             JD_firstInteract = true;
             JD_Audio.init();
+            JD_Core._requestFullscreen(); // Fullscreen + orientation lock
         }
 
         if (JD_currentState === JD_STATES.START) {
@@ -185,24 +192,66 @@ const JD_Core = {
         }
     },
 
+    // ── Fullscreen + orientation lock ─────────────────────────────────────────
+    // Se aplica sobre #jd-container (no el canvas) para que el HUD HTML
+    // permanezca visible en modo pantalla completa.
+    // Compatibilidad: prefijo webkit para Safari en macOS/iPadOS.
+    // Nota iOS: screen.orientation.lock solo funciona en PWA instaladas;
+    //           en Safari web se silencia el error sin romper el flujo.
+    _requestFullscreen() {
+        const JD_el = document.getElementById('jd-container');
+        if (!JD_el) return;
+
+        const JD_rfs = JD_el.requestFullscreen
+                    || JD_el.webkitRequestFullscreen
+                    || JD_el.mozRequestFullScreen
+                    || JD_el.msRequestFullscreen;
+
+        if (!JD_rfs) {
+            console.info('[JD] Fullscreen API no disponible en este navegador.');
+            return;
+        }
+
+        JD_rfs.call(JD_el)
+            .then(() => {
+                console.log('[JD] Fullscreen activado.');
+                // Intentar fijar la orientación en landscape
+                if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                    screen.orientation.lock('landscape').catch((JD_err) => {
+                        // iOS/Safari web lanza NotSupportedError — es comportamiento esperado.
+                        console.info('[JD] orientation.lock no soportado (probablemente iOS Safari):', JD_err.message);
+                    });
+                }
+            })
+            .catch((JD_err) => {
+                // El usuario puede haber denegado el fullscreen o el navegador
+                // puede rechazarlo en ciertos contextos (iframe sin permiso).
+                console.info('[JD] Fullscreen rechazado:', JD_err.message);
+            });
+    },
+
     // ── Botón de mute ─────────────────────────────────────────────────────────
+    // El botón ahora reside en #jd-mute-container (fuera del HUD superior)
+    // para evitar activaciones accidentales durante el juego.
+    // Su visibilidad según el estado del juego se gestiona desde el glue
+    // script de index.html a través de la clase CSS .jd-hidden.
     _setupMuteBtn() {
         const JD_muteBtn = document.getElementById('jd-mute-btn');
         if (!JD_muteBtn) return;
 
-        const JD_iconOff = JD_muteBtn.querySelector('.jd-sound-on');
-        const JD_iconOn  = JD_muteBtn.querySelector('.jd-sound-off');
+        const JD_iconOn  = JD_muteBtn.querySelector('.jd-sound-on');
+        const JD_iconOff = JD_muteBtn.querySelector('.jd-sound-off');
 
         function JD_updateMuteIcon(muted) {
-            if (JD_iconOff) JD_iconOff.style.display = muted ? 'none' : 'block';
-            if (JD_iconOn)  JD_iconOn.style.display  = muted ? 'block' : 'none';
+            if (JD_iconOn)  JD_iconOn.style.display  = muted ? 'none'  : 'block';
+            if (JD_iconOff) JD_iconOff.style.display = muted ? 'block' : 'none';
         }
 
-        // Estado inicial
+        // Estado inicial leído desde JD_Audio
         JD_updateMuteIcon(JD_Audio.isMuted);
 
         JD_muteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Evitar que el click llegue al canvas
             const JD_muted = JD_Audio.toggleMute();
             JD_updateMuteIcon(JD_muted);
         });
