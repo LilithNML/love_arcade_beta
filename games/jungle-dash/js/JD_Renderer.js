@@ -2,6 +2,11 @@
  * JD_Renderer.js — Jungle Dash | Motor de Renderizado
  * Canvas 2D responsivo 16:9. Parallax de 4 capas. Transiciones de bioma.
  * Fallback procedural completo si los assets no cargan.
+ *
+ * v1.2.0 — JD_drawHUD() desactivado del render loop. El HUD de puntuación
+ *           se gestiona íntegramente por el DOM HTML (index.html) para obtener
+ *           texto nítido en pantallas de alta densidad (Retina/OLED) y eliminar
+ *           el doble renderizado que causaba el texto "borroso" en el canvas.
  */
 
 const JD_Renderer = (() => {
@@ -205,120 +210,88 @@ const JD_Renderer = (() => {
                 const JD_ty = JD_GROUND_Y - JD_th;
                 JD_c.fillRect(JD_x + JD_segW * 0.4, JD_ty + JD_th * 0.5, 8, JD_th * 0.5);
                 JD_c.beginPath();
-                JD_c.arc(JD_x + JD_segW * 0.4 + 4, JD_ty + JD_th * 0.5, JD_tw, 0, Math.PI * 2);
+                JD_c.arc(JD_x + JD_segW * 0.4 + 4, JD_ty + JD_th * 0.5, JD_tw / 2, 0, Math.PI * 2);
                 JD_c.fill();
-
-                // Ruina (arco de piedra) para bioma cueva
-                if (getBiomeIdx() === 1) {
-                    JD_c.fillStyle = 'rgba(60,40,80,0.6)';
-                    JD_c.fillRect(JD_x + 10, JD_GROUND_Y - 70, 15, 70);
-                    JD_c.fillRect(JD_x + 60, JD_GROUND_Y - 70, 15, 70);
-                    JD_c.fillRect(JD_x + 10, JD_GROUND_Y - 80, 65, 18);
-                }
             }
         }
 
         else if (layer === 2) {
-            // Selva media: vegetación densa
-            const JD_segW2 = 90;
+            // Vegetación media
+            JD_c.fillStyle = biome.mid;
+            JD_c.fillRect(0, JD_GROUND_Y - 60, JD_w, 60);
+
+            const JD_segW2 = 80;
             const JD_cols2 = Math.ceil(JD_w / JD_segW2) + 2;
             for (let i = 0; i < JD_cols2; i++) {
-                const JD_x = ((i * JD_segW2 - offset * 0.55) % (JD_cols2 * JD_segW2) + (JD_cols2 * JD_segW2)) % (JD_cols2 * JD_segW2);
-                const JD_seed = (i * 13 + 7) % 8;
-
-                JD_c.fillStyle = biome.treeColor;
-                const JD_cw2  = 30 + JD_seed * 5;
-                const JD_cy   = JD_GROUND_Y - 60 - JD_seed * 10;
+                const JD_x2 = ((i * JD_segW2 - offset * 0.55) % (JD_cols2 * JD_segW2) + (JD_cols2 * JD_segW2)) % (JD_cols2 * JD_segW2);
+                const JD_seed2 = (i * 13 + 7) % 8;
+                JD_c.fillStyle = JD_lerpColor(biome.treeColor, biome.mid, 0.3);
                 JD_c.beginPath();
-                JD_c.arc(JD_x + JD_segW2 * 0.5, JD_cy, JD_cw2, 0, Math.PI * 2);
+                JD_c.ellipse(JD_x2 + 20, JD_GROUND_Y - 20 - JD_seed2 * 4, 22 + JD_seed2 * 2, 18 + JD_seed2, 0, 0, Math.PI * 2);
                 JD_c.fill();
-                JD_c.fillRect(JD_x + JD_segW2 * 0.5 - 5, JD_cy, 10, JD_GROUND_Y - JD_cy);
             }
-
-            // Niebla de capa media
-            const JD_fogGrad = JD_c.createLinearGradient(0, JD_GROUND_Y - 100, 0, JD_GROUND_Y);
-            JD_fogGrad.addColorStop(0, 'transparent');
-            JD_fogGrad.addColorStop(1, biome.fogColor);
-            JD_c.fillStyle = JD_fogGrad;
-            JD_c.fillRect(0, JD_GROUND_Y - 100, JD_w, 100);
         }
 
         else if (layer === 3) {
-            // Suelo: franja sólida con textura
+            // Suelo
             JD_c.fillStyle = biome.ground;
             JD_c.fillRect(0, JD_GROUND_Y, JD_w, JD_h - JD_GROUND_Y);
-
-            // Línea base del suelo (4px de grosor, como especifica el brief)
             JD_c.fillStyle = biome.accent;
             JD_c.fillRect(0, JD_GROUND_Y, JD_w, 4);
-
-            // Textura de hierba/suelo
-            JD_c.fillStyle = 'rgba(0,0,0,0.3)';
-            for (let gx = (-(offset * 1.0) % 60 + 60) % 60; gx < JD_w; gx += 60) {
-                JD_c.fillRect(gx, JD_GROUND_Y + 4, 2, 8);
-            }
         }
     }
 
-    function getBiomeIdx() {
-        // Helper para obtener índice de bioma global (accede a JD_Core internamente)
-        if (typeof JD_Core !== 'undefined') return JD_getBiome(JD_Core.score);
-        return 0;
-    }
-
-    // ── Dibujado del jugador ──────────────────────────────────────────────────
+    // ── Dibujado del jugador (jaguar) ─────────────────────────────────────────
     function JD_drawPlayer(player, isJumping) {
         const JD_c = JD_ctx;
 
-        if (player.JD_imgRun && player.JD_imgJump) {
-            // Sprite real
-            if (isJumping && player.JD_imgJump) {
-                JD_c.drawImage(player.JD_imgJump, player.x, player.y, player.w, player.h);
-            } else if (player.JD_imgRun) {
-                const JD_fw = 64; // ancho de cada frame (384/6)
-                JD_c.drawImage(
-                    player.JD_imgRun,
-                    player.JD_frameIndex * JD_fw, 0, JD_fw, 64,
-                    player.x, player.y, player.w, player.h
-                );
-            }
-        } else {
-            // Fallback: rectángulo rgba(255, 200, 0, 1) — especificado en el brief
-            JD_c.fillStyle = 'rgba(255, 200, 0, 1)';
-            JD_c.fillRect(player.x, player.y, player.w, player.h);
-
-            // Orejas del jaguar
-            JD_c.fillStyle = 'rgba(220, 160, 0, 1)';
-            JD_c.fillRect(player.x + 6,  player.y - 10, 12, 12);
-            JD_c.fillRect(player.x + 46, player.y - 10, 12, 12);
-
-            // Cola
-            JD_c.strokeStyle = 'rgba(220, 160, 0, 1)';
-            JD_c.lineWidth   = 4;
-            JD_c.beginPath();
-            JD_c.moveTo(player.x, player.y + 40);
-            JD_c.quadraticCurveTo(player.x - 20, player.y + 20, player.x - 10, player.y + 10);
-            JD_c.stroke();
-
-            // Manchas (animadas)
-            JD_c.fillStyle = 'rgba(160, 100, 0, 0.6)';
-            JD_c.beginPath();
-            JD_c.arc(player.x + 25, player.y + 20, 6, 0, Math.PI * 2);
-            JD_c.fill();
-            JD_c.beginPath();
-            JD_c.arc(player.x + 42, player.y + 35, 5, 0, Math.PI * 2);
-            JD_c.fill();
-
-            // Ojos
-            JD_c.fillStyle = '#222';
-            JD_c.beginPath();
-            JD_c.arc(player.x + 50, player.y + 14, 4, 0, Math.PI * 2);
-            JD_c.fill();
-            JD_c.fillStyle = '#00ff80';
-            JD_c.beginPath();
-            JD_c.arc(player.x + 51, player.y + 13, 2, 0, Math.PI * 2);
-            JD_c.fill();
+        if (player.img && player.img.complete && player.img.naturalWidth > 0) {
+            JD_c.drawImage(player.img, player.x, player.y, player.w, player.h);
+            return;
         }
+
+        // Fallback procedural: jaguar geométrico
+        const JD_px = player.x;
+        const JD_py = player.y;
+        const JD_pw = player.w;
+        const JD_ph = player.h;
+
+        // Cuerpo
+        JD_c.fillStyle = 'rgba(255, 200, 0, 1)';
+        JD_c.fillRect(JD_px, JD_py + JD_ph * 0.25, JD_pw, JD_ph * 0.6);
+
+        // Cabeza
+        JD_c.fillRect(JD_px + JD_pw * 0.55, JD_py, JD_pw * 0.45, JD_ph * 0.5);
+
+        // Orejas
+        JD_c.fillStyle = 'rgba(220, 160, 0, 1)';
+        JD_c.beginPath();
+        JD_c.moveTo(JD_px + JD_pw * 0.60, JD_py);
+        JD_c.lineTo(JD_px + JD_pw * 0.65, JD_py - 8);
+        JD_c.lineTo(JD_px + JD_pw * 0.72, JD_py);
+        JD_c.fill();
+        JD_c.beginPath();
+        JD_c.moveTo(JD_px + JD_pw * 0.82, JD_py);
+        JD_c.lineTo(JD_px + JD_pw * 0.87, JD_py - 8);
+        JD_c.lineTo(JD_px + JD_pw * 0.94, JD_py);
+        JD_c.fill();
+
+        // Manchas
+        JD_c.fillStyle = 'rgba(100, 50, 0, 0.6)';
+        JD_c.beginPath(); JD_c.arc(JD_px + JD_pw * 0.25, JD_py + JD_ph * 0.4, 5, 0, Math.PI * 2); JD_c.fill();
+        JD_c.beginPath(); JD_c.arc(JD_px + JD_pw * 0.45, JD_py + JD_ph * 0.35, 4, 0, Math.PI * 2); JD_c.fill();
+
+        // Ojo
+        JD_c.fillStyle = '#111';
+        JD_c.beginPath(); JD_c.arc(JD_px + JD_pw * 0.88, JD_py + JD_ph * 0.18, 3, 0, Math.PI * 2); JD_c.fill();
+
+        // Patas (animación sencilla)
+        JD_c.fillStyle = 'rgba(200, 160, 0, 1)';
+        const JD_legOff = isJumping ? 0 : Math.sin(Date.now() / 80) * 5;
+        JD_c.fillRect(JD_px + JD_pw * 0.1, JD_py + JD_ph * 0.75,  8, JD_ph * 0.28 + JD_legOff);
+        JD_c.fillRect(JD_px + JD_pw * 0.35, JD_py + JD_ph * 0.75, 8, JD_ph * 0.28 - JD_legOff);
+        JD_c.fillRect(JD_px + JD_pw * 0.60, JD_py + JD_ph * 0.75, 8, JD_ph * 0.28 + JD_legOff);
+        JD_c.fillRect(JD_px + JD_pw * 0.80, JD_py + JD_ph * 0.75, 8, JD_ph * 0.28 - JD_legOff);
     }
 
     // ── Dibujado de obstáculos ────────────────────────────────────────────────
@@ -326,47 +299,47 @@ const JD_Renderer = (() => {
         const JD_c = JD_ctx;
 
         obstacles.forEach(obs => {
-            if (obs.JD_img) {
-                JD_c.drawImage(obs.JD_img, obs.x, obs.y, obs.w, obs.h);
-            } else {
-                // Fallback: triángulos rgba(200, 50, 50, 1) — especificado en el brief
-                JD_c.fillStyle = 'rgba(200, 50, 50, 1)';
+            if (obs.img && obs.img.complete && obs.img.naturalWidth > 0) {
+                JD_c.drawImage(obs.img, obs.x, obs.y, obs.w, obs.h);
+                return;
+            }
 
-                if (obs.type === 'plant') {
-                    // Triángulo apuntando hacia arriba (planta carnívora)
+            // Fallback: forma geométrica roja
+            JD_c.fillStyle = 'rgba(200, 50, 50, 1)';
+            if (obs.type === 'plant') {
+                // Planta: triángulo vertical
+                JD_c.beginPath();
+                JD_c.moveTo(obs.x + obs.w / 2, obs.y);
+                JD_c.lineTo(obs.x + obs.w,      obs.y + obs.h);
+                JD_c.lineTo(obs.x,               obs.y + obs.h);
+                JD_c.closePath();
+                JD_c.fill();
+
+                // Dentículos decorativos
+                JD_c.fillStyle = biome.accent;
+                for (let d = 0; d < 3; d++) {
                     JD_c.beginPath();
-                    JD_c.moveTo(obs.x + obs.w / 2, obs.y);
-                    JD_c.lineTo(obs.x + obs.w,     obs.y + obs.h);
-                    JD_c.lineTo(obs.x,              obs.y + obs.h);
+                    JD_c.moveTo(obs.x + 8  + d * 12, obs.y + 10);
+                    JD_c.lineTo(obs.x + 14 + d * 12, obs.y + 22);
+                    JD_c.lineTo(obs.x + 2  + d * 12, obs.y + 22);
                     JD_c.closePath();
                     JD_c.fill();
-
-                    // Dentículos
-                    JD_c.fillStyle = biome.accent;
-                    for (let d = 0; d < 3; d++) {
-                        JD_c.beginPath();
-                        JD_c.moveTo(obs.x + 8  + d * 12, obs.y + 10);
-                        JD_c.lineTo(obs.x + 14 + d * 12, obs.y + 22);
-                        JD_c.lineTo(obs.x + 2  + d * 12, obs.y + 22);
-                        JD_c.closePath();
-                        JD_c.fill();
-                    }
-                } else {
-                    // Log: triángulo horizontal
-                    JD_c.beginPath();
-                    JD_c.moveTo(obs.x,              obs.y + obs.h / 2);
-                    JD_c.lineTo(obs.x + obs.w,      obs.y);
-                    JD_c.lineTo(obs.x + obs.w,      obs.y + obs.h);
-                    JD_c.closePath();
-                    JD_c.fill();
-
-                    // Anillos del tronco
-                    JD_c.strokeStyle = 'rgba(140, 30, 30, 0.7)';
-                    JD_c.lineWidth   = 2;
-                    JD_c.beginPath();
-                    JD_c.arc(obs.x + obs.w - 10, obs.y + obs.h / 2, 8, 0, Math.PI * 2);
-                    JD_c.stroke();
                 }
+            } else {
+                // Log: triángulo horizontal
+                JD_c.beginPath();
+                JD_c.moveTo(obs.x,              obs.y + obs.h / 2);
+                JD_c.lineTo(obs.x + obs.w,      obs.y);
+                JD_c.lineTo(obs.x + obs.w,      obs.y + obs.h);
+                JD_c.closePath();
+                JD_c.fill();
+
+                // Anillos del tronco
+                JD_c.strokeStyle = 'rgba(140, 30, 30, 0.7)';
+                JD_c.lineWidth   = 2;
+                JD_c.beginPath();
+                JD_c.arc(obs.x + obs.w - 10, obs.y + obs.h / 2, 8, 0, Math.PI * 2);
+                JD_c.stroke();
             }
         });
     }
@@ -387,23 +360,26 @@ const JD_Renderer = (() => {
     }
 
     // ── HUD sobre el canvas ───────────────────────────────────────────────────
-    function JD_drawHUD(score, state) {
-        if (state !== 'PLAYING') return;
-        const JD_c = JD_ctx;
-
-        // Puntuación
-        JD_c.fillStyle    = 'rgba(0,0,0,0.45)';
-        JD_c.fillRect(JD_VIRT_W - 180, 14, 166, 36);
-        JD_c.strokeStyle  = 'rgba(255,255,255,0.15)';
-        JD_c.lineWidth    = 1;
-        JD_c.strokeRect(JD_VIRT_W - 180, 14, 166, 36);
-
-        JD_c.fillStyle    = '#fff';
-        JD_c.font         = 'bold 22px monospace';
-        JD_c.textAlign    = 'right';
-        JD_c.fillText(Math.floor(score).toString().padStart(6, '0'), JD_VIRT_W - 20, 40);
-        JD_c.textAlign    = 'left';
-    }
+    // DESACTIVADO en v1.2.0: el HUD de puntuación migró al DOM HTML para
+    // obtener texto nítido en pantallas de alta densidad (Retina / OLED) y
+    // eliminar el doble renderizado. Ver #jd-session-info en index.html.
+    //
+    // function JD_drawHUD(score, state) {
+    //     if (state !== 'PLAYING') return;
+    //     const JD_c = JD_ctx;
+    //
+    //     JD_c.fillStyle    = 'rgba(0,0,0,0.45)';
+    //     JD_c.fillRect(JD_VIRT_W - 180, 14, 166, 36);
+    //     JD_c.strokeStyle  = 'rgba(255,255,255,0.15)';
+    //     JD_c.lineWidth    = 1;
+    //     JD_c.strokeRect(JD_VIRT_W - 180, 14, 166, 36);
+    //
+    //     JD_c.fillStyle    = '#fff';
+    //     JD_c.font         = 'bold 22px monospace';
+    //     JD_c.textAlign    = 'right';
+    //     JD_c.fillText(Math.floor(score).toString().padStart(6, '0'), JD_VIRT_W - 20, 40);
+    //     JD_c.textAlign    = 'left';
+    // }
 
     // ── Pantalla de inicio ────────────────────────────────────────────────────
     function JD_drawStartScreen() {
@@ -523,7 +499,7 @@ const JD_Renderer = (() => {
 
             // Entidades (solo en PLAYING y GAMEOVER)
             if (state !== 'START') {
-                const JD_player = JD_Entities.player;
+                const JD_player    = JD_Entities.player;
                 const JD_isJumping = !JD_Physics.onGround;
 
                 JD_drawDecorations(JD_Entities.decorations, JD_biome);
@@ -531,8 +507,11 @@ const JD_Renderer = (() => {
                 JD_drawPlayer(JD_player, JD_isJumping);
             }
 
-            // HUD
-            JD_drawHUD(score, state);
+            // ── JD_drawHUD eliminado del render loop (v1.2.0) ─────────────────
+            // El HUD de puntuación se gestiona por el DOM HTML (#jd-score-display)
+            // para evitar el doble renderizado y el texto borroso en pantallas
+            // de alta densidad. El glue script en index.html actualiza el valor
+            // a 10 fps, suficiente para un contador de puntuación.
 
             // Pantallas de estado
             if (state === 'START')    JD_drawStartScreen();
