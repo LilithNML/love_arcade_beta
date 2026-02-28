@@ -433,9 +433,19 @@ function _onTap() {
   if (fx.magnet.shots <= 0) fx.magnet.on = false;
 }
 
+/**
+ * Toggle pause (called by button, keyboard, and two-finger double tap).
+ */
 function _onPause() {
   if      (state.phase === 'PLAYING') setPaused(true);
   else if (state.phase === 'PAUSED')  setPaused(false);
+}
+
+/**
+ * Only pause — never resume (called by automatic triggers: tab hide, blur).
+ */
+function _onPauseOnly() {
+  if (state.phase === 'PLAYING') setPaused(true);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -456,12 +466,14 @@ function boot() {
     onRetry:  () => { initAudio(); startGame(); },
     onResume: () => setPaused(false),
     onMenu:   goToMenu,
+    onPause:  _onPause,
   });
 
   ui.bindInput({
-    onMove:  _onMove,
-    onTap:   _onTap,
-    onPause: _onPause,
+    onMove:       _onMove,
+    onTap:        _onTap,
+    onPause:      _onPause,
+    onPauseOnly:  _onPauseOnly,
   });
 
   ui.bindKeyboard(
