@@ -102,6 +102,11 @@ export function showPlaying() {
   document.getElementById('os-paused')  .classList.add('hidden');
   document.getElementById('os-hud')     .classList.add('active');
   document.getElementById('os-pu-bar')  .classList.add('active');
+
+  // Show the pause button
+  const btn = document.getElementById('os-btn-pause');
+  btn.classList.add('visible');
+  btn.classList.remove('is-paused');
 }
 
 /**
@@ -110,6 +115,11 @@ export function showPlaying() {
  */
 export function setPaused(paused) {
   document.getElementById('os-paused').classList.toggle('hidden', !paused);
+
+  const btn = document.getElementById('os-btn-pause');
+  btn.classList.toggle('is-paused', paused);
+  // aria-label for accessibility
+  btn.setAttribute('aria-label', paused ? 'Reanudar juego' : 'Pausar juego');
 }
 
 /**
@@ -127,6 +137,9 @@ export function showGameOver(score, wave, coins) {
   document.getElementById('os-gameover').classList.remove('hidden');
   document.getElementById('os-hud')     .classList.remove('active');
   document.getElementById('os-pu-bar')  .classList.remove('active');
+
+  // Hide pause button
+  document.getElementById('os-btn-pause').classList.remove('visible');
 }
 
 /**
@@ -141,6 +154,9 @@ export function showMenu(highscore, isStandalone) {
   document.getElementById('os-pu-bar')  .classList.remove('active');
   document.getElementById('os-menu')    .classList.remove('hidden');
   document.getElementById('os-hs')      .textContent = highscore.toLocaleString();
+
+  // Hide pause button
+  document.getElementById('os-btn-pause').classList.remove('visible');
 
   if (isStandalone) {
     document.getElementById('os-notice-menu').classList.add('visible');
@@ -166,41 +182,78 @@ export function refreshHighscore() {
  * Attach click listeners to all menu/overlay buttons.
  * Callbacks are injected by main.js to avoid circular imports.
  *
- * @param {{ onStart, onRetry, onResume, onMenu }} callbacks
+ * @param {{ onStart, onRetry, onResume, onMenu, onPause }} callbacks
  */
-export function bindButtons({ onStart, onRetry, onResume, onMenu }) {
+export function bindButtons({ onStart, onRetry, onResume, onMenu, onPause }) {
   document.getElementById('os-btn-start') .addEventListener('click', onStart);
   document.getElementById('os-btn-retry') .addEventListener('click', onRetry);
   document.getElementById('os-btn-resume').addEventListener('click', onResume);
   document.getElementById('os-btn-menu')  .addEventListener('click', onMenu);
+  document.getElementById('os-btn-pause') .addEventListener('click', onPause);
 }
 
 /**
  * Attach pointer/touch events to the wrapper element for paddle control.
+ * Also wires up three automatic-pause triggers:
+ *  1. visibilitychange — browser tab hidden / minimised
+ *  2. window blur      — focus lost to another OS window
+ *  3. Two-finger double tap — intentional in-game pause gesture
  *
- * @param {{ onMove: function(number), onTap: function(), onPause: function() }} cbs
+ * @param {{ onMove: function(number), onTap: function(), onPause: function(), onPauseOnly: function() }} cbs
  */
-export function bindInput({ onMove, onTap, onPause }) {
+export function bindInput({ onMove, onTap, onPause, onPauseOnly }) {
   const wrapper = document.getElementById('os-wrapper');
 
-  // Mouse
+  // ── Mouse ────────────────────────────────────────────────────────────────────
   wrapper.addEventListener('mousemove', e => onMove(e.clientX));
 
-  // Touch (passive: false so we can call preventDefault and block page scroll)
+  // ── Touch move ───────────────────────────────────────────────────────────────
+  // passive: false so we can call preventDefault and block page scroll
   wrapper.addEventListener('touchmove', e => {
     e.preventDefault();
     onMove(e.touches[0].clientX);
   }, { passive: false });
 
-  // Click / tap
+  // ── Click / single tap ───────────────────────────────────────────────────────
   wrapper.addEventListener('click', () => onTap());
   wrapper.addEventListener('touchend', e => {
     if (e.changedTouches.length) onTap();
   }, { passive: false });
 
-  // Keyboard: Space/Esc for pause
+  // ── Two-finger double tap ────────────────────────────────────────────────────
+  // A "two-finger tap" is a touchstart where ≥ 2 fingers land simultaneously.
+  // Two such events within DOUBLE_TAP_WINDOW ms trigger pause.
+  const DOUBLE_TAP_WINDOW = 350; // ms
+  let lastTwoFingerTap = 0;
+
+  wrapper.addEventListener('touchstart', e => {
+    if (e.touches.length >= 2) {
+      const now = Date.now();
+      if (now - lastTwoFingerTap <= DOUBLE_TAP_WINDOW) {
+        // Second two-finger tap within the window — toggle pause
+        e.preventDefault();
+        onPause();
+        lastTwoFingerTap = 0;   // reset to avoid triple-tap triggering again
+      } else {
+        lastTwoFingerTap = now;
+      }
+    }
+  }, { passive: false });
+
+  // ── Keyboard: Space / Escape ─────────────────────────────────────────────────
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Escape') onPause();
+  });
+
+  // ── Visibility change (tab switch / minimise) ────────────────────────────────
+  // Only auto-pause (never auto-resume) so the player consciously resumes.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) onPauseOnly();
+  });
+
+  // ── Window blur (alt-tab to another OS window) ───────────────────────────────
+  window.addEventListener('blur', () => {
+    onPauseOnly();
   });
 }
 
