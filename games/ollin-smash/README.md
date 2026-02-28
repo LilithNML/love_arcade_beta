@@ -1,10 +1,10 @@
 # Ollin Smash
 
-**Versión:** `2.1.0` · **Motor:** Love Arcade Game Center Core `v7.5` · **Estado:** Producción
+**Versión:** `2.2.0` · **Motor:** Love Arcade Game Center Core `v7.5` · **Estado:** Producción
 
 > Arkanoid Neo-Mexica / Cyberpunk para la plataforma Love Arcade. Juego de ruptura de bloques generado proceduralmente con estética prehispánica, cinco power-ups con mecánicas únicas, sistema de combo multiplicador, audio sintetizado en tiempo real mediante Web Audio API e integración completa con la economía universal de Love Arcade.
 >
-> La versión 2.1 introduce una **arquitectura modular completa basada en ES Modules**, descomponiendo el archivo monolítico original en trece unidades con responsabilidades únicas, sin dependencias circulares y con los módulos de física y audio diseñados para pruebas unitarias en aislamiento.
+> La versión 2.1 introdujo una **arquitectura modular completa basada en ES Modules**, descomponiendo el archivo monolítico original en trece unidades con responsabilidades únicas, sin dependencias circulares y con los módulos de física y audio diseñados para pruebas unitarias en aislamiento. La versión 2.2 añade un **sistema de pausa robusto** con tres disparadores independientes y diferenciación entre pausa voluntaria (toggle) y pausa automática (solo pausa).
 
 ---
 
@@ -26,12 +26,13 @@
 14. [Integración con Love Arcade](#14-integración-con-love-arcade)
 15. [Namespacing y Aislamiento](#15-namespacing-y-aislamiento)
 16. [Controles e Input](#16-controles-e-input)
-17. [Persistencia Local](#17-persistencia-local)
-18. [Diseño Responsivo y Mobile-First](#18-diseño-responsivo-y-mobile-first)
-19. [Modos de Ejecución y Desarrollo](#19-modos-de-ejecución-y-desarrollo)
-20. [API Pública del Juego](#20-api-pública-del-juego)
-21. [Checklist de QA](#21-checklist-de-qa)
-22. [Glosario](#22-glosario)
+17. [Sistema de Pausa](#17-sistema-de-pausa)
+18. [Persistencia Local](#18-persistencia-local)
+19. [Diseño Responsivo y Mobile-First](#19-diseño-responsivo-y-mobile-first)
+20. [Modos de Ejecución y Desarrollo](#20-modos-de-ejecución-y-desarrollo)
+21. [API Pública del Juego](#21-api-pública-del-juego)
+22. [Checklist de QA](#22-checklist-de-qa)
+23. [Glosario](#23-glosario)
 
 ---
 
@@ -51,10 +52,11 @@ El juego opera sobre un **bucle infinito de oleadas generadas proceduralmente**.
 - Audio reactivo generado por Web Audio API sin archivos externos
 - Fondo dinámico que reacciona a la velocidad de la bola en tiempo real
 - Iconografía 100% SVG inline, sin emojis ni imágenes rasterizadas
+- Sistema de pausa robusto con tres disparadores independientes
 - Modo standalone (sin `app.js`) con aviso visible al jugador
 - Integración completa con `window.GameCenter.completeLevel()` de Love Arcade
 
-### Características de la arquitectura (v2.1)
+### Características de la arquitectura (v2.1 / v2.2)
 
 - 13 archivos con responsabilidades únicas y no solapadas
 - ES Modules nativos (`import` / `export`) sin bundler requerido en desarrollo
@@ -72,8 +74,9 @@ El juego opera sobre un **bucle infinito de oleadas generadas proceduralmente**.
 |---------|-------------|
 | `2.0.0` | Implementacion inicial completa. Un unico archivo `index.html` con HTML, CSS y JS monolitico. |
 | `2.1.0` | Modularizacion completa. Descomposicion en 13 archivos bajo arquitectura ES Modules. Sin cambios en gameplay ni comportamiento externo. |
+| `2.2.0` | Sistema de pausa robusto. Boton dedicado en el HUD, pausa automatica por perdida de foco (visibilitychange / window blur) y gesto de doble tap con dos dedos. Distincion entre `_onPause` (toggle) y `_onPauseOnly` (solo pausa). Sin cambios en gameplay ni arquitectura de modulos. |
 
-La transicion de 2.0 a 2.1 es **transparente para el usuario y para Love Arcade**. El contrato de integracion (`window.GameCenter.completeLevel`, `window.OllinSmashGame`) es identico. Solo la organizacion interna del codigo ha cambiado.
+La transicion de 2.1 a 2.2 es **transparente para Love Arcade**. El contrato de integracion (`window.GameCenter.completeLevel`, `window.OllinSmashGame`) no ha cambiado. Solo se añaden mecanismos de entrada y gestion de estado de pausa.
 
 ---
 
@@ -115,11 +118,11 @@ La transicion de 2.0 a 2.1 es **transparente para el usuario y para Love Arcade*
 
 | Archivo | Lineas aprox. | Responsabilidad |
 |---|---|---|
-| `index.html` | 170 | Estructura HTML minima. Sin logica, sin estilos inline. |
-| `css/styles.css` | 280 | Variables CSS, layout, HUD, overlays, botones, animaciones. |
+| `index.html` | 175 | Estructura HTML minima. Incluye el boton `#os-btn-pause` dentro del HUD. |
+| `css/styles.css` | 305 | Variables CSS, layout, HUD, overlays, botones, animaciones. Incluye estilos del boton de pausa. |
 | `js/config.js` | 65 | Constantes inmutables: dimensiones, velocidades, colores, IDs. |
 | `js/state.js` | 125 | Estado mutable compartido. Objetos `state`, `paddle`, `fx`. Helpers de reset. |
-| `js/main.js` | 490 | Entry point. Game loop, update, draw, input, integracion Love Arcade, API publica. |
+| `js/main.js` | 500 | Entry point. Game loop, update, draw, input, integracion Love Arcade, API publica. Incluye `_onPause` y `_onPauseOnly`. |
 | `js/core/physics.js` | 75 | Funciones puras: `aabb`, `lerp`, `toCanvasX`, `ballSpeed`. Sin efectos secundarios. |
 | `js/core/particles.js` | 140 | Object Pool de 220 particulas y cola de textos flotantes. |
 | `js/audio/audio-engine.js` | 100 | Contexto Web Audio API, sintesis de tonos, catalogo de SFX. |
@@ -127,7 +130,7 @@ La transicion de 2.0 a 2.1 es **transparente para el usuario y para Love Arcade*
 | `js/components/ball.js` | 90 | Creacion de descriptores de bola y renderizado (cuerpo + trail). |
 | `js/components/paddle.js` | 110 | Renderizado del paddle y bordes grecan. |
 | `js/components/powerups.js` | 230 | Activacion de efectos, fisica de drops en caida, iconos canvas. |
-| `js/ui/interface.js` | 200 | DOM exclusivamente: HUD, overlays, event listeners. Sin canvas. |
+| `js/ui/interface.js` | 240 | DOM exclusivamente: HUD, overlays, event listeners. Incluye gestion del boton de pausa y los tres disparadores automaticos. |
 
 ---
 
@@ -571,15 +574,20 @@ ui.updateWaveLabel(wave)
 ```js
 ui.showPlaying()
 // Oculta todos los overlays, muestra HUD y barra de power-ups.
+// Muestra el boton #os-btn-pause (clase .visible) y lo pone en icono de barras (no pausado).
 
 ui.setPaused(boolean)
 // Muestra u oculta el overlay de pausa.
+// Conmuta la clase .is-paused en #os-btn-pause para alternar entre icono ⏸ e icono ▶.
+// Actualiza el aria-label del boton segun el estado.
 
 ui.showGameOver(score, wave, coins)
 // Muestra el overlay de Game Over con las estadisticas finales.
+// Oculta el boton #os-btn-pause (elimina clase .visible).
 
 ui.showMenu(highscore, isStandalone)
 // Muestra el menu principal. Si isStandalone es true, muestra el aviso de modo practica.
+// Oculta el boton #os-btn-pause (elimina clase .visible).
 
 ui.showWaveFlash(wave)
 // Muestra el texto de transicion de oleada con fade-in/fade-out automatico (900ms).
@@ -592,10 +600,13 @@ ui.refreshHighscore()  --> number
 
 ```js
 // Botones de overlay -- callbacks inyectados por main.js
-ui.bindButtons({ onStart, onRetry, onResume, onMenu })
+// onPause: callback para el boton #os-btn-pause (toggle pausa/reanuda)
+ui.bindButtons({ onStart, onRetry, onResume, onMenu, onPause })
 
-// Eventos de puntero y toque sobre el wrapper
-ui.bindInput({ onMove, onTap, onPause })
+// Eventos de puntero, toque y disparadores automaticos de pausa
+// onPause:     toggle (pausa si jugando, reanuda si pausado)
+// onPauseOnly: solo pausa, nunca reanuda (para triggers automaticos)
+ui.bindInput({ onMove, onTap, onPause, onPauseOnly })
 
 // Teclas de movimiento de paddle
 ui.bindKeyboard(onLeft, onRight)
@@ -618,9 +629,9 @@ El campo `state.phase` controla que codigo se ejecuta en cada frame. Las transic
               +---------+                                   | PLAYING |
                     ^                          +-----------> +----+----+
                     |                          |  [resume]        |
-                    |                  +-------+-------+          | [Espacio / Escape]
-                    |                  |    PAUSED     | <--------+
-                    |                  +---------------+
+                    |                  +-------+-------+          | [boton / Espacio / Escape /
+                    |                  |    PAUSED     | <--------+  doble tap 2 dedos /
+                    |                  +---------------+            tab oculta / blur ventana]
                     |
                     |             +-----------+       [lives <= 0]
                     +-------------|  GAMEOVER | <------------------+
@@ -630,13 +641,16 @@ El campo `state.phase` controla que codigo se ejecuta en cada frame. Las transic
 | Transicion | Origen | Destino | Disparador |
 |---|---|---|---|
 | Inicio de partida | `MENU` | `PLAYING` | Clic en INICIAR |
-| Pausa | `PLAYING` | `PAUSED` | Espacio, Escape o boton |
-| Reanudacion | `PAUSED` | `PLAYING` | Clic en CONTINUAR |
+| Pausa voluntaria | `PLAYING` | `PAUSED` | Boton HUD, Espacio, Escape, doble tap 2 dedos |
+| Pausa automatica | `PLAYING` | `PAUSED` | Tab oculta (`visibilitychange`) o foco perdido (`window blur`) |
+| Reanudacion | `PAUSED` | `PLAYING` | Clic en CONTINUAR o boton HUD o Espacio/Escape |
 | Fin de partida | `PLAYING` | `GAMEOVER` | `state.lives <= 0` |
 | Reintentar | `GAMEOVER` | `PLAYING` | Clic en REINTENTAR |
 | Menu desde Game Over | `GAMEOVER` | `MENU` | Clic en MENU |
 
-`update()` retorna en la primera linea si `state.phase !== 'PLAYING'`. `draw()` siempre ejecuta el fondo animado para mantener el movimiento en todas las pantallas, incluyendo menu y game over.
+**Distincion clave:** los disparadores automaticos (tab/blur) llaman a `_onPauseOnly()`, que solo transiciona `PLAYING → PAUSED` y nunca reanuda. Esto garantiza que el jugador no pueda reanudar sin accion consciente aunque el foco vuelva al navegador. Los disparadores manuales (boton, teclado, gesto) llaman a `_onPause()`, que alterna entre los dos estados.
+
+`update()` retorna en la primera linea si `state.phase !== 'PLAYING'`. `draw()` siempre ejecuta el fondo animado y, si la fase es `PLAYING` o `PAUSED`, renderiza el campo de juego para que el estado de la escena sea visible bajo el overlay de pausa.
 
 ---
 
@@ -982,7 +996,7 @@ Los event listeners se registran en `ui/interface.js` mediante `bindInput()` y `
 |---|---|
 | `Flecha izquierda` / `A` | Mover paddle 18 px hacia la izquierda |
 | `Flecha derecha` / `D` | Mover paddle 18 px hacia la derecha |
-| `Espacio` / `Escape` | Pausar o Reanudar |
+| `Espacio` / `Escape` | Pausar o Reanudar (toggle) |
 
 ### Tap y Click
 
@@ -990,7 +1004,101 @@ Activa el lanzamiento de la bola retenida cuando PU_MAGNET esta activo. El angul
 
 ---
 
-## 17. Persistencia Local
+## 17. Sistema de Pausa
+
+El sistema de pausa es **aditivo**: no modifica ningun mecanismo existente de gameplay ni de navegacion entre pantallas. Se apoya en la distincion entre dos tipos de callback que evita reanudar el juego de forma involuntaria.
+
+### Arquitectura de callbacks
+
+```
+main.js
+ |-- _onPause()      → toggle PLAYING ↔ PAUSED   (disparadores manuales)
+ +-- _onPauseOnly()  → solo PLAYING → PAUSED      (disparadores automaticos)
+```
+
+`_onPause` alterna el estado. `_onPauseOnly` solo avanza hacia la pausa y no hace nada si el juego ya esta pausado o en cualquier otra fase.
+
+### Disparadores de pausa
+
+#### 1. Boton dedicado en el HUD (`#os-btn-pause`)
+
+Un boton SVG posicionado en la esquina superior derecha del HUD. Solo es visible durante el gameplay (cuando `#os-hud` tiene la clase `active`). Usa `pointer-events: auto` para anular el `pointer-events: none` heredado del contenedor HUD.
+
+- **Icono en juego:** dos barras verticales (⏸), renderizadas como `<rect>` SVG.
+- **Icono en pausa:** triangulo de reproduccion (▶), generado via pseudo-elemento `::after` cuando el boton tiene la clase `.is-paused`. Los `<rect>` se ocultan con CSS.
+- **Callback:** `_onPause` (toggle).
+
+```css
+/* Regla clave que permite que el boton reciba clics dentro del HUD */
+#os-btn-pause {
+  pointer-events: auto;
+}
+```
+
+#### 2. Cambio de pestaña / minimizacion (`visibilitychange`)
+
+```js
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) onPauseOnly();
+});
+```
+
+Se dispara cuando el navegador oculta la pestaña (cambio de tab, minimize, pantalla apagada). Solo pausa; nunca reanuda al volver al foco.
+
+#### 3. Perdida de foco de ventana (`window blur`)
+
+```js
+window.addEventListener('blur', () => {
+  onPauseOnly();
+});
+```
+
+Se dispara cuando la ventana del navegador pierde el foco a nivel de sistema operativo (alt-tab a otra aplicacion, clic fuera del navegador). Cubre casos que `visibilitychange` no detecta, como cambiar a otra ventana del mismo escritorio sin minimizar.
+
+#### 4. Doble tap con dos dedos (gesto tactil)
+
+```js
+// Ventana de deteccion: 350 ms entre el primer y el segundo tap de dos dedos
+const DOUBLE_TAP_WINDOW = 350;
+let lastTwoFingerTap = 0;
+
+wrapper.addEventListener('touchstart', e => {
+  if (e.touches.length >= 2) {
+    const now = Date.now();
+    if (now - lastTwoFingerTap <= DOUBLE_TAP_WINDOW) {
+      e.preventDefault();
+      onPause();           // toggle: pausa o reanuda
+      lastTwoFingerTap = 0;
+    } else {
+      lastTwoFingerTap = now;
+    }
+  }
+}, { passive: false });
+```
+
+Un "tap de dos dedos" se define como un evento `touchstart` con `touches.length >= 2`. Dos de estos eventos dentro de 350 ms activan el toggle de pausa. El contador se resetea tras el segundo tap para evitar que un triple tap produzca dos eventos de pausa seguidos.
+
+`e.preventDefault()` se llama en el segundo tap para evitar que el navegador interprete el gesto como zoom o scroll.
+
+### Gestion visual del boton
+
+`ui/interface.js` gestiona la visibilidad y el icono del boton en cada transicion de pantalla:
+
+| Funcion | Efecto sobre `#os-btn-pause` |
+|---|---|
+| `showPlaying()` | Añade `.visible` (display flex), elimina `.is-paused` (icono ⏸) |
+| `setPaused(true)` | Añade `.is-paused` (icono ▶), actualiza `aria-label` |
+| `setPaused(false)` | Elimina `.is-paused` (icono ⏸), actualiza `aria-label` |
+| `showGameOver()` | Elimina `.visible` (oculta el boton) |
+| `showMenu()` | Elimina `.visible` (oculta el boton) |
+
+### Comportamiento del game loop durante la pausa
+
+`update()` retorna inmediatamente si `state.phase !== 'PLAYING'`, congelando toda la simulacion (fisica, efectos, particulas). `draw()` siempre ejecuta el fondo y, cuando la fase es `PLAYING` o `PAUSED`, tambien renderiza el campo de juego (bricks, bolas, paddle, particulas). Esto hace que el estado de la escena sea visible bajo el overlay de pausa semitransparente, reforzando la orientacion espacial del jugador al reanudar.
+
+---
+
+## 18. Persistencia Local
 
 La unica clave escrita en `localStorage` es `OS_highscore`, gestionada en `main.js → doGameOver()` y leida en `ui/interface.js → refreshHighscore()`:
 
@@ -1008,7 +1116,7 @@ No se guarda el estado de partida. Las sesiones de Arkanoid son cortas y la comp
 
 ---
 
-## 18. Diseno Responsivo y Mobile-First
+## 19. Diseno Responsivo y Mobile-First
 
 El canvas tiene dimensiones de diseno fijas (390 x 700 px). El escalado al dispositivo real es responsabilidad exclusiva de CSS:
 
@@ -1027,7 +1135,7 @@ El HUD y los overlays usan `position: absolute` relativo al wrapper con `width: 
 
 ---
 
-## 19. Modos de Ejecucion y Desarrollo
+## 20. Modos de Ejecucion y Desarrollo
 
 ### Modo Integrado (Produccion)
 
@@ -1073,7 +1181,7 @@ npm run build
 
 ---
 
-## 20. API Publica del Juego
+## 21. API Publica del Juego
 
 `window.OllinSmashGame` es un objeto congelado con tres metodos de solo lectura. Es el unico simbolo que el juego exporta al scope global de `window`.
 
@@ -1092,7 +1200,7 @@ No existen metodos de escritura. El estado solo puede modificarse a traves de la
 
 ---
 
-## 21. Checklist de QA
+## 22. Checklist de QA
 
 ### Estructura y Navegacion
 
@@ -1106,6 +1214,7 @@ No existen metodos de escritura. El estado solo puede modificarse a traves de la
 - [x] Diseno Mobile First con escalado CSS puro
 - [x] Canvas con aspect ratio 390:700 preservado en cualquier pantalla
 - [x] `touchmove` y `touchend` funcionales con `{ passive: false }`
+- [x] `touchstart` con `{ passive: false }` para deteccion de doble tap con dos dedos
 - [x] `touch-action: none` en `<html>` para prevenir scroll durante el juego
 
 ### Rendimiento
@@ -1124,6 +1233,19 @@ No existen metodos de escritura. El estado solo puede modificarse a traves de la
 - [x] `ui/interface.js` sin imports del juego, DOM puro
 - [x] Callbacks inyectados en `bindButtons()` y `bindInput()` desde `main.js`
 - [x] `state.js` como Single Source of Truth mutable
+
+### Sistema de Pausa
+
+- [x] Boton `#os-btn-pause` visible unicamente durante `PLAYING` y `PAUSED`
+- [x] Icono SVG ⏸ durante juego; icono CSS ▶ durante pausa (sin imagenes externas)
+- [x] `aria-label` actualizado en cada transicion de estado del boton
+- [x] `pointer-events: auto` en el boton para anular el `none` del contenedor HUD
+- [x] `visibilitychange` pausa al ocultar la pestaña (tab switch, pantalla apagada)
+- [x] `window blur` pausa al perder el foco del sistema operativo (alt-tab)
+- [x] Doble tap con dos dedos detectado en ≤ 350 ms; toggle de pausa/reanuda
+- [x] Disparadores automaticos llaman `_onPauseOnly()`: solo pausan, nunca reanudan
+- [x] Disparadores manuales llaman `_onPause()`: toggle completo
+- [x] El campo de juego sigue renderizandose mientras `state.phase === 'PAUSED'`
 
 ### Aislamiento y Namespacing
 
@@ -1157,7 +1279,7 @@ No existen metodos de escritura. El estado solo puede modificarse a traves de la
 
 ---
 
-## 22. Glosario
+## 23. Glosario
 
 | Termino | Definicion |
 |---|---|
@@ -1181,4 +1303,4 @@ No existen metodos de escritura. El estado solo puede modificarse a traves de la
 
 ---
 
-*Documentacion de Ollin Smash v2.1 · Desarrollado para Love Arcade · Motor: Game Center Core v7.5 · 2026*
+*Documentacion de Ollin Smash v2.2 · Desarrollado para Love Arcade · Motor: Game Center Core v7.5 · 2026*
