@@ -196,8 +196,18 @@ const JD_Core = {
     // Se aplica sobre #jd-container (no el canvas) para que el HUD HTML
     // permanezca visible en modo pantalla completa.
     // Compatibilidad: prefijo webkit para Safari en macOS/iPadOS.
-    // Nota iOS: screen.orientation.lock solo funciona en PWA instaladas;
-    //           en Safari web se silencia el error sin romper el flujo.
+    //
+    // Nuevo comportamiento (v1.2.0):
+    //   1. Se intenta requestFullscreen + orientation.lock('landscape').
+    //   2. Si orientation.lock tiene éxito → el navegador rota el dispositivo;
+    //      el overlay permanece oculto.
+    //   3. Si orientation.lock falla (iOS Safari, Firefox escritorio, etc.) →
+    //      se activa el overlay "Gira tu dispositivo" solo si el dispositivo
+    //      sigue en portrait en ese momento.
+    //   4. Un listener de 'resize' oculta el overlay automáticamente cuando
+    //      el usuario gira el dispositivo de forma manual.
+    // El canvas NO se oculta con CSS, por lo que la pantalla START es visible
+    // en cualquier orientación antes de la primera interacción.
     _requestFullscreen() {
         const JD_el = document.getElementById('jd-container');
         if (!JD_el) return;
@@ -209,26 +219,74 @@ const JD_Core = {
 
         if (!JD_rfs) {
             console.info('[JD] Fullscreen API no disponible en este navegador.');
+            // Sin fullscreen API tampoco hay orientation.lock → activar overlay si portrait
+            JD_Core._checkRotateOverlay();
             return;
         }
 
         JD_rfs.call(JD_el)
             .then(() => {
                 console.log('[JD] Fullscreen activado.');
-                // Intentar fijar la orientación en landscape
                 if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    screen.orientation.lock('landscape').catch((JD_err) => {
-                        // iOS/Safari web lanza NotSupportedError — es comportamiento esperado.
-                        console.info('[JD] orientation.lock no soportado (probablemente iOS Safari):', JD_err.message);
-                    });
+                    screen.orientation.lock('landscape')
+                        .then(() => {
+                            console.log('[JD] Orientación fijada en landscape.');
+                            // El navegador ha rotado — overlay innecesario
+                            JD_Core._hideRotateOverlay();
+                        })
+                        .catch((JD_err) => {
+                            // iOS/Safari web: NotSupportedError — comportamiento esperado.
+                            console.info('[JD] orientation.lock no soportado:', JD_err.message);
+                            JD_Core._checkRotateOverlay();
+                        });
+                } else {
+                    // Navegador sin orientation.lock
+                    JD_Core._checkRotateOverlay();
                 }
             })
             .catch((JD_err) => {
-                // El usuario puede haber denegado el fullscreen o el navegador
-                // puede rechazarlo en ciertos contextos (iframe sin permiso).
+                // Fullscreen rechazado (iframe sin permiso, denegación del usuario…)
                 console.info('[JD] Fullscreen rechazado:', JD_err.message);
+                JD_Core._checkRotateOverlay();
             });
     },
+
+    // ── Overlay "Gira tu dispositivo" — gestión JS ────────────────────────────
+    // Muestra el overlay solo si el dispositivo está en portrait después de
+    // que orientation.lock haya fallado. Registra un listener de resize para
+    // ocultarlo automáticamente cuando el usuario gire el dispositivo.
+    _checkRotateOverlay() {
+        if (window.innerWidth < window.innerHeight) {
+            JD_Core._showRotateOverlay();
+        }
+        // Registrar solo una vez
+        if (!JD_Core._rotateListenerActive) {
+            JD_Core._rotateListenerActive = true;
+            window.addEventListener('resize', JD_Core._onOrientationChange);
+        }
+    },
+
+    _showRotateOverlay() {
+        const JD_ov = document.getElementById('jd-rotate-overlay');
+        if (JD_ov) JD_ov.style.display = 'flex';
+    },
+
+    _hideRotateOverlay() {
+        const JD_ov = document.getElementById('jd-rotate-overlay');
+        if (JD_ov) JD_ov.style.display = 'none';
+    },
+
+    // Callback de resize: oculta/muestra el overlay según la orientación actual
+    _onOrientationChange() {
+        if (window.innerWidth >= window.innerHeight) {
+            JD_Core._hideRotateOverlay();
+        } else {
+            JD_Core._showRotateOverlay();
+        }
+    },
+
+    // Flag interno: evita añadir el listener de resize más de una vez
+    _rotateListenerActive: false,
 
     // ── Botón de mute ─────────────────────────────────────────────────────────
     // El botón ahora reside en #jd-mute-container (fuera del HUD superior)
