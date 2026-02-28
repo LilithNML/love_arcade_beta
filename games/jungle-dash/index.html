@@ -91,6 +91,7 @@
         }
         #jd-session-info svg { flex-shrink: 0; }
         #jd-pts-label { font-weight: 600; font-size: clamp(10px, 1vw, 12px); opacity: 0.7; }
+        #jd-score-display { font-weight: 700; font-size: clamp(11px, 1.2vw, 14px); color: #ffd700; letter-spacing: 1px; }
 
         /* ── HUD inferior: récord (solo visible en PLAYING) ────────────────── */
         #jd-hud-bottom {
@@ -152,11 +153,13 @@
         .jd-sound-off { display: none; color: rgba(255,100,100,0.85); }
 
         /* ── Overlay "Gira tu dispositivo" ─────────────────────────────────── */
-        /* Visible solo cuando el teléfono está en portrait.
-           iOS/Safari no soporta orientation.lock en web, por lo que este
-           mensaje CSS es el mecanismo de protección principal en esa plataforma. */
+        /* Oculto por defecto. JD_Core lo activa mediante JS solo cuando
+           orientation.lock falla y el dispositivo sigue en portrait.
+           Sin @media portrait: la pantalla START permanece visible en cualquier
+           orientación antes de la primera interacción, permitiendo que el
+           primer toque desbloquee Fullscreen API y orientation.lock. */
         #jd-rotate-overlay {
-            display: none;              /* oculto por defecto (landscape) */
+            display: none;              /* activado exclusivamente por JS */
             position: fixed;
             inset: 0;
             z-index: 9999;
@@ -187,13 +190,6 @@
             opacity: 0.55;
         }
 
-        /* Activar overlay en portrait y ocultar canvas para evitar
-           errores de renderizado en dimensiones incorrectas.                  */
-        @media (orientation: portrait) {
-            #jd-rotate-overlay { display: flex; }
-            #JD_canvas          { visibility: hidden; }
-        }
-
         /* ── Scrollbar oculta ──────────────────────────────────────────────── */
         ::-webkit-scrollbar { display: none; }
     </style>
@@ -201,7 +197,8 @@
 <body>
 
 <!-- ── Overlay de orientación portrait ──────────────────────────────────── -->
-<!-- Critico en iOS/Safari, donde orientation.lock no está disponible en web -->
+<!-- Activado por JS (JD_Core._checkRotateOverlay) solo si orientation.lock
+     falla y el dispositivo sigue en portrait. No se activa por CSS. -->
 <div id="jd-rotate-overlay" aria-live="polite" role="alert">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
          stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
@@ -248,6 +245,7 @@
             <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="jd-pts-label">PUNTOS</span>
+        <span id="jd-score-display">000000</span>
     </div>
 
 </header>
@@ -295,7 +293,8 @@
 (function () {
     'use strict';
 
-    const JD_hsDisplay    = document.getElementById('jd-highscore-display');
+    const JD_hsDisplay     = document.getElementById('jd-highscore-display');
+    const JD_scoreDisplay  = document.getElementById('jd-score-display');
     const JD_muteContainer = document.getElementById('jd-mute-container');
 
     // Visibilidad del botón de mute:
@@ -312,6 +311,14 @@
 
     // Ticker de UI (~10 fps es suficiente para etiquetas y badges)
     setInterval(() => {
+        // ── Puntuación en tiempo real ────────────────────────────────────────
+        if (JD_scoreDisplay && typeof JD_Core !== 'undefined') {
+            const JD_s = JD_Core.state === 'PLAYING' || JD_Core.state === 'GAMEOVER'
+                ? Math.floor(JD_Core.score)
+                : 0;
+            JD_scoreDisplay.textContent = JD_s.toString().padStart(6, '0');
+        }
+
         // ── Récord en el badge ───────────────────────────────────────────────
         if (JD_hsDisplay) {
             const JD_hs = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
