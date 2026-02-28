@@ -1,6 +1,6 @@
 # Jungle Dash — Documentación del Juego
 
-> **Versión:** `1.2.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
+> **Versión:** `1.1.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
 > **Namespace:** `JD_` · **Motor:** Game Center Core v7.5
 
 ---
@@ -20,7 +20,6 @@
 11. [Integración con Love Arcade](#11-integración-con-love-arcade)
 12. [Persistencia local](#12-persistencia-local)
 13. [Estructura de archivos](#13-estructura-de-archivos)
-14. [Historial de cambios](#14-historial-de-cambios)
 
 ---
 
@@ -102,9 +101,9 @@ START ──(primera interacción)──→ PLAYING ──(colisión)──→ G
 
 | Estado | Descripción |
 |---|---|
-| `START` | Pantalla de inicio. El canvas renderiza el fondo en loop. El botón de mute es visible. El juego es interactuable en cualquier orientación. |
-| `PLAYING` | Loop activo. Física, entidades, parallax y puntuación actualizándose. El botón de mute se oculta para evitar toques accidentales. |
-| `GAMEOVER` | Loop detenido. Se muestra el panel de resultado y se reporta al GameCenter. El botón de mute vuelve a ser visible. |
+| `START` | Pantalla de inicio. El canvas renderiza el fondo en loop pero no hay lógica de juego activa. El botón de mute es visible. |
+| `PLAYING` | Loop activo. Se actualiza física, entidades, parallax y puntuación. El botón de mute se oculta para evitar activaciones accidentales. |
+| `GAMEOVER` | Loop detenido. Se muestra la pantalla de resultado y se reporta al GameCenter. El botón de mute vuelve a ser visible. |
 
 ---
 
@@ -118,7 +117,7 @@ La puntuación aumenta continuamente mientras el jugador está en estado `PLAYIN
 JD_score += delta * 0.85;  // ~51 puntos por segundo a 60 fps
 ```
 
-El valor se muestra en tiempo real en el elemento `#jd-score-display` del HUD HTML, actualizado cada 100 ms por el glue script de `index.html`. El antiguo `JD_drawHUD()` del canvas fue eliminado en v1.2.0 (ver §9).
+El resultado se muestra en el canvas como un contador de 6 dígitos con ceros a la izquierda.
 
 ### Conversión a monedas Love Arcade
 
@@ -209,7 +208,7 @@ Cada 2 000 puntos el mundo cambia de bioma. La transición se produce mediante i
 | 2 000 – 3 999 | Cueva Ancestral | Púrpuras oscuros, arcos de piedra |
 | 4 000+ | Riberas | Azules acuáticos, niebla cyan |
 
-> **Nota v1.1.0:** La etiqueta de texto `#jd-biome-label` fue eliminada. El bioma queda comunicado exclusivamente a través del parallax y la paleta de colores.
+> **Nota:** La etiqueta de texto `#jd-biome-label` que identificaba el bioma activo ha sido **eliminada del HUD** en la v1.1.0. El bioma queda comunicado exclusivamente a través del parallax y la paleta de colores, eliminando redundancia visual y manteniendo la estética inmersiva del juego.
 
 ---
 
@@ -219,7 +218,7 @@ Todo el audio se gestiona a través de la **Web Audio API** mediante un `AudioCo
 
 ### Política de Autoplay
 
-El `AudioContext` no se inicializa hasta la primera interacción del usuario (click, tap o tecla), en cumplimiento con las políticas de Autoplay de los navegadores modernos. La inicialización se realiza junto al resto de APIs restringidas (Fullscreen, orientation.lock) en `JD_Core._onActionStart()`.
+El `AudioContext` no se inicializa hasta la primera interacción del usuario (click, tap o tecla), en cumplimiento con las políticas de Autoplay de los navegadores modernos.
 
 ### BGM (música de fondo)
 
@@ -236,7 +235,9 @@ Todos los efectos se sintetizan en tiempo real sin latencia mediante la creació
 
 ### Control de mute
 
-El estado de mute se persiste en `localStorage` bajo la clave `JD_muted`. El botón (`#jd-mute-btn`) reside en `#jd-mute-container`, desacoplado del HUD superior. Solo es visible en los estados `START` y `GAMEOVER`; la clase `.jd-hidden` la aplica el glue script de `index.html`.
+El estado de mute se persiste en `localStorage` bajo la clave `JD_muted`. El botón de la UI activa/desactiva el `GainNode` maestro con una transición suave de 50 ms para evitar clicks de audio.
+
+El botón de mute (`#jd-mute-btn`) reside en el contenedor `#jd-mute-container`, **desacoplado del HUD superior**. Solo es visible en los estados `START` y `GAMEOVER` para evitar activaciones accidentales con los pulgares durante el juego.
 
 ---
 
@@ -257,81 +258,58 @@ El estado de mute se persiste en `localStorage` bajo la clave `JD_muted`. El bot
 
 El canvas captura los eventos `touchstart` y `touchend` con `passive: false` para prevenir el scroll del navegador durante el juego.
 
+> **Nota:** El hint táctil `#jd-touch-hint` ("👆 Toca para saltar") ha sido **eliminado** en la v1.1.0. La mecánica de toque es autodescubrible en el primer segundo de juego, y el elemento ocupaba espacio vital en pantallas pequeñas.
+
 ---
 
 ## 9. Experiencia móvil y pantalla completa
 
-### El problema del "bucle de visibilidad"
-
-Los navegadores modernos exigen un **gesto explícito del usuario** para activar la Fullscreen API y `screen.orientation.lock()`. Si el juego se oculta cuando el dispositivo está en portrait, el usuario no puede interactuar y el flujo de automatización nunca se desencadena. La solución es la estrategia "Permitir para Transformar".
-
-### Estrategia "Permitir para Transformar"
-
-El juego permanece **completamente visible en cualquier orientación**. La pantalla de inicio actúa como punto de entrada accesible en portrait, permitiendo que el primer toque desencadene todas las APIs restringidas de forma simultánea.
-
-```
-Usuario en portrait
-      │
-      ▼ (toca la pantalla)
-JD_Core._onActionStart()
-      │
-      ├─ JD_Audio.init()                   ← desbloquea AudioContext
-      ├─ container.requestFullscreen()     ← expande a pantalla completa
-      └─ screen.orientation.lock('landscape')
-               │
-         ┌─────┴──────┐
-         ✅ éxito      ❌ rechazado (iOS Safari)
-         │              │
-     gira auto      muestra overlay
-                   "Gira tu dispositivo"
-```
-
 ### Fullscreen API
 
-`JD_Core._requestFullscreen()` aplica fullscreen sobre `#jd-container` (no el canvas), para que el HUD HTML siga siendo visible dentro del modo pantalla completa. Incluye prefijos `webkit`, `moz` y `ms` para máxima compatibilidad.
+Al detectar la primera interacción del usuario, `JD_Core._requestFullscreen()` activa el modo pantalla completa sobre el elemento `#jd-container` (no el canvas). Usar el contenedor en lugar del canvas permite que el HUD HTML siga siendo visible y accesible en modo fullscreen.
 
 ```js
 // JD_Core.js — _requestFullscreen()
+const JD_el = document.getElementById('jd-container');
 const JD_rfs = JD_el.requestFullscreen
-             || JD_el.webkitRequestFullscreen
+             || JD_el.webkitRequestFullscreen   // Safari / Chrome iOS
              || JD_el.mozRequestFullScreen
              || JD_el.msRequestFullscreen;
 
-JD_rfs.call(JD_el)
-    .then(() => screen.orientation.lock('landscape').catch(onFail))
-    .catch(onFail);
-```
-
-### Overlay "Gira tu dispositivo" — fallback JS-only
-
-El overlay `#jd-rotate-overlay` es `display: none` por defecto. Solo se activa desde JavaScript, añadiendo la clase `.jd-visible`, cuando `orientation.lock()` o `requestFullscreen()` son rechazados **y** el dispositivo está en portrait (`window.innerWidth < window.innerHeight`).
-
-**No existe ninguna regla `@media (orientation: portrait)` que oculte el canvas o el contenedor.** El overlay desaparece automáticamente cuando el usuario gira el dispositivo, gracias al listener `orientationchange` del glue script de `index.html`.
-
-```js
-// index.html — glue script
-window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-        if (window.innerWidth > window.innerHeight) {
-            JD_overlay.classList.remove('jd-visible');
-        }
-    }, 100);
+JD_rfs.call(JD_el).then(() => {
+    screen.orientation.lock('landscape').catch(() => {});
 });
 ```
 
-### HUD de puntuación — migración al DOM
+La activación se integra en el mismo gesto que desbloquea el `AudioContext`, evitando la necesidad de un segundo gesto de usuario.
 
-`JD_drawHUD()` fue **eliminado del render loop del canvas** en v1.2.0. La puntuación se muestra ahora en el elemento `#jd-score-display` del DOM HTML, actualizado cada 100 ms por el glue script. Esta migración resuelve el problema del texto "borroso" en pantallas de alta densidad (Retina / OLED), donde el canvas escala mediante CSS pero el texto del navegador usa sub-pixel rendering nativo.
+### Forzado de orientación (`orientation.lock`)
+
+Tras activar el fullscreen, se invoca `screen.orientation.lock('landscape')` para fijar la orientación horizontal. Los errores se silencian con `.catch(() => {})` ya que esta API **no está soportada en iOS Safari web** (solo en PWA instaladas).
+
+### Overlay "Gira tu dispositivo"
+
+Para cubrir el caso de iOS y cualquier otro navegador que no soporte `orientation.lock`, se implementa un bloqueo por CSS mediante una media query de orientación:
+
+```css
+/* index.html — overlay portrait */
+@media (orientation: portrait) {
+    #jd-rotate-overlay { display: flex; }   /* Muestra el mensaje */
+    #JD_canvas          { visibility: hidden; } /* Evita errores de renderizado */
+}
+```
+
+El overlay `#jd-rotate-overlay` es un elemento `position: fixed` con `z-index: 9999` que cubre completamente la pantalla, mostrando un icono animado y el mensaje "Gira tu dispositivo". El canvas se oculta con `visibility: hidden` (en lugar de `display: none`) para preservar sus dimensiones y evitar que `JD_Renderer` recalcule el layout durante la rotación.
 
 ### Notas de compatibilidad
 
 | Plataforma | Fullscreen | orientation.lock | Overlay portrait |
 |---|---|---|---|
-| Chrome / Edge (Android) | ✅ | ✅ | — (no necesario) |
-| Firefox (Android) | ✅ | ✅ | — (no necesario) |
-| Safari (macOS) | ✅ (webkit) | ❌ No soportado en web | ✅ (solo si en portrait) |
-| Safari (iOS) | ❌ No soportado en web | ❌ No soportado en web | ✅ (crítico) |
-| Chrome (iOS) | ❌ Motor WebKit | ❌ Motor WebKit | ✅ (crítico) |
+| Chrome / Edge (Android) | ✅ | ✅ | ✅ (respaldo) |
+| Firefox (Android) | ✅ | ✅ | ✅ (respaldo) |
+| Safari (macOS) | ✅ (webkit) | ❌ No soportado | ✅ (crítico) |
+| Safari (iOS) | ❌ Web no soportado | ❌ No soportado | ✅ (crítico) |
+| Chrome (iOS) | ❌ Motor WebKit | ❌ No soportado | ✅ (crítico) |
 
 ---
 
@@ -370,8 +348,6 @@ El fallback se activa de forma transparente: el jugador no recibe ningún mensaj
 <script src="../../js/app.js"></script>
 ```
 
-> ⚠️ **No modificar esta etiqueta ni las meta-tags de Game Center.** Son críticas para la persistencia de monedas y la comunicación con el backend de la plataforma.
-
 ### Modo standalone
 
 El juego detecta la ausencia de `window.GameCenter` antes de intentar cualquier llamada. En modo standalone (desarrollo local sin `app.js`), la partida funciona con normalidad y las monedas simplemente no se acumulan.
@@ -401,7 +377,7 @@ El juego solo escribe en `localStorage` bajo claves con prefijo `JD_`. No lee ni
 
 ```
 games/jungle-dash/
-├── index.html                  ← Entrada principal. HUD DOM, canvas, overlay JS, scripts.
+├── index.html                  ← Entrada principal. HUD, canvas, overlay portrait, scripts.
 ├── js/
 │   ├── JD_Audio.js             ← Módulo de audio (Web Audio API)
 │   ├── JD_Physics.js           ← Módulo de física (gravedad, salto, AABB)
@@ -416,36 +392,19 @@ games/jungle-dash/
 
 ---
 
-## 14. Historial de cambios
-
-### v1.2.0 — Automatización de Orientación y Limpieza de UI
-
-**Problema resuelto:** El "bucle de visibilidad" — ocultar el juego en portrait impedía al usuario interactuar, bloqueando la activación de las APIs de rotación automática.
-
-**`JD_Core.js`**
-- **Nuevo método `_showRotateOverlayIfPortrait()`**: encapsula la lógica de mostrar el overlay solo cuando el dispositivo está en portrait (`innerWidth < innerHeight`). Evita que el overlay aparezca en escritorio o en dispositivos ya en landscape.
-- **`_requestFullscreen()` refactorizado**: el overlay de rotación ya no se muestra por defecto. Solo se activa si `requestFullscreen()` o `screen.orientation.lock()` son rechazados por el navegador y el dispositivo está en portrait.
-- **`_onActionStart()` actualizado**: activa `JD_Audio.init()`, `requestFullscreen()` y `orientation.lock()` de forma simultánea en la primera interacción, aprovechando el único gesto de usuario requerido.
-
-**`JD_Renderer.js`**
-- **`JD_drawHUD()` desactivado del render loop**: la llamada `JD_drawHUD(score, state)` en `render()` fue comentada. La función se preserva en el código para referencia histórica. El HUD migró al DOM HTML para eliminar el doble renderizado y el texto borroso en pantallas de alta densidad (Retina / OLED).
-
-**`index.html`**
-- **Overlay portrait JS-only**: `#jd-rotate-overlay` es `display: none` por defecto. Se activa añadiendo la clase `.jd-visible` desde `JD_Core._showRotateOverlayIfPortrait()`. No existe ninguna regla `@media (orientation: portrait)` que oculte el canvas ni el contenedor.
-- **Eliminada restricción CSS de portrait**: el juego permanece completamente visible en cualquier orientación, habilitando la estrategia "Permitir para Transformar".
-- **`#jd-score-display` añadido al HUD**: nuevo elemento `<span>` dentro de `#jd-session-info` que muestra la puntuación en vivo. Reemplaza a `JD_drawHUD()` del canvas.
-- **Glue script actualizado**: sincroniza `#jd-score-display` con `JD_Core.score` a 10 fps. Añade listener `orientationchange` para retirar automáticamente el overlay cuando el usuario rota a landscape.
+## Historial de cambios
 
 ### v1.1.0 — Optimización Mobile & Fullscreen
 
-- Añadida Fullscreen API sobre `#jd-container`.
-- `screen.orientation.lock('landscape')` tras fullscreen (con prefijo webkit).
-- Overlay CSS `@media (orientation: portrait)` (reemplazado en v1.2.0 por lógica JS).
-- Eliminados `#jd-touch-hint` y `#jd-biome-label`.
-- Botón de mute reubicado a `#jd-mute-container`.
-- HUD migrado de `px` fijos a unidades relativas `clamp`, `vw`, `vh`.
-- Eliminados `box-shadow` y `border` de `#jd-container`.
+- **Añadido:** Fullscreen API sobre `#jd-container` activada en la primera interacción del usuario (`JD_Core._requestFullscreen()`). Incluye prefijo `webkit` para compatibilidad con Safari.
+- **Añadido:** `screen.orientation.lock('landscape')` tras activar el fullscreen. Los errores en plataformas no compatibles (iOS Safari web) se silencian sin romper el flujo.
+- **Añadido:** Overlay CSS `#jd-rotate-overlay` visible únicamente en `@media (orientation: portrait)`. Cubre el canvas y muestra un icono animado con el mensaje "Gira tu dispositivo". Mecanismo de protección principal para iOS Safari, donde `orientation.lock` no está disponible en contextos web.
+- **Eliminado:** `#jd-touch-hint` — el hint táctil "👆 Toca para saltar" se elimina del HTML, CSS y lógica de actualización. La mecánica es autodescubrible.
+- **Eliminado:** `#jd-biome-label` — la etiqueta de texto de bioma se elimina del HTML, CSS y ticker de UI. El bioma queda comunicado únicamente a través del arte visual (parallax + paleta).
+- **Reubicado:** `#jd-mute-btn` se desacopla del `<header id="jd-hud">` y se traslada a `#jd-mute-container` (elemento `fixed` independiente). Solo es visible en los estados `START` y `GAMEOVER`; se oculta automáticamente durante `PLAYING` mediante la clase CSS `.jd-hidden` gestionada por el glue script.
+- **Limpieza:** Se eliminan `box-shadow` y `border` de `#jd-container`. En fullscreen generan *gaps* blancos visibles en los bordes y consumen GPU innecesariamente.
+- **HUD responsivo:** Padding, fuentes y tamaños del HUD migrados de px fijos a unidades relativas (`clamp`, `vw`, `vh`) para escalar correctamente en tablets y pantallas grandes en modo fullscreen.
 
 ---
 
-*Documentación de Jungle Dash · Love Arcade · v1.2.0 · 2026*
+*Documentación de Jungle Dash · Love Arcade · v1.1.0 · 2026*
