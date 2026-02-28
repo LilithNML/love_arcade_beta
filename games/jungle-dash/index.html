@@ -20,6 +20,8 @@
         }
 
         /* ── Contenedor principal ──────────────────────────────────────────── */
+        /* Sin box-shadow ni border: en fullscreen generan gaps blancos y
+           consumen GPU de forma innecesaria.                                  */
         #jd-container {
             position: relative;
             width: 100vw;
@@ -48,7 +50,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 14px;
+            padding: 1vh 1.5vw;
             background: linear-gradient(to bottom, rgba(0,0,0,0.72), transparent);
             pointer-events: none; /* El HUD no bloquea el canvas */
         }
@@ -60,15 +62,15 @@
         #jd-back-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 0.5vw;
             color: rgba(255,255,255,0.85);
             text-decoration: none;
-            font-size: 13px;
+            font-size: clamp(11px, 1.2vw, 14px);
             font-weight: 600;
             background: rgba(0,0,0,0.4);
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
-            padding: 6px 10px;
+            padding: 0.6vh 1vw;
             transition: background 0.2s;
         }
         #jd-back-btn:hover,
@@ -79,54 +81,35 @@
         #jd-session-info {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 0.5vw;
             color: rgba(255,255,255,0.88);
-            font-size: 13px;
+            font-size: clamp(11px, 1.2vw, 14px);
             background: rgba(0,0,0,0.4);
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
-            padding: 6px 10px;
+            padding: 0.6vh 1vw;
         }
         #jd-session-info svg { flex-shrink: 0; }
-        #jd-pts-label { font-weight: 600; font-size: 11px; opacity: 0.7; }
-
-        /* ── Botón de mute ─────────────────────────────────────────────────── */
-        #jd-mute-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 8px;
-            padding: 6px;
-            cursor: pointer;
-            color: rgba(255,255,255,0.85);
-            transition: background 0.2s;
-            width: 36px;
-            height: 36px;
-        }
-        #jd-mute-btn:hover,
-        #jd-mute-btn:active { background: rgba(40,40,40,0.7); }
-        .jd-sound-off { display: none; color: rgba(255,100,100,0.85); }
+        #jd-pts-label { font-weight: 600; font-size: clamp(10px, 1vw, 12px); opacity: 0.7; }
 
         /* ── HUD inferior: récord (solo visible en PLAYING) ────────────────── */
         #jd-hud-bottom {
             position: fixed;
-            bottom: 12px;
+            bottom: 1.5vh;
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
             display: flex;
-            gap: 16px;
+            gap: 2vw;
             pointer-events: none;
         }
         .jd-badge {
             background: rgba(0,0,0,0.45);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 8px;
-            padding: 4px 12px;
+            padding: 0.5vh 1.5vw;
             color: rgba(255,255,255,0.72);
-            font-size: 12px;
+            font-size: clamp(10px, 1.1vw, 13px);
             font-weight: 600;
             letter-spacing: 0.5px;
         }
@@ -135,38 +118,80 @@
             margin-left: 4px;
         }
 
-        /* ── Indicador de bioma ────────────────────────────────────────────── */
-        #jd-biome-label {
+        /* ── Botón de mute (solo visible en pantallas START y GAMEOVER) ─────── */
+        /* Se separa del HUD superior para evitar activaciones accidentales
+           con los pulgares durante el juego.                                   */
+        #jd-mute-container {
             position: fixed;
-            top: 54px;
-            right: 14px;
-            z-index: 99;
-            font-size: 11px;
-            color: rgba(255,255,255,0.55);
-            font-style: italic;
+            bottom: 4vh;
+            right: 2vw;
+            z-index: 200;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        #jd-mute-container.jd-hidden {
+            opacity: 0;
+            visibility: hidden;
             pointer-events: none;
-            transition: opacity 1s;
+        }
+        #jd-mute-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 0.6vh 0.8vw;
+            cursor: pointer;
+            color: rgba(255,255,255,0.85);
+            transition: background 0.2s;
+            width: clamp(32px, 3.5vw, 44px);
+            height: clamp(32px, 3.5vw, 44px);
+        }
+        #jd-mute-btn:hover,
+        #jd-mute-btn:active { background: rgba(40,40,40,0.75); }
+        .jd-sound-off { display: none; color: rgba(255,100,100,0.85); }
+
+        /* ── Overlay "Gira tu dispositivo" ─────────────────────────────────── */
+        /* Visible solo cuando el teléfono está en portrait.
+           iOS/Safari no soporta orientation.lock en web, por lo que este
+           mensaje CSS es el mecanismo de protección principal en esa plataforma. */
+        #jd-rotate-overlay {
+            display: none;              /* oculto por defecto (landscape) */
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #050d07;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            color: rgba(255,255,255,0.85);
+            text-align: center;
+            padding: 24px;
+        }
+        #jd-rotate-overlay svg {
+            animation: jd-rotate-icon 2s ease-in-out infinite;
+            opacity: 0.75;
+        }
+        @keyframes jd-rotate-icon {
+            0%, 100% { transform: rotate(-15deg); }
+            50%       { transform: rotate(15deg);  }
+        }
+        #jd-rotate-overlay p {
+            font-size: clamp(16px, 4vw, 22px);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        #jd-rotate-overlay small {
+            font-size: clamp(12px, 2.5vw, 15px);
+            opacity: 0.55;
         }
 
-        /* ── Instrucción táctil (aparece en móvil) ─────────────────────────── */
-        #jd-touch-hint {
-            position: fixed;
-            bottom: 55px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 99;
-            display: none;
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-            pointer-events: none;
-            animation: jd-pulse 2s infinite;
-        }
-        @keyframes jd-pulse {
-            0%, 100% { opacity: 0.5; }
-            50%       { opacity: 1;   }
-        }
-        @media (hover: none) {
-            #jd-touch-hint { display: block; }
+        /* Activar overlay en portrait y ocultar canvas para evitar
+           errores de renderizado en dimensiones incorrectas.                  */
+        @media (orientation: portrait) {
+            #jd-rotate-overlay { display: flex; }
+            #JD_canvas          { visibility: hidden; }
         }
 
         /* ── Scrollbar oculta ──────────────────────────────────────────────── */
@@ -175,18 +200,36 @@
 </head>
 <body>
 
+<!-- ── Overlay de orientación portrait ──────────────────────────────────── -->
+<!-- Critico en iOS/Safari, donde orientation.lock no está disponible en web -->
+<div id="jd-rotate-overlay" aria-live="polite" role="alert">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+         stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+        <line x1="12" y1="18" x2="12.01" y2="18"/>
+        <path d="M8 2h8"/>
+        <!-- flecha indicando rotación -->
+        <path d="M17 9l3 3-3 3" stroke="rgba(255,200,0,0.85)" stroke-width="2"/>
+        <path d="M20 12H10" stroke="rgba(255,200,0,0.85)" stroke-width="2"/>
+    </svg>
+    <p>Gira tu dispositivo</p>
+    <small>Jungle Dash requiere orientación horizontal</small>
+</div>
+
 <!-- ── Contenedor del juego ──────────────────────────────────────────────── -->
 <div id="jd-container">
     <canvas id="JD_canvas" role="img" aria-label="Jungle Dash — juego de carrera infinita"></canvas>
 </div>
 
 <!-- ── HUD superior ─────────────────────────────────────────────────────── -->
+<!-- El botón de mute se ha retirado de aquí para evitar pulsaciones
+     accidentales durante el juego. Ahora reside en #jd-mute-container.      -->
 <header id="jd-hud" role="toolbar" aria-label="Controles del juego">
 
     <!-- Botón de retorno al hub — ruta obligatoria: ../../index.html -->
     <a id="jd-back-btn" href="../../index.html" aria-label="Volver a Love Arcade">
-        <!-- SVG de retorno — iconografía del brief -->
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
              aria-hidden="true">
             <path d="M11 17.2l-6.3-6.3c-.4-.4-.4-1 0-1.4L11 3.2M7 10.1h13"/>
@@ -194,10 +237,10 @@
         Love Arcade
     </a>
 
-    <!-- Info de sesión: puntuación actual — SVG del brief -->
+    <!-- Info de sesión: puntuación actual -->
     <div id="jd-session-info" role="status" aria-live="polite" aria-atomic="true"
          aria-label="Puntuación actual">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
              aria-hidden="true">
             <circle cx="12" cy="12" r="10"/>
@@ -205,10 +248,20 @@
             <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span id="jd-pts-label">PUNTOS</span>
-        <!-- El score real se dibuja en el canvas; este es sólo la etiqueta del HUD -->
     </div>
 
-    <!-- Botón de mute — SVG del brief -->
+</header>
+
+<!-- ── HUD inferior: récord ──────────────────────────────────────────────── -->
+<div id="jd-hud-bottom" role="status" aria-label="Récord personal">
+    <div class="jd-badge" id="jd-record-badge">
+        🏆 RÉCORD <span id="jd-highscore-display">000000</span>
+    </div>
+</div>
+
+<!-- ── Botón de mute (pantallas START / GAMEOVER únicamente) ─────────────── -->
+<!-- Desacoplado del HUD superior. JD_Core.js gestiona su visibilidad. -->
+<div id="jd-mute-container" aria-label="Control de audio">
     <button id="jd-mute-btn" type="button" aria-label="Activar/desactivar audio">
         <!-- Ícono sonido activo -->
         <svg class="jd-sound-on" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -226,24 +279,10 @@
             <line x1="17" y1="9" x2="23" y2="15"/>
         </svg>
     </button>
-</header>
-
-<!-- ── HUD inferior: récord ──────────────────────────────────────────────── -->
-<div id="jd-hud-bottom" role="status" aria-label="Récord personal">
-    <div class="jd-badge" id="jd-record-badge">
-        🏆 RÉCORD <span id="jd-highscore-display">000000</span>
-    </div>
 </div>
-
-<!-- ── Indicador de bioma ────────────────────────────────────────────────── -->
-<div id="jd-biome-label" aria-hidden="true">Selva Densa</div>
-
-<!-- ── Hint táctil (solo mobile) ────────────────────────────────────────── -->
-<div id="jd-touch-hint" aria-hidden="true">👆 Toca para saltar · Mantén para salto alto</div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════
      Scripts — orden de carga: dependencias primero, núcleo al final.
-     app.js se carga DESPUÉS de todos los scripts del juego, al final del body.
      ═══════════════════════════════════════════════════════════════════════ -->
 <script src="js/JD_Audio.js"></script>
 <script src="js/JD_Physics.js"></script>
@@ -256,25 +295,32 @@
 (function () {
     'use strict';
 
-    // Actualizar el récord en el badge HTML (sin exponer variables genéricas)
-    const JD_hsDisplay = document.getElementById('jd-highscore-display');
-    const JD_biomeEl   = document.getElementById('jd-biome-label');
+    const JD_hsDisplay    = document.getElementById('jd-highscore-display');
+    const JD_muteContainer = document.getElementById('jd-mute-container');
 
-    // Ticker de UI (60fps no necesario; 10fps basta para etiquetas)
-    setInterval(() => {
-        if (!JD_hsDisplay) return;
-
-        // Récord
-        const JD_hs = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
-        JD_hsDisplay.textContent = JD_hs.toString().padStart(6, '0');
-
-        // Etiqueta de bioma
-        if (JD_biomeEl && typeof JD_Core !== 'undefined') {
-            const JD_s = JD_Core.score;
-            const JD_biomes = ['Selva Densa', 'Cueva Ancestral', 'Riberas'];
-            const JD_idx    = JD_s < 2000 ? 0 : JD_s < 4000 ? 1 : 2;
-            JD_biomeEl.textContent = JD_biomes[JD_idx];
+    // Visibilidad del botón de mute:
+    // Solo se muestra en START y GAMEOVER para evitar toques accidentales.
+    function JD_syncMuteVisibility() {
+        if (!JD_muteContainer || typeof JD_Core === 'undefined') return;
+        const JD_playing = JD_Core.state === 'PLAYING';
+        if (JD_playing) {
+            JD_muteContainer.classList.add('jd-hidden');
+        } else {
+            JD_muteContainer.classList.remove('jd-hidden');
         }
+    }
+
+    // Ticker de UI (~10 fps es suficiente para etiquetas y badges)
+    setInterval(() => {
+        // ── Récord en el badge ───────────────────────────────────────────────
+        if (JD_hsDisplay) {
+            const JD_hs = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
+            JD_hsDisplay.textContent = JD_hs.toString().padStart(6, '0');
+        }
+
+        // ── Visibilidad del mute ─────────────────────────────────────────────
+        JD_syncMuteVisibility();
+
     }, 100);
 })();
 </script>
