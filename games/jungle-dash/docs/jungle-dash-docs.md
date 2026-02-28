@@ -1,6 +1,6 @@
 # Jungle Dash — Documentación del Juego
 
-> **Versión:** `1.0.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
+> **Versión:** `1.1.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
 > **Namespace:** `JD_` · **Motor:** Game Center Core v7.5
 
 ---
@@ -15,10 +15,11 @@
 6. [Biomas y mundo visual](#6-biomas-y-mundo-visual)
 7. [Sistema de audio](#7-sistema-de-audio)
 8. [Controles](#8-controles)
-9. [Sistema de fallback](#9-sistema-de-fallback)
-10. [Integración con Love Arcade](#10-integración-con-love-arcade)
-11. [Persistencia local](#11-persistencia-local)
-12. [Estructura de archivos](#12-estructura-de-archivos)
+9. [Experiencia móvil y pantalla completa](#9-experiencia-móvil-y-pantalla-completa)
+10. [Sistema de fallback](#10-sistema-de-fallback)
+11. [Integración con Love Arcade](#11-integración-con-love-arcade)
+12. [Persistencia local](#12-persistencia-local)
+13. [Estructura de archivos](#13-estructura-de-archivos)
 
 ---
 
@@ -76,7 +77,7 @@ JD_Audio.js      ←── Web Audio API (BGM + SFX)
 JD_Physics.js    ←── Gravedad, salto, AABB
 JD_Entities.js   ←── Jugador, obstáculos, decoraciones
 JD_Renderer.js   ←── Canvas 2D, parallax, biomas, fallback
-JD_Core.js       ←── Game loop, estados, input, GameCenter
+JD_Core.js       ←── Game loop, estados, input, fullscreen, GameCenter
 ```
 
 ### Orden de dependencias
@@ -100,9 +101,9 @@ START ──(primera interacción)──→ PLAYING ──(colisión)──→ G
 
 | Estado | Descripción |
 |---|---|
-| `START` | Pantalla de inicio. El canvas renderiza el fondo en loop pero no hay lógica de juego activa. |
-| `PLAYING` | Loop activo. Se actualiza física, entidades, parallax y puntuación. |
-| `GAMEOVER` | Loop detenido. Se muestra la pantalla de resultado y se reporta al GameCenter. |
+| `START` | Pantalla de inicio. El canvas renderiza el fondo en loop pero no hay lógica de juego activa. El botón de mute es visible. |
+| `PLAYING` | Loop activo. Se actualiza física, entidades, parallax y puntuación. El botón de mute se oculta para evitar activaciones accidentales. |
+| `GAMEOVER` | Loop detenido. Se muestra la pantalla de resultado y se reporta al GameCenter. El botón de mute vuelve a ser visible. |
 
 ---
 
@@ -207,7 +208,7 @@ Cada 2 000 puntos el mundo cambia de bioma. La transición se produce mediante i
 | 2 000 – 3 999 | Cueva Ancestral | Púrpuras oscuros, arcos de piedra |
 | 4 000+ | Riberas | Azules acuáticos, niebla cyan |
 
-El bioma activo se muestra en una etiqueta discreta en la esquina superior derecha del HUD.
+> **Nota:** La etiqueta de texto `#jd-biome-label` que identificaba el bioma activo ha sido **eliminada del HUD** en la v1.1.0. El bioma queda comunicado exclusivamente a través del parallax y la paleta de colores, eliminando redundancia visual y manteniendo la estética inmersiva del juego.
 
 ---
 
@@ -236,6 +237,8 @@ Todos los efectos se sintetizan en tiempo real sin latencia mediante la creació
 
 El estado de mute se persiste en `localStorage` bajo la clave `JD_muted`. El botón de la UI activa/desactiva el `GainNode` maestro con una transición suave de 50 ms para evitar clicks de audio.
 
+El botón de mute (`#jd-mute-btn`) reside en el contenedor `#jd-mute-container`, **desacoplado del HUD superior**. Solo es visible en los estados `START` y `GAMEOVER` para evitar activaciones accidentales con los pulgares durante el juego.
+
 ---
 
 ## 8. Controles
@@ -255,9 +258,62 @@ El estado de mute se persiste en `localStorage` bajo la clave `JD_muted`. El bot
 
 El canvas captura los eventos `touchstart` y `touchend` con `passive: false` para prevenir el scroll del navegador durante el juego.
 
+> **Nota:** El hint táctil `#jd-touch-hint` ("👆 Toca para saltar") ha sido **eliminado** en la v1.1.0. La mecánica de toque es autodescubrible en el primer segundo de juego, y el elemento ocupaba espacio vital en pantallas pequeñas.
+
 ---
 
-## 9. Sistema de fallback
+## 9. Experiencia móvil y pantalla completa
+
+### Fullscreen API
+
+Al detectar la primera interacción del usuario, `JD_Core._requestFullscreen()` activa el modo pantalla completa sobre el elemento `#jd-container` (no el canvas). Usar el contenedor en lugar del canvas permite que el HUD HTML siga siendo visible y accesible en modo fullscreen.
+
+```js
+// JD_Core.js — _requestFullscreen()
+const JD_el = document.getElementById('jd-container');
+const JD_rfs = JD_el.requestFullscreen
+             || JD_el.webkitRequestFullscreen   // Safari / Chrome iOS
+             || JD_el.mozRequestFullScreen
+             || JD_el.msRequestFullscreen;
+
+JD_rfs.call(JD_el).then(() => {
+    screen.orientation.lock('landscape').catch(() => {});
+});
+```
+
+La activación se integra en el mismo gesto que desbloquea el `AudioContext`, evitando la necesidad de un segundo gesto de usuario.
+
+### Forzado de orientación (`orientation.lock`)
+
+Tras activar el fullscreen, se invoca `screen.orientation.lock('landscape')` para fijar la orientación horizontal. Los errores se silencian con `.catch(() => {})` ya que esta API **no está soportada en iOS Safari web** (solo en PWA instaladas).
+
+### Overlay "Gira tu dispositivo"
+
+Para cubrir el caso de iOS y cualquier otro navegador que no soporte `orientation.lock`, se implementa un bloqueo por CSS mediante una media query de orientación:
+
+```css
+/* index.html — overlay portrait */
+@media (orientation: portrait) {
+    #jd-rotate-overlay { display: flex; }   /* Muestra el mensaje */
+    #JD_canvas          { visibility: hidden; } /* Evita errores de renderizado */
+}
+```
+
+El overlay `#jd-rotate-overlay` es un elemento `position: fixed` con `z-index: 9999` que cubre completamente la pantalla, mostrando un icono animado y el mensaje "Gira tu dispositivo". El canvas se oculta con `visibility: hidden` (en lugar de `display: none`) para preservar sus dimensiones y evitar que `JD_Renderer` recalcule el layout durante la rotación.
+
+### Notas de compatibilidad
+
+| Plataforma | Fullscreen | orientation.lock | Overlay portrait |
+|---|---|---|---|
+| Chrome / Edge (Android) | ✅ | ✅ | ✅ (respaldo) |
+| Firefox (Android) | ✅ | ✅ | ✅ (respaldo) |
+| Safari (macOS) | ✅ (webkit) | ❌ No soportado | ✅ (crítico) |
+| Safari (iOS) | ❌ Web no soportado | ❌ No soportado | ✅ (crítico) |
+| Chrome (iOS) | ❌ Motor WebKit | ❌ No soportado | ✅ (crítico) |
+
+---
+
+## 10. Sistema de fallback
 
 Si los assets gráficos no están disponibles o no cargan en menos de **5 segundos**, el motor renderiza formas geométricas procedurales que garantizan la jugabilidad completa.
 
@@ -274,7 +330,7 @@ El fallback se activa de forma transparente: el jugador no recibe ningún mensaj
 
 ---
 
-## 10. Integración con Love Arcade
+## 11. Integración con Love Arcade
 
 ### Parámetros de integración
 
@@ -306,7 +362,7 @@ if (typeof window.GameCenter !== 'undefined') {
 
 ---
 
-## 11. Persistencia local
+## 12. Persistencia local
 
 El juego solo escribe en `localStorage` bajo claves con prefijo `JD_`. No lee ni escribe ninguna clave reservada del sistema (`gamecenter_v6_promos` u otras).
 
@@ -317,17 +373,17 @@ El juego solo escribe en `localStorage` bajo claves con prefijo `JD_`. No lee ni
 
 ---
 
-## 12. Estructura de archivos
+## 13. Estructura de archivos
 
 ```
 games/jungle-dash/
-├── index.html                  ← Entrada principal. HUD, canvas, carga de scripts.
+├── index.html                  ← Entrada principal. HUD, canvas, overlay portrait, scripts.
 ├── js/
 │   ├── JD_Audio.js             ← Módulo de audio (Web Audio API)
 │   ├── JD_Physics.js           ← Módulo de física (gravedad, salto, AABB)
 │   ├── JD_Entities.js          ← Módulo de entidades (jugador, obstáculos)
 │   ├── JD_Renderer.js          ← Módulo de renderizado (canvas, parallax, biomas)
-│   └── JD_Core.js              ← Módulo principal (loop, estados, input, GameCenter)
+│   └── JD_Core.js              ← Módulo principal (loop, estados, input, fullscreen, GameCenter)
 └── assets/
     ├── sprites/                ← Assets gráficos (ver guía de sprites)
     └── audio/
@@ -336,4 +392,19 @@ games/jungle-dash/
 
 ---
 
-*Documentación de Jungle Dash · Love Arcade · v1.0.0 · 2026*
+## Historial de cambios
+
+### v1.1.0 — Optimización Mobile & Fullscreen
+
+- **Añadido:** Fullscreen API sobre `#jd-container` activada en la primera interacción del usuario (`JD_Core._requestFullscreen()`). Incluye prefijo `webkit` para compatibilidad con Safari.
+- **Añadido:** `screen.orientation.lock('landscape')` tras activar el fullscreen. Los errores en plataformas no compatibles (iOS Safari web) se silencian sin romper el flujo.
+- **Añadido:** Overlay CSS `#jd-rotate-overlay` visible únicamente en `@media (orientation: portrait)`. Cubre el canvas y muestra un icono animado con el mensaje "Gira tu dispositivo". Mecanismo de protección principal para iOS Safari, donde `orientation.lock` no está disponible en contextos web.
+- **Eliminado:** `#jd-touch-hint` — el hint táctil "👆 Toca para saltar" se elimina del HTML, CSS y lógica de actualización. La mecánica es autodescubrible.
+- **Eliminado:** `#jd-biome-label` — la etiqueta de texto de bioma se elimina del HTML, CSS y ticker de UI. El bioma queda comunicado únicamente a través del arte visual (parallax + paleta).
+- **Reubicado:** `#jd-mute-btn` se desacopla del `<header id="jd-hud">` y se traslada a `#jd-mute-container` (elemento `fixed` independiente). Solo es visible en los estados `START` y `GAMEOVER`; se oculta automáticamente durante `PLAYING` mediante la clase CSS `.jd-hidden` gestionada por el glue script.
+- **Limpieza:** Se eliminan `box-shadow` y `border` de `#jd-container`. En fullscreen generan *gaps* blancos visibles en los bordes y consumen GPU innecesariamente.
+- **HUD responsivo:** Padding, fuentes y tamaños del HUD migrados de px fijos a unidades relativas (`clamp`, `vw`, `vh`) para escalar correctamente en tablets y pantallas grandes en modo fullscreen.
+
+---
+
+*Documentación de Jungle Dash · Love Arcade · v1.1.0 · 2026*
