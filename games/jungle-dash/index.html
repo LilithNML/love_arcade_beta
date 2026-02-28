@@ -21,7 +21,7 @@
 
         /* ── Contenedor principal ──────────────────────────────────────────── */
         /* Sin box-shadow ni border: en fullscreen generan gaps blancos y
-           consumen GPU innecesariamente.                                       */
+           consumen GPU de forma innecesaria.                                  */
         #jd-container {
             position: relative;
             width: 100vw;
@@ -31,7 +31,7 @@
             justify-content: center;
         }
 
-        /* ── Canvas ────────────────────────────────────────────────────────── */
+        /* ── Canvas (posicionado absolutamente por JD_Renderer) ────────────── */
         #JD_canvas {
             position: absolute;
             display: block;
@@ -52,8 +52,10 @@
             justify-content: space-between;
             padding: 1vh 1.5vw;
             background: linear-gradient(to bottom, rgba(0,0,0,0.72), transparent);
-            pointer-events: none;
+            pointer-events: none; /* El HUD no bloquea el canvas */
         }
+
+        /* Todos los hijos del HUD recuperan eventos de puntero */
         #jd-hud > * { pointer-events: all; }
 
         /* ── Botón de retorno ──────────────────────────────────────────────── */
@@ -75,9 +77,7 @@
         #jd-back-btn:active { background: rgba(40,40,40,0.7); }
         #jd-back-btn svg { flex-shrink: 0; }
 
-        /* ── Info de sesión: puntuación en vivo ────────────────────────────── */
-        /* JD_drawHUD() fue eliminado del canvas (v1.2.0). La puntuación ahora
-           se muestra aquí, con renderizado nítido del navegador en Retina/OLED. */
+        /* ── Info de sesión (puntos) ───────────────────────────────────────── */
         #jd-session-info {
             display: flex;
             align-items: center;
@@ -90,21 +90,9 @@
             padding: 0.6vh 1vw;
         }
         #jd-session-info svg { flex-shrink: 0; }
-        #jd-pts-label {
-            font-weight: 600;
-            font-size: clamp(10px, 1vw, 12px);
-            opacity: 0.7;
-            margin-right: 2px;
-        }
-        #jd-score-display {
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 700;
-            font-size: clamp(13px, 1.4vw, 16px);
-            letter-spacing: 1px;
-            color: #fff;
-        }
+        #jd-pts-label { font-weight: 600; font-size: clamp(10px, 1vw, 12px); opacity: 0.7; }
 
-        /* ── HUD inferior: récord ──────────────────────────────────────────── */
+        /* ── HUD inferior: récord (solo visible en PLAYING) ────────────────── */
         #jd-hud-bottom {
             position: fixed;
             bottom: 1.5vh;
@@ -130,9 +118,9 @@
             margin-left: 4px;
         }
 
-        /* ── Botón de mute (solo en START / GAMEOVER) ──────────────────────── */
-        /* Desacoplado del HUD superior para evitar activaciones accidentales
-           con los pulgares. La clase .jd-hidden la gestiona el glue script.   */
+        /* ── Botón de mute (solo visible en pantallas START y GAMEOVER) ─────── */
+        /* Se separa del HUD superior para evitar activaciones accidentales
+           con los pulgares durante el juego.                                   */
         #jd-mute-container {
             position: fixed;
             bottom: 4vh;
@@ -152,6 +140,7 @@
             background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px;
+            padding: 0.6vh 0.8vw;
             cursor: pointer;
             color: rgba(255,255,255,0.85);
             transition: background 0.2s;
@@ -163,25 +152,15 @@
         .jd-sound-off { display: none; color: rgba(255,100,100,0.85); }
 
         /* ── Overlay "Gira tu dispositivo" ─────────────────────────────────── */
-        /*
-         * COMPORTAMIENTO v1.2.0:
-         *   - Oculto por defecto (display: none).
-         *   - El juego permanece VISIBLE en portrait para que el usuario pueda
-         *     tocar la pantalla y desencadenar requestFullscreen() + orientation.lock().
-         *   - El overlay se activa ÚNICAMENTE por JS (clase .jd-visible) cuando
-         *     orientation.lock() es rechazado por el navegador (ej. iOS Safari web).
-         *   - Desaparece automáticamente cuando el usuario gira el dispositivo
-         *     (listener 'orientationchange' en el glue script).
-         *
-         * NO hay ninguna regla @media (orientation: portrait) que oculte el canvas
-         * o el contenedor del juego.
-         */
+        /* Visible solo cuando el teléfono está en portrait.
+           iOS/Safari no soporta orientation.lock en web, por lo que este
+           mensaje CSS es el mecanismo de protección principal en esa plataforma. */
         #jd-rotate-overlay {
-            display: none;
+            display: none;              /* oculto por defecto (landscape) */
             position: fixed;
             inset: 0;
             z-index: 9999;
-            background: rgba(5, 13, 7, 0.96);
+            background: #050d07;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -190,19 +169,16 @@
             text-align: center;
             padding: 24px;
         }
-        #jd-rotate-overlay.jd-visible {
-            display: flex;
-        }
         #jd-rotate-overlay svg {
             animation: jd-rotate-icon 2s ease-in-out infinite;
             opacity: 0.75;
         }
         @keyframes jd-rotate-icon {
-            0%, 100% { transform: rotate(-20deg); }
-            50%       { transform: rotate(20deg);  }
+            0%, 100% { transform: rotate(-15deg); }
+            50%       { transform: rotate(15deg);  }
         }
         #jd-rotate-overlay p {
-            font-size: clamp(18px, 4vw, 24px);
+            font-size: clamp(16px, 4vw, 22px);
             font-weight: 700;
             letter-spacing: 0.5px;
         }
@@ -211,24 +187,31 @@
             opacity: 0.55;
         }
 
+        /* Activar overlay en portrait y ocultar canvas para evitar
+           errores de renderizado en dimensiones incorrectas.                  */
+        @media (orientation: portrait) {
+            #jd-rotate-overlay { display: flex; }
+            #JD_canvas          { visibility: hidden; }
+        }
+
         /* ── Scrollbar oculta ──────────────────────────────────────────────── */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
 
-<!-- ── Overlay "Gira tu dispositivo" ────────────────────────────────────── -->
-<!-- Activado exclusivamente por JS en _requestFullscreen() cuando
-     orientation.lock() falla. Crítico para iOS Safari (no soporta la API en web).
-     El juego es visible en portrait para permitir la interacción inicial.      -->
-<div id="jd-rotate-overlay" role="alert" aria-live="assertive">
+<!-- ── Overlay de orientación portrait ──────────────────────────────────── -->
+<!-- Critico en iOS/Safari, donde orientation.lock no está disponible en web -->
+<div id="jd-rotate-overlay" aria-live="polite" role="alert">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
          stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
         <line x1="12" y1="18" x2="12.01" y2="18"/>
-        <path d="M17 9l3 3-3 3" stroke="rgba(255,200,0,0.9)" stroke-width="2"/>
-        <path d="M20 12H10" stroke="rgba(255,200,0,0.9)" stroke-width="2"/>
+        <path d="M8 2h8"/>
+        <!-- flecha indicando rotación -->
+        <path d="M17 9l3 3-3 3" stroke="rgba(255,200,0,0.85)" stroke-width="2"/>
+        <path d="M20 12H10" stroke="rgba(255,200,0,0.85)" stroke-width="2"/>
     </svg>
     <p>Gira tu dispositivo</p>
     <small>Jungle Dash requiere orientación horizontal</small>
@@ -240,6 +223,8 @@
 </div>
 
 <!-- ── HUD superior ─────────────────────────────────────────────────────── -->
+<!-- El botón de mute se ha retirado de aquí para evitar pulsaciones
+     accidentales durante el juego. Ahora reside en #jd-mute-container.      -->
 <header id="jd-hud" role="toolbar" aria-label="Controles del juego">
 
     <!-- Botón de retorno al hub — ruta obligatoria: ../../index.html -->
@@ -252,9 +237,7 @@
         Love Arcade
     </a>
 
-    <!-- Puntuación en vivo — renderizado DOM (nítido en Retina / OLED)     -->
-    <!-- Reemplaza al antiguo JD_drawHUD() del canvas, eliminado en v1.2.0. -->
-    <!-- El glue script actualiza #jd-score-display a 10 fps.               -->
+    <!-- Info de sesión: puntuación actual -->
     <div id="jd-session-info" role="status" aria-live="polite" aria-atomic="true"
          aria-label="Puntuación actual">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -264,8 +247,7 @@
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        <span id="jd-pts-label">PTS</span>
-        <span id="jd-score-display">000000</span>
+        <span id="jd-pts-label">PUNTOS</span>
     </div>
 
 </header>
@@ -277,15 +259,18 @@
     </div>
 </div>
 
-<!-- ── Botón de mute (pantallas START / GAMEOVER) ────────────────────────── -->
+<!-- ── Botón de mute (pantallas START / GAMEOVER únicamente) ─────────────── -->
+<!-- Desacoplado del HUD superior. JD_Core.js gestiona su visibilidad. -->
 <div id="jd-mute-container" aria-label="Control de audio">
     <button id="jd-mute-btn" type="button" aria-label="Activar/desactivar audio">
+        <!-- Ícono sonido activo -->
         <svg class="jd-sound-on" width="20" height="20" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
              aria-hidden="true">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
         </svg>
+        <!-- Ícono mute -->
         <svg class="jd-sound-off" width="20" height="20" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
              aria-hidden="true">
@@ -305,54 +290,35 @@
 <script src="js/JD_Renderer.js"></script>
 <script src="js/JD_Core.js"></script>
 
-<!-- Glue: sincronización del HUD DOM con el estado interno del juego ──── -->
+<!-- Glue: sincronización del HUD HTML con el estado del canvas ─────────── -->
 <script>
 (function () {
     'use strict';
 
-    const JD_scoreDisplay  = document.getElementById('jd-score-display');
-    const JD_hsDisplay     = document.getElementById('jd-highscore-display');
+    const JD_hsDisplay    = document.getElementById('jd-highscore-display');
     const JD_muteContainer = document.getElementById('jd-mute-container');
-    const JD_overlay       = document.getElementById('jd-rotate-overlay');
 
-    // ── Visibilidad del botón de mute ────────────────────────────────────────
-    // Solo visible en START y GAMEOVER. Oculto en PLAYING para evitar
-    // activaciones accidentales con los pulgares durante el juego.
+    // Visibilidad del botón de mute:
+    // Solo se muestra en START y GAMEOVER para evitar toques accidentales.
     function JD_syncMuteVisibility() {
         if (!JD_muteContainer || typeof JD_Core === 'undefined') return;
-        JD_muteContainer.classList.toggle('jd-hidden', JD_Core.state === 'PLAYING');
+        const JD_playing = JD_Core.state === 'PLAYING';
+        if (JD_playing) {
+            JD_muteContainer.classList.add('jd-hidden');
+        } else {
+            JD_muteContainer.classList.remove('jd-hidden');
+        }
     }
 
-    // ── Listener de orientación para ocultar el overlay ──────────────────────
-    // Cuando el usuario rota manualmente a landscape tras ver el overlay, este
-    // desaparece sin necesidad de ninguna interacción adicional.
-    window.addEventListener('orientationchange', () => {
-        if (!JD_overlay) return;
-        // Pequeño delay para que innerWidth/Height se actualicen tras el evento
-        setTimeout(() => {
-            if (window.innerWidth > window.innerHeight) {
-                JD_overlay.classList.remove('jd-visible');
-            }
-        }, 100);
-    });
-
-    // ── Ticker de UI a 10 fps ────────────────────────────────────────────────
-    // 100 ms es suficiente para actualizar contadores de texto en el HUD.
+    // Ticker de UI (~10 fps es suficiente para etiquetas y badges)
     setInterval(() => {
-
-        // Puntuación en vivo — sustituye a JD_drawHUD() eliminado del canvas
-        if (JD_scoreDisplay && typeof JD_Core !== 'undefined') {
-            JD_scoreDisplay.textContent = Math.floor(JD_Core.score)
-                .toString().padStart(6, '0');
-        }
-
-        // Récord personal
+        // ── Récord en el badge ───────────────────────────────────────────────
         if (JD_hsDisplay) {
             const JD_hs = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
             JD_hsDisplay.textContent = JD_hs.toString().padStart(6, '0');
         }
 
-        // Visibilidad del botón de mute según estado del juego
+        // ── Visibilidad del mute ─────────────────────────────────────────────
         JD_syncMuteVisibility();
 
     }, 100);
@@ -360,8 +326,6 @@
 </script>
 
 <!-- Motor central de Love Arcade — DEBE ir al final del body ────────────── -->
-<!-- ⚠️  NO MODIFICAR: crítico para la persistencia de monedas y la
-     comunicación con el backend de la plataforma (Game Center).              -->
 <script src="../../js/app.js"></script>
 
 </body>
