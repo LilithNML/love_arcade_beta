@@ -531,8 +531,10 @@ const JD_Renderer = (() => {
                 JD_drawPlayer(JD_player, JD_isJumping);
             }
 
-            // HUD
-            JD_drawHUD(score, state);
+            // HUD — renderizado exclusivamente por el DOM (#jd-session-info).
+            // JD_drawHUD se mantiene como referencia pero NO se llama para
+            // evitar el doble renderizado y el texto borroso en pantallas Retina.
+            // JD_drawHUD(score, state);
 
             // Pantallas de estado
             if (state === 'START')    JD_drawStartScreen();
