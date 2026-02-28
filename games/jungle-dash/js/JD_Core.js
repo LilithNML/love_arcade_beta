@@ -174,13 +174,13 @@ const JD_Core = {
     // ── Acción unificada de inicio/salto ──────────────────────────────────────
     _onActionStart() {
         // ── Primera interacción ───────────────────────────────────────────────
-        // Los navegadores exigen un gesto de usuario para desbloquear tanto el
-        // AudioContext como la Fullscreen API. Ambas se activan aquí de forma
-        // simultánea para no requerir un segundo gesto.
+        // Desbloquea el AudioContext (requiere gesto de usuario).
+        // Fullscreen + orientation.lock se gestionan desde el glue script de
+        // index.html mediante el patrón no-bloqueante (v1.2.1), que dispara
+        // antes que este listener (window vs canvas).
         if (!JD_firstInteract) {
             JD_firstInteract = true;
             JD_Audio.init();
-            JD_Core._requestFullscreen(); // Fullscreen + orientation lock
         }
 
         if (JD_currentState === JD_STATES.START) {
@@ -193,99 +193,21 @@ const JD_Core = {
     },
 
     // ── Fullscreen + orientation lock ─────────────────────────────────────────
-    // Se aplica sobre #jd-container (no el canvas) para que el HUD HTML
-    // permanezca visible en modo pantalla completa.
-    // Compatibilidad: prefijo webkit para Safari en macOS/iPadOS.
-    //
-    // Nuevo comportamiento (v1.2.0):
-    //   1. Se intenta requestFullscreen + orientation.lock('landscape').
-    //   2. Si orientation.lock tiene éxito → el navegador rota el dispositivo;
-    //      el overlay permanece oculto.
-    //   3. Si orientation.lock falla (iOS Safari, Firefox escritorio, etc.) →
-    //      se activa el overlay "Gira tu dispositivo" solo si el dispositivo
-    //      sigue en portrait en ese momento.
-    //   4. Un listener de 'resize' oculta el overlay automáticamente cuando
-    //      el usuario gira el dispositivo de forma manual.
-    // El canvas NO se oculta con CSS, por lo que la pantalla START es visible
-    // en cualquier orientación antes de la primera interacción.
+    // ⚠️  DEPRECADO en v1.2.1 — La gestión de fullscreen y orientation.lock
+    // ha sido trasladada íntegramente al glue script de index.html, que usa
+    // el patrón no-bloqueante (sin await) para preservar el User Gesture Token
+    // en Android. _requestFullscreen ya no se llama desde ningún lugar del módulo.
+    // Se conserva el stub para compatibilidad con cualquier referencia externa.
     _requestFullscreen() {
-        const JD_el = document.getElementById('jd-container');
-        if (!JD_el) return;
-
-        const JD_rfs = JD_el.requestFullscreen
-                    || JD_el.webkitRequestFullscreen
-                    || JD_el.mozRequestFullScreen
-                    || JD_el.msRequestFullscreen;
-
-        if (!JD_rfs) {
-            console.info('[JD] Fullscreen API no disponible en este navegador.');
-            // Sin fullscreen API tampoco hay orientation.lock → activar overlay si portrait
-            JD_Core._checkRotateOverlay();
-            return;
-        }
-
-        JD_rfs.call(JD_el)
-            .then(() => {
-                console.log('[JD] Fullscreen activado.');
-                if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    screen.orientation.lock('landscape')
-                        .then(() => {
-                            console.log('[JD] Orientación fijada en landscape.');
-                            // El navegador ha rotado — overlay innecesario
-                            JD_Core._hideRotateOverlay();
-                        })
-                        .catch((JD_err) => {
-                            // iOS/Safari web: NotSupportedError — comportamiento esperado.
-                            console.info('[JD] orientation.lock no soportado:', JD_err.message);
-                            JD_Core._checkRotateOverlay();
-                        });
-                } else {
-                    // Navegador sin orientation.lock
-                    JD_Core._checkRotateOverlay();
-                }
-            })
-            .catch((JD_err) => {
-                // Fullscreen rechazado (iframe sin permiso, denegación del usuario…)
-                console.info('[JD] Fullscreen rechazado:', JD_err.message);
-                JD_Core._checkRotateOverlay();
-            });
+        console.info('[JD] _requestFullscreen() deprecado — gestionado por el glue script (v1.2.1).');
     },
 
-    // ── Overlay "Gira tu dispositivo" — gestión JS ────────────────────────────
-    // Muestra el overlay solo si el dispositivo está en portrait después de
-    // que orientation.lock haya fallado. Registra un listener de resize para
-    // ocultarlo automáticamente cuando el usuario gire el dispositivo.
-    _checkRotateOverlay() {
-        if (window.innerWidth < window.innerHeight) {
-            JD_Core._showRotateOverlay();
-        }
-        // Registrar solo una vez
-        if (!JD_Core._rotateListenerActive) {
-            JD_Core._rotateListenerActive = true;
-            window.addEventListener('resize', JD_Core._onOrientationChange);
-        }
-    },
-
-    _showRotateOverlay() {
-        const JD_ov = document.getElementById('jd-rotate-overlay');
-        if (JD_ov) JD_ov.style.display = 'flex';
-    },
-
-    _hideRotateOverlay() {
-        const JD_ov = document.getElementById('jd-rotate-overlay');
-        if (JD_ov) JD_ov.style.display = 'none';
-    },
-
-    // Callback de resize: oculta/muestra el overlay según la orientación actual
-    _onOrientationChange() {
-        if (window.innerWidth >= window.innerHeight) {
-            JD_Core._hideRotateOverlay();
-        } else {
-            JD_Core._showRotateOverlay();
-        }
-    },
-
-    // Flag interno: evita añadir el listener de resize más de una vez
+    // ── Helpers de overlay — deprecados en v1.2.1 ────────────────────────────
+    // El overlay "Gira tu dispositivo" también lo gestiona el glue script.
+    _checkRotateOverlay()    {},
+    _showRotateOverlay()     {},
+    _hideRotateOverlay()     {},
+    _onOrientationChange()   {},
     _rotateListenerActive: false,
 
     // ── Botón de mute ─────────────────────────────────────────────────────────
