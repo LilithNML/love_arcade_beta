@@ -1,6 +1,6 @@
 # Jungle Dash — Documentación del Juego
 
-> **Versión:** `1.2.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
+> **Versión:** `1.3.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
 > **Namespace:** `JD_` · **Motor:** Game Center Core v7.5
 
 ---
@@ -53,18 +53,30 @@ El salto no es binario: la altura final depende del tiempo de presión sobre el 
 
 El delta de tiempo se normaliza a 60 fps (`delta = Δt / 16.667`) y se limita a un máximo de 3 para evitar *tunneling* ante bajadas de framerate.
 
-### Detección de colisiones (AABB al 80 %)
+### Detección de colisiones (hitbox diferencial v1.3.0)
 
-Las cajas de colisión se reducen simétricamente al **80 % del tamaño real del sprite** en ambos ejes. Esto produce una experiencia más justa al evitar falsos positivos en los bordes visuales de los sprites.
+Las cajas de colisión aplican factores distintos según el tipo de entidad para maximizar la fairness en obstáculos y la accesibilidad en recompensas:
+
+| Entidad | Factor | Efecto |
+|---|---|---|
+| Obstáculos (`JD_HITBOX_FACTOR`) | **0.80** | Caja reducida al 80 % del sprite — evita falsos positivos en bordes visuales |
+| Ítems / Super Monedas (`JD_ITEM_HITBOX_FACTOR`) | **1.30** | Caja expandida al 130 % — efecto magnético, elimina "casi lo agarro" |
 
 ```
+// Obstáculo (reducción simétrica 80%)
 hitbox.x = entity.x + entity.w * 0.10
 hitbox.y = entity.y + entity.h * 0.10
 hitbox.w = entity.w * 0.80
 hitbox.h = entity.h * 0.80
+
+// Ítem de recompensa (expansión simétrica 130%)
+hitbox.x = entity.x - entity.w * 0.15
+hitbox.y = entity.y - entity.h * 0.15
+hitbox.w = entity.w * 1.30
+hitbox.h = entity.h * 1.30
 ```
 
-Al detectarse una colisión, `JD_Core` detiene el loop de juego, reproduce el SFX de impacto, calcula la recompensa e invoca el flujo de fin de partida.
+Al detectarse una colisión con un obstáculo, `JD_Core` detiene el loop de juego, reproduce el SFX de impacto, calcula la recompensa e invoca el flujo de fin de partida. Al detectarse solapamiento con un ítem, este se retira del array y se reproduce el SFX correspondiente.
 
 ---
 
@@ -109,47 +121,34 @@ START ──(primera interacción)──→ PLAYING ──(colisión)──→ G
 
 ## 4. Sistema de puntuación y economía
 
-### Puntuación
+> 📄 **La documentación completa del sistema de economía de recompensas se encuentra en el archivo dedicado:**  
+> **[`jungle-dash-economy.md`](./jungle-dash-economy.md)**
+>
+> Ese documento cubre en detalle: conversión pasiva y activa de monedas, multiplicador dinámico de score, mecánica de la Super Moneda, matriz de balance, hitbox diferencial (magnetismo) y flujo de reporte al GameCenter.
 
-La puntuación aumenta continuamente mientras el jugador está en estado `PLAYING`:
+### Resumen rápido (v1.3.0)
 
-```js
-JD_score += delta * 0.85;  // ~51 puntos por segundo a 60 fps
-```
-
-El resultado se muestra en el canvas como un contador de 6 dígitos con ceros a la izquierda.
-
-### Conversión a monedas Love Arcade
-
-Al finalizar la partida se aplica la regla de negocio definida en el brief técnico:
+La puntuación aumenta con un **multiplicador dinámico** que premia la longevidad:
 
 ```js
-JD_coinsEarned = Math.floor(JD_score / 500);
+// JD_Core.js — _update()
+JD_score += (delta * 0.1) * JD_currentMultiplier;
 ```
 
-| Puntuación | Monedas otorgadas |
+| Tramo | Multiplicador |
 |---|---|
-| 0 – 499 | 0 (no se reporta al GameCenter) |
-| 500 – 999 | 1 |
-| 1 000 – 1 499 | 2 |
-| 5 000 | 10 |
-| 10 000 | 20 |
+| 0 – 1 000 pts | 1.0× |
+| 1 001 – 3 000 pts | 1.5× |
+| 3 001 + pts | 2.0× |
 
-Si el resultado es `0`, la llamada al GameCenter se omite para respetar la regla de validación `coins > 0` del sistema universal.
-
-### Flujo de reporte al GameCenter
+Al finalizar la partida, las monedas se calculan desde dos fuentes y se reportan al GameCenter en una única llamada:
 
 ```js
-// JD_Core.js — gameOver()
-if (JD_coinsEarned > 0) {
-    if (typeof window.GameCenter !== 'undefined') {
-        const JD_sessionId = 'jd_session_' + Date.now();
-        window.GameCenter.completeLevel('jungle-dash', JD_sessionId, JD_coinsEarned);
-    }
-}
+JD_coinsEarned = Math.floor(JD_score / 40)           // pasivas
+               + JD_Entities.superCoinsCollected * 25; // activas (Super Monedas)
 ```
 
-El `levelId` se genera con `Date.now()` para garantizar la unicidad de cada sesión y evitar el rechazo por idempotencia del sistema.
+**Meta de diseño:** ~200 monedas en 5 000 puntos.
 
 ---
 
@@ -232,6 +231,10 @@ Todos los efectos se sintetizan en tiempo real sin latencia mediante la creació
 |---|---|---|
 | Salto | Oscilador `square` con sweep ascendente | Tono agudo de ~150 ms |
 | Colisión | Buffer de ruido blanco filtrado (`lowpass`) | Impacto de ~300 ms |
+| Moneda normal (`playCoin`) | Oscilador `triangle` 520 Hz → 880 Hz | Tono suave de 0.18 s |
+| Super Moneda (`playSuperCoin`) | Dos osciladores `triangle` en cadena, 900–2 000 Hz | Doble tono agudo de ~0.24 s |
+
+> El SFX de Super Moneda tiene un pitch más agudo y una estructura de dos notas para diferenciarlo inequívocamente del sonido de coleccionables ordinarios, reforzando el feedback positivo.
 
 ### Control de mute
 
@@ -388,6 +391,7 @@ Si los assets gráficos no están disponibles o no cargan en menos de **5 segund
 | Jugador (jaguar) | Rectángulo `rgba(255, 200, 0, 1)` con orejas, manchas y ojos |
 | Obstáculo: planta | Triángulo `rgba(200, 50, 50, 1)` con dentículos decorativos |
 | Obstáculo: tronco | Triángulo `rgba(200, 50, 50, 1)` horizontal con anillos |
+| Super Moneda | Círculo con gradiente dorado radial, halo exterior y estrella de 4 puntas blanca |
 | Fondos | Gradientes de color por bioma, árboles y ruinas procedurales |
 | Suelo | Línea base continua de 4 px de grosor en color de acento del bioma |
 | BGM | Melodía pentatónica generada con Web Audio API |
@@ -404,7 +408,7 @@ El fallback se activa de forma transparente: el jugador no recibe ningún mensaj
 |---|---|
 | `gameId` | `'jungle-dash'` |
 | `levelId` | `'jd_session_' + Date.now()` |
-| `rewardAmount` | `Math.floor(JD_score / 500)` |
+| `rewardAmount` | `Math.floor(score / 40) + superCoinsCollected × 25` |
 | Namespace JS | `JD_` |
 
 ### Inclusión del motor central
@@ -443,22 +447,36 @@ El juego solo escribe en `localStorage` bajo claves con prefijo `JD_`. No lee ni
 
 ```
 games/jungle-dash/
-├── index.html                  ← Entrada principal. HUD, canvas, overlay portrait, scripts.
+├── index.html                       ← Entrada principal. HUD, canvas, overlay portrait, scripts.
+├── docs/
+│   ├── jungle-dash-docs.md          ← Documentación general del juego (este archivo)
+│   └── jungle-dash-economy.md       ← Documentación dedicada de la economía de recompensas (v1.3.0)
 ├── js/
-│   ├── JD_Audio.js             ← Módulo de audio (Web Audio API)
-│   ├── JD_Physics.js           ← Módulo de física (gravedad, salto, AABB)
-│   ├── JD_Entities.js          ← Módulo de entidades (jugador, obstáculos)
-│   ├── JD_Renderer.js          ← Módulo de renderizado (canvas, parallax, biomas)
-│   └── JD_Core.js              ← Módulo principal (loop, estados, input, fullscreen, GameCenter)
+│   ├── JD_Audio.js                  ← Módulo de audio (Web Audio API + SFX playCoin/playSuperCoin)
+│   ├── JD_Physics.js                ← Módulo de física (gravedad, salto, AABB, hitbox diferencial)
+│   ├── JD_Entities.js               ← Módulo de entidades (jugador, obstáculos, Super Monedas)
+│   ├── JD_Renderer.js               ← Módulo de renderizado (canvas, parallax, biomas, Super Monedas)
+│   └── JD_Core.js                   ← Módulo principal (loop, estados, input, multiplicador, GameCenter)
 └── assets/
-    ├── sprites/                ← Assets gráficos (ver guía de sprites)
+    ├── sprites/
+    │   └── JD_item_supercoin.webp   ← Sprite de la Super Moneda (32×32 px, con fallback procedural)
     └── audio/
-        └── JD_bgm_jungle.mp3   ← Música de fondo (opcional; hay fallback procedural)
+        └── JD_bgm_jungle.mp3        ← Música de fondo (opcional; hay fallback procedural)
 ```
 
 ---
 
 ## Historial de cambios
+
+### v1.3.0 — Optimización del Sistema de Recompensas
+
+- **Añadido:** Multiplicador de score dinámico (`JD_currentMultiplier`): 1.0× (0–1 000 pts), 1.5× (1 001–3 000 pts), 2.0× (3 001+ pts). Nueva fórmula: `JD_score += (delta * 0.1) * JD_currentMultiplier`.
+- **Añadido:** Nueva entidad `JD_SuperCoin` con efecto de flotación senoidal (`y = baseY + sin(t) * 12`). Spawn al 5 % de probabilidad por ciclo, habilitado tras los 1 000 puntos. Valor: 25 monedas cada una.
+- **Añadido:** Sprite `JD_item_supercoin.webp` (32×32 px) con fallback procedural dorado (gradiente radial + halo + estrella de 4 puntas).
+- **Añadido:** Hitbox diferencial en `JD_Physics`: `JD_ITEM_HITBOX_FACTOR = 1.30` para ítems de recompensa (efecto magnético), manteniendo `JD_HITBOX_FACTOR = 0.80` para obstáculos. Nuevo método público `checkItemCollection()`.
+- **Añadido:** SFX `playCoin()` (triangle 520→880 Hz, 0.18 s) y `playSuperCoin()` (doble nota 900→2 000 Hz, ~0.24 s) en `JD_Audio`.
+- **Modificado:** Economía de monedas dual: pasiva `Math.floor(score / 40)` + activa `superCoinsCollected × 25`. Meta: ~200 monedas en 5 000 pts.
+- **Documentación:** Sección de economía extraída a `jungle-dash-economy.md` (archivo dedicado). `jungle-dash-docs.md` conserva el resumen rápido con referencia cruzada.
 
 ### v1.2.0 — Corrección de activación Fullscreen desde canvas (Glue Script v2.1.0)
 
@@ -486,4 +504,4 @@ games/jungle-dash/
 
 ---
 
-*Documentación de Jungle Dash · Love Arcade · v1.2.0 · 2026*
+*Documentación de Jungle Dash · Love Arcade · v1.3.0 · 2026*
