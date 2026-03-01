@@ -1,6 +1,6 @@
 # Jungle Dash — Documentación del Juego
 
-> **Versión:** `1.1.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
+> **Versión:** `1.2.0` · **Plataforma:** Love Arcade · **ID del juego:** `jungle-dash`  
 > **Namespace:** `JD_` · **Motor:** Game Center Core v7.5
 
 ---
@@ -264,42 +264,67 @@ El canvas captura los eventos `touchstart` y `touchend` con `passive: false` par
 
 ## 9. Experiencia móvil y pantalla completa
 
-### Fullscreen API
+### Fullscreen API — Glue Script v2.1.0
 
-Al detectar la primera interacción del usuario, `JD_Core._requestFullscreen()` activa el modo pantalla completa sobre el elemento `#jd-container` (no el canvas). Usar el contenedor en lugar del canvas permite que el HUD HTML siga siendo visible y accesible en modo fullscreen.
+La inmersión (fullscreen + orientation lock) se gestiona íntegramente en el **glue script** de `index.html`. `JD_Core._requestFullscreen()` es un stub vacío mantenido solo por compatibilidad; no se invoca desde ningún lugar del motor.
+
+El glue script opera en dos fases separadas:
+
+**Fase 1 — Desbloqueo de AudioContext (`pointerdown` en `window`, `passive: true`)**
+
+Se registra en el momento de carga. Al primer contacto (sea sobre el canvas, el HUD o cualquier punto de la pantalla), crea el `AudioContext` en estado `suspended` sin emitir sonido. El uso de `passive: true` garantiza que no se bloquea el hilo principal.
+
+**Fase 2 — Inmersión completa (`touchstart` + `click` en `#jd-container`, `capture: true`)**
+
+El punto clave de la v2.1.0 es que el listener se registra sobre **`#jd-container`** (no en `window`) y usa la **fase de captura**, lo que garantiza que el contenedor intercepta el gesto **antes de que el canvas pueda llamar a `preventDefault()`**:
 
 ```js
-// JD_Core.js — _requestFullscreen()
-const JD_el = document.getElementById('jd-container');
-const JD_rfs = JD_el.requestFullscreen
-             || JD_el.webkitRequestFullscreen   // Safari / Chrome iOS
-             || JD_el.mozRequestFullScreen
-             || JD_el.msRequestFullscreen;
-
-JD_rfs.call(JD_el).then(() => {
-    screen.orientation.lock('landscape').catch(() => {});
-});
+// index.html — glue script v2.1.0
+JD_container.addEventListener('touchstart', JD_immersionHandler, { capture: true, passive: false });
+JD_container.addEventListener('click',      JD_immersionHandler, { capture: true });
 ```
 
-La activación se integra en el mismo gesto que desbloquea el `AudioContext`, evitando la necesidad de un segundo gesto de usuario.
+- **`touchstart` (capture):** cubre el canal táctil aunque `preventDefault()` suprima la generación del evento `click` posterior. Es el camino principal en móvil.
+- **`click` (capture):** cubre escritorio y teclado donde no hay `touchstart`.
+- **Sin `stopPropagation`:** el evento sigue propagándose hacia `JD_Core._onActionStart()`, que gestiona el cambio de estado (`startGame` / `startJump`) de forma natural.
+- **Sin llamada explícita a `startGame()`:** `JD_Core` lo hace al recibir el evento a través de sus propios listeners.
+
+El handler se auto-elimina tras la primera ejecución para no interferir con los saltos posteriores.
+
+```js
+const JD_immersionHandler = () => {
+    JD_container.removeEventListener('touchstart', JD_immersionHandler, { capture: true });
+    JD_container.removeEventListener('click',      JD_immersionHandler, { capture: true });
+
+    const JD_fsReq = JD_container.requestFullscreen || JD_container.webkitRequestFullscreen /* … */;
+    if (JD_fsReq) {
+        JD_fsReq.call(JD_container)
+            .then(() => {
+                // orientation.lock DENTRO del .then(): el SO ya concedió fullscreen.
+                if (screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {});
+            })
+            .catch(() => { /* Fullscreen denegado — juego continúa en modo ventana */ });
+    }
+};
+```
+
+### Por qué v2.0.0 fallaba
+
+La v2.0.0 escuchaba `click` en `window`. En móvil, el canvas tiene un listener `touchstart` con `passive: false` que llama a `e.preventDefault()`. Esto suprime la generación del evento `click` sintético por parte del navegador, por lo que el trigger de inmersión nunca se disparaba cuando el primer toque caía sobre el canvas (el 100 % del área visual en móvil).
 
 ### Forzado de orientación (`orientation.lock`)
 
-Tras activar el fullscreen, se invoca `screen.orientation.lock('landscape')` para fijar la orientación horizontal. Los errores se silencian con `.catch(() => {})` ya que esta API **no está soportada en iOS Safari web** (solo en PWA instaladas).
+Tras activar el fullscreen, se invoca `screen.orientation.lock('landscape')` encadenado dentro del `.then()` de la promesa de `requestFullscreen`. Esto es crítico: llamarlo de forma síncrona antes de que la promesa resuelva provoca que Android rechace el lock porque el SO todavía no ha aplicado el cambio de ventana.
+
+Los errores se silencian con `.catch(() => {})` ya que esta API **no está soportada en iOS Safari web** (solo en PWA instaladas).
+
+Un listener adicional en `fullscreenchange` reintenta el orientation lock para Samsung Internet y WebViews que disparan el evento de forma diferida (hasta 600 ms después de que `requestFullscreen` resuelva).
 
 ### Overlay "Gira tu dispositivo"
 
-Para cubrir el caso de iOS y cualquier otro navegador que no soporte `orientation.lock`, se implementa un bloqueo por CSS mediante una media query de orientación:
+El overlay `#jd-rotate-overlay` (`position: fixed`, `z-index: 9999`) se activa **exclusivamente por JavaScript**, no por `@media (orientation: portrait)`. El glue script lo oculta en cuanto se dispara la inmersión, y un listener `resize` lo vuelve a ocultar cuando el usuario gira el dispositivo manualmente (caso iOS Safari donde `orientation.lock` no está disponible).
 
-```css
-/* index.html — overlay portrait */
-@media (orientation: portrait) {
-    #jd-rotate-overlay { display: flex; }   /* Muestra el mensaje */
-    #JD_canvas          { visibility: hidden; } /* Evita errores de renderizado */
-}
-```
-
-El overlay `#jd-rotate-overlay` es un elemento `position: fixed` con `z-index: 9999` que cubre completamente la pantalla, mostrando un icono animado y el mensaje "Gira tu dispositivo". El canvas se oculta con `visibility: hidden` (en lugar de `display: none`) para preservar sus dimensiones y evitar que `JD_Renderer` recalcule el layout durante la rotación.
+Esta arquitectura permite que la pantalla de inicio (`START`) sea visible en cualquier orientación antes de la primera interacción, sin bloquear el primer tap que desencadenará `requestFullscreen`.
 
 ### Notas de compatibilidad
 
@@ -394,6 +419,14 @@ games/jungle-dash/
 
 ## Historial de cambios
 
+### v1.2.0 — Corrección de activación Fullscreen desde canvas (Glue Script v2.1.0)
+
+- **Corregido:** La inmersión (Fullscreen API + `orientation.lock`) no se activaba cuando el primer toque del usuario caía directamente sobre el canvas (el área de juego). En móvil, el canvas ocupa el 100 % de la superficie visual, haciendo el bug reproducible en prácticamente todos los dispositivos.
+- **Causa:** El glue script v2.0.0 escuchaba el evento `click` en `window`. El canvas registra `touchstart` con `passive: false` y llama a `e.preventDefault()`, lo que suprime la síntesis del evento `click` por parte del navegador. El trigger de inmersión nunca recibía el evento.
+- **Solución:** El listener de inmersión se traslada de `window` a `#jd-container` y se registra en **fase de captura** (`capture: true`). Se añade `touchstart` (capture) como canal primario en móvil, garantizando que el contenedor intercepta el gesto antes de que el canvas pueda invocar `preventDefault()`.
+- **Sin `stopPropagation`:** El evento sigue propagándose hacia `JD_Core._onActionStart()`, que gestiona el inicio/reinicio de partida de forma natural. Ya no es necesaria la llamada explícita a `JD_Core.startGame()` desde el glue.
+- **Documentación:** Sección 9 actualizada para reflejar la arquitectura del glue script v2.1.0 y el motivo del fallo de v2.0.0.
+
 ### v1.1.0 — Optimización Mobile & Fullscreen
 
 - **Añadido:** Fullscreen API sobre `#jd-container` activada en la primera interacción del usuario (`JD_Core._requestFullscreen()`). Incluye prefijo `webkit` para compatibilidad con Safari.
@@ -407,4 +440,4 @@ games/jungle-dash/
 
 ---
 
-*Documentación de Jungle Dash · Love Arcade · v1.1.0 · 2026*
+*Documentación de Jungle Dash · Love Arcade · v1.2.0 · 2026*
