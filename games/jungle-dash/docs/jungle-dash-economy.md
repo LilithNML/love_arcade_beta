@@ -40,15 +40,15 @@ Al finalizar la partida, la puntuación acumulada se convierte directamente en m
 const JD_passiveCoins = Math.floor(JD_score / 30);
 ```
 
-Este ratio reemplaza la conversión anterior (`score / 500`) e implica que el jugador empieza a acumular monedas a partir de los **40 puntos** en lugar de los 500.
+Este ratio reemplaza la conversión anterior (`score / 500`) e implica que el jugador empieza a acumular monedas a partir de los **30 puntos** en lugar de los 500.
 
 ### Fuente activa — Super Monedas
 
-Las Super Monedas son ítems de recompensa que aparecen durante la partida y valen **25 monedas** cada una al ser recogidas. Se acumulan durante la sesión y se suman a las monedas pasivas al terminar:
+Las Super Monedas son ítems de recompensa que aparecen durante la partida y valen **30 monedas** cada una al ser recogidas. Se acumulan durante la sesión y se suman a las monedas pasivas al terminar:
 
 ```js
 // JD_Core.js — gameOver()
-const JD_activeCoins = JD_Entities.superCoinsCollected * 25;
+const JD_activeCoins = JD_Entities.superCoinsCollected * 30;
 JD_coinsEarned       = JD_passiveCoins + JD_activeCoins;
 ```
 
