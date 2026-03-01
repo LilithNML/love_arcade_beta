@@ -23,9 +23,9 @@ La economía de v1.3.0 está diseñada para alcanzar **200 monedas** en **5 000 
 
 | Fuente | Tipo | Monedas en 5 000 pts |
 |---|---|---|
-| Conversión pasiva (puntuación) | Automática al final de la partida | 125 |
-| Super Monedas recogidas | Activa durante el juego | 75 (3 × 25) |
-| **Total** | | **200** |
+| Conversión pasiva (puntuación) | Automática al final de la partida | 166 |
+| Super Monedas recogidas | Activa durante el juego | 90 (3 × 30) |
+| **Total** | | **256** |
 
 ---
 
@@ -33,11 +33,11 @@ La economía de v1.3.0 está diseñada para alcanzar **200 monedas** en **5 000 
 
 ### Fuente pasiva — Conversión de puntuación
 
-Al finalizar la partida, la puntuación acumulada se convierte directamente en monedas Love Arcade a razón de **1 moneda por cada 40 puntos**:
+Al finalizar la partida, la puntuación acumulada se convierte directamente en monedas Love Arcade a razón de **1 moneda por cada 30 puntos**:
 
 ```js
 // JD_Core.js — gameOver()
-const JD_passiveCoins = Math.floor(JD_score / 40);
+const JD_passiveCoins = Math.floor(JD_score / 30);
 ```
 
 Este ratio reemplaza la conversión anterior (`score / 500`) e implica que el jugador empieza a acumular monedas a partir de los **40 puntos** en lugar de los 500.
