@@ -2,6 +2,10 @@
  * JD_Renderer.js — Jungle Dash | Motor de Renderizado
  * Canvas 2D responsivo 16:9. Parallax de 4 capas. Transiciones de bioma.
  * Fallback procedural completo si los assets no cargan.
+ *
+ * v1.3.0 — Renderizado de Super Monedas (JD_drawSuperCoins):
+ *   Sprite: JD_item_supercoin.webp. Fallback: círculo dorado con halo y estrella
+ *   central para distinguirla visualmente de la moneda normal.
  */
 
 const JD_Renderer = (() => {
@@ -386,6 +390,57 @@ const JD_Renderer = (() => {
         });
     }
 
+    // ── Dibujado de Super Monedas ─────────────────────────────────────────────
+    // Si el sprite JD_item_supercoin.webp está disponible se dibuja directamente.
+    // Fallback procedural: círculo dorado con halo exterior y estrella de 4 puntas
+    // central para diferenciarlo inequívocamente de la moneda normal.
+    function JD_drawSuperCoins(superCoins) {
+        const JD_c = JD_ctx;
+
+        superCoins.forEach(sc => {
+            if (sc.JD_img) {
+                JD_c.drawImage(sc.JD_img, sc.x, sc.y, sc.w, sc.h);
+            } else {
+                const JD_cx = sc.x + sc.w / 2;
+                const JD_cy = sc.y + sc.h / 2;
+                const JD_r  = sc.w / 2;
+
+                // Halo exterior pulsante (usa la posición senoidal ya calculada)
+                const JD_haloGrad = JD_c.createRadialGradient(JD_cx, JD_cy, JD_r * 0.6, JD_cx, JD_cy, JD_r * 1.6);
+                JD_haloGrad.addColorStop(0, 'rgba(255, 220, 50, 0.5)');
+                JD_haloGrad.addColorStop(1, 'rgba(255, 180, 0, 0)');
+                JD_c.beginPath();
+                JD_c.arc(JD_cx, JD_cy, JD_r * 1.6, 0, Math.PI * 2);
+                JD_c.fillStyle = JD_haloGrad;
+                JD_c.fill();
+
+                // Cuerpo dorado
+                const JD_bodyGrad = JD_c.createRadialGradient(JD_cx - JD_r * 0.3, JD_cy - JD_r * 0.3, JD_r * 0.1, JD_cx, JD_cy, JD_r);
+                JD_bodyGrad.addColorStop(0, '#fff176');
+                JD_bodyGrad.addColorStop(0.5, '#ffd600');
+                JD_bodyGrad.addColorStop(1, '#e65100');
+                JD_c.beginPath();
+                JD_c.arc(JD_cx, JD_cy, JD_r, 0, Math.PI * 2);
+                JD_c.fillStyle = JD_bodyGrad;
+                JD_c.fill();
+
+                // Estrella de 4 puntas (símbolo ★ simplificado)
+                JD_c.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                JD_c.beginPath();
+                const JD_sp = JD_r * 0.42; // radio mayor de la estrella
+                const JD_si = JD_r * 0.16; // radio menor (interior)
+                for (let k = 0; k < 8; k++) {
+                    const JD_ang = (k * Math.PI) / 4 - Math.PI / 2;
+                    const JD_rr  = k % 2 === 0 ? JD_sp : JD_si;
+                    if (k === 0) JD_c.moveTo(JD_cx + JD_rr * Math.cos(JD_ang), JD_cy + JD_rr * Math.sin(JD_ang));
+                    else         JD_c.lineTo(JD_cx + JD_rr * Math.cos(JD_ang), JD_cy + JD_rr * Math.sin(JD_ang));
+                }
+                JD_c.closePath();
+                JD_c.fill();
+            }
+        });
+    }
+
     // ── HUD sobre el canvas ───────────────────────────────────────────────────
     function JD_drawHUD(score, state) {
         if (state !== 'PLAYING') return;
@@ -528,6 +583,7 @@ const JD_Renderer = (() => {
 
                 JD_drawDecorations(JD_Entities.decorations, JD_biome);
                 JD_drawObstacles(JD_Entities.obstacles, JD_biome);
+                JD_drawSuperCoins(JD_Entities.superCoins);
                 JD_drawPlayer(JD_player, JD_isJumping);
             }
 
