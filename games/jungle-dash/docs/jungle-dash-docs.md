@@ -272,33 +272,45 @@ El glue script opera en dos fases separadas:
 
 **Fase 1 — Desbloqueo de AudioContext (`pointerdown` en `window`, `passive: true`)**
 
-Se registra en el momento de carga. Al primer contacto (sea sobre el canvas, el HUD o cualquier punto de la pantalla), crea el `AudioContext` en estado `suspended` sin emitir sonido. El uso de `passive: true` garantiza que no se bloquea el hilo principal.
+Se registra en el momento de carga. Al primer contacto (sea sobre el canvas, el HUD o cualquier punto de la pantalla), crea el `AudioContext` en estado `suspended` sin emitir sonido. El uso de `passive: true` garantiza que no bloquea el hilo principal.
 
-**Fase 2 — Inmersión completa (`touchstart` + `click` en `#jd-container`, `capture: true`)**
+**Fase 2 — Inmersión completa: dos rutas paralelas**
 
-El punto clave de la v2.1.0 es que el listener se registra sobre **`#jd-container`** (no en `window`) y usa la **fase de captura**, lo que garantiza que el contenedor intercepta el gesto **antes de que el canvas pueda llamar a `preventDefault()`**:
+El trigger de inmersión usa **dos rutas complementarias** que comparten la función `JD_doImmersion()` y se auto-eliminan mutuamente al primer disparo válido:
+
+| Ruta | Evento | Propósito |
+|---|---|---|
+| Principal (táctil) | `touchend` en `window`, `capture: true` | Android: funciona aunque `touchstart` haya llamado a `preventDefault()` |
+| Respaldo | `click` en `window`, `capture: true` | Desktop y Safari iOS donde `touchstart` no suprime `click` |
+
+Un tercer listener en `touchstart` (`passive: true`) registra las coordenadas del punto de contacto para filtrar swipes en `touchend`:
 
 ```js
 // index.html — glue script v2.1.0
-JD_container.addEventListener('touchstart', JD_immersionHandler, { capture: true, passive: false });
-JD_container.addEventListener('click',      JD_immersionHandler, { capture: true });
+const JD_TAP_DRIFT = 10; // px
+let JD_touchStartX = 0, JD_touchStartY = 0;
+
+// Rastreo de posición inicial (solo para cálculo de drift)
+window.addEventListener('touchstart', JD_trackTouchStart, { capture: true, passive: true });
+
+// Ruta principal: touchend (se genera aunque touchstart llame a preventDefault)
+window.addEventListener('touchend', JD_touchTrigger, { capture: true, passive: true });
+
+// Ruta de respaldo: click (desktop + Safari iOS)
+window.addEventListener('click', JD_clickTrigger, { capture: true });
 ```
 
-- **`touchstart` (capture):** cubre el canal táctil aunque `preventDefault()` suprima la generación del evento `click` posterior. Es el camino principal en móvil.
-- **`click` (capture):** cubre escritorio y teclado donde no hay `touchstart`.
-- **Sin `stopPropagation`:** el evento sigue propagándose hacia `JD_Core._onActionStart()`, que gestiona el cambio de estado (`startGame` / `startJump`) de forma natural.
-- **Sin llamada explícita a `startGame()`:** `JD_Core` lo hace al recibir el evento a través de sus propios listeners.
-
-El handler se auto-elimina tras la primera ejecución para no interferir con los saltos posteriores.
-
 ```js
-const JD_immersionHandler = () => {
-    JD_container.removeEventListener('touchstart', JD_immersionHandler, { capture: true });
-    JD_container.removeEventListener('click',      JD_immersionHandler, { capture: true });
+const JD_doImmersion = (fsTarget) => {
+    JD_removeTriggers(); // auto-eliminación de los tres listeners
 
-    const JD_fsReq = JD_container.requestFullscreen || JD_container.webkitRequestFullscreen /* … */;
+    if (typeof JD_Core !== 'undefined' && JD_Core.state === 'START') {
+        JD_Core.startGame(); // guard: evita duplicado si _onActionStart() ya lo llamó
+    }
+
+    const JD_fsReq = fsTarget.requestFullscreen || fsTarget.webkitRequestFullscreen /* … */;
     if (JD_fsReq) {
-        JD_fsReq.call(JD_container)
+        JD_fsReq.call(fsTarget)
             .then(() => {
                 // orientation.lock DENTRO del .then(): el SO ya concedió fullscreen.
                 if (screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {});
@@ -308,9 +320,39 @@ const JD_immersionHandler = () => {
 };
 ```
 
+**Selección del elemento para `requestFullscreen`**
+
+En Android, `requestFullscreen()` debe invocarse sobre el elemento que recibió la interacción del usuario. Ambas rutas determinan el elemento correcto según `e.target`:
+
+```js
+// Si el tap cayó sobre JD_canvas → requestFullscreen en JD_canvas
+// Si cayó sobre JD_container (u otro elemento) → requestFullscreen en JD_container
+const JD_fsTarget = (e.target === JD_canvas || e.target === JD_container)
+    ? e.target
+    : JD_container;
+```
+
+**Filtro de swipes en la ruta `touchend`**
+
+Para evitar que un swipe de scroll active fullscreen, `JD_touchTrigger` compara las coordenadas finales con las iniciales registradas en `touchstart`. Si el drift supera `JD_TAP_DRIFT` (10 px) en cualquier eje, el evento se ignora.
+
+**Guard de `startGame()` duplicado**
+
+La ruta `touchend` del glue se dispara simultáneamente con el listener `touchstart` del canvas en `JD_Core`, que ya habrá llamado a `_onActionStart()` → `startGame()`. El guard `state === 'START'` en el glue evita una segunda invocación.
+
+La ruta `click` en cambio llama a `e.stopPropagation()` para impedir que `JD_Core` reciba ese primer click, y llama a `startGame()` de forma explícita.
+
 ### Por qué v2.0.0 fallaba
 
-La v2.0.0 escuchaba `click` en `window`. En móvil, el canvas tiene un listener `touchstart` con `passive: false` que llama a `e.preventDefault()`. Esto suprime la generación del evento `click` sintético por parte del navegador, por lo que el trigger de inmersión nunca se disparaba cuando el primer toque caía sobre el canvas (el 100 % del área visual en móvil).
+La v2.0.0 escuchaba **únicamente `click`** en `window`. En Android, cuando el toque cae sobre el canvas:
+
+1. El canvas recibe `touchstart` con `passive: false` y llama a `e.preventDefault()`.
+2. `preventDefault()` en `touchstart` **cancela la síntesis del evento `click` por parte del navegador**.
+3. El listener de inmersión nunca recibe el evento → fullscreen no se activa.
+
+Al tocar el `jd-container` fuera del canvas no había `preventDefault()` y el `click` sí se generaba, haciendo el bug parcialmente reproducible (área visible ≈ 0 en móvil).
+
+La solución correcta no es interceptar el evento antes del `preventDefault()` sino usar **`touchend`**, que el navegador genera **siempre**, independientemente de lo que `touchstart` haya declarado.
 
 ### Forzado de orientación (`orientation.lock`)
 
@@ -336,7 +378,6 @@ Esta arquitectura permite que la pantalla de inicio (`START`) sea visible en cua
 | Safari (iOS) | ❌ Web no soportado | ❌ No soportado | ✅ (crítico) |
 | Chrome (iOS) | ❌ Motor WebKit | ❌ No soportado | ✅ (crítico) |
 
----
 
 ## 10. Sistema de fallback
 
@@ -421,11 +462,16 @@ games/jungle-dash/
 
 ### v1.2.0 — Corrección de activación Fullscreen desde canvas (Glue Script v2.1.0)
 
-- **Corregido:** La inmersión (Fullscreen API + `orientation.lock`) no se activaba cuando el primer toque del usuario caía directamente sobre el canvas (el área de juego). En móvil, el canvas ocupa el 100 % de la superficie visual, haciendo el bug reproducible en prácticamente todos los dispositivos.
-- **Causa:** El glue script v2.0.0 escuchaba el evento `click` en `window`. El canvas registra `touchstart` con `passive: false` y llama a `e.preventDefault()`, lo que suprime la síntesis del evento `click` por parte del navegador. El trigger de inmersión nunca recibía el evento.
-- **Solución:** El listener de inmersión se traslada de `window` a `#jd-container` y se registra en **fase de captura** (`capture: true`). Se añade `touchstart` (capture) como canal primario en móvil, garantizando que el contenedor intercepta el gesto antes de que el canvas pueda invocar `preventDefault()`.
-- **Sin `stopPropagation`:** El evento sigue propagándose hacia `JD_Core._onActionStart()`, que gestiona el inicio/reinicio de partida de forma natural. Ya no es necesaria la llamada explícita a `JD_Core.startGame()` desde el glue.
-- **Documentación:** Sección 9 actualizada para reflejar la arquitectura del glue script v2.1.0 y el motivo del fallo de v2.0.0.
+- **Corregido:** La inmersión (Fullscreen API + `orientation.lock`) no se activaba cuando el primer toque del usuario caía sobre el canvas (el 100 % del área visible en móvil). El bug era reproducible en prácticamente todos los dispositivos Android.
+- **Causa raíz:** El glue script v2.0.0 escuchaba únicamente el evento `click` en `window`. El canvas de `JD_Core` registra `touchstart` con `passive: false` y llama a `e.preventDefault()`, lo que **cancela la síntesis del evento `click` por parte del navegador** en Android Chrome y Samsung Internet. El trigger de inmersión nunca recibía el evento al tocar el canvas.
+- **Solución — dos rutas paralelas en `JD_doImmersion()`:**
+  - **Ruta principal:** `touchend` en `window` (capture, passive). `touchend` se genera siempre, independientemente de si `touchstart` llamó a `preventDefault()`. Es el canal táctil primario en Android.
+  - **Ruta de respaldo:** `click` en `window` (capture). Para desktop y Safari iOS donde `touchstart` no suprime `click`.
+  - Un listener adicional en `touchstart` (passive) registra coordenadas para filtrar swipes en `touchend` (drift máximo: 10 px).
+  - Ambas rutas se auto-eliminan mutuamente al primer disparo válido.
+- **Selección de elemento para `requestFullscreen`:** se usa `e.target` para invocar `requestFullscreen()` sobre el elemento exacto que recibió la interacción (canvas o contenedor), cumpliendo el requisito de User Activation Token de Android.
+- **Guard de `startGame()` duplicado:** la ruta `touchend` puede coincidir con `_onActionStart()` de `JD_Core`. El guard `state === 'START'` en el glue evita la doble invocación.
+- **Documentación:** Sección 9 actualizada para reflejar la arquitectura real del glue script v2.1.0 y el análisis de causa raíz.
 
 ### v1.1.0 — Optimización Mobile & Fullscreen
 
