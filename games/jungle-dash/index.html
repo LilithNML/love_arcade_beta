@@ -197,8 +197,8 @@
 <body>
 
 <!-- ── Overlay de orientación portrait ──────────────────────────────────── -->
-<!-- Activado por JS (JD_Core._checkRotateOverlay) solo si orientation.lock
-     falla y el dispositivo sigue en portrait. No se activa por CSS. -->
+<!-- Activado por JS (glue script v2.0.0) solo si orientation.lock falla y el
+     dispositivo sigue en portrait. No se activa por CSS (@media). -->
 <div id="jd-rotate-overlay" aria-live="polite" role="alert">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
          stroke="rgba(255,255,255,0.75)" stroke-width="1.5"
@@ -289,11 +289,34 @@
 <script src="js/JD_Core.js"></script>
 
 <!-- Glue: Fullscreen/Orientación + sincronización del HUD HTML ────────────
-     v1.3.0 — Ejecución Plana con Captura de Fase.
-     requestFullscreen es la primera instrucción del primer stack frame del
-     gesto. Se usa { capture: true } para disparar ANTES que cualquier listener
-     del canvas (JD_Core), preservando el Transient Activation Token en Android.
-     e.stopPropagation() evita el doble disparo en el canvas listener de JD_Core.  -->
+     v2.0.0 — Modelo de Dos Fases (audio-first / immersion-second).
+
+     PROBLEMA RESUELTO:
+     La v1.3.0 usaba touchstart para disparar requestFullscreen() y llamaba a
+     screen.orientation.lock() de forma síncrona en el mismo frame, ANTES de
+     que la promesa de requestFullscreen() resolviera. Android Chrome rechaza
+     orientation.lock() si el sistema operativo no ha concedido aún fullscreen,
+     y en dispositivos de gama media el micro-congelamiento causado por inicializar
+     el AudioContext en ese mismo frame invalidaba el Transient Activation Token.
+
+     SOLUCIÓN — DOS FASES SEPARADAS:
+
+     FASE 1 · pointerdown (passive: true)
+       → Desbloquear el AudioContext únicamente.
+       → passive:true: no bloquea el hilo principal, compatible con scroll-opt.
+       → No se llama a requestFullscreen: el token de FS API requiere un gesto
+         inequívoco (sin posibilidad de scroll/swipe), no un inicio de contacto.
+
+     FASE 2 · click (capture: true)
+       → Disparar requestFullscreen().
+       → Encadenar orientation.lock() DENTRO del .then() de la promesa: en ese
+         punto el SO ya ha concedido fullscreen y el lock es aceptado.
+       → 'click' solo se dispara cuando el dedo NO se movió: garantiza que el
+         User Activation Token permanece activo en Android Chrome.
+       → stopPropagation: evita que el canvas de JD_Core reciba este click e
+         intente llamar a startJump() inmediatamente al iniciar la partida.
+       → startGame() se invoca aquí de forma explícita tras la eliminación
+         del listener, reemplazando el flujo previo que pasaba por JD_Core.         -->
 <script>
 (function () {
     'use strict';
@@ -304,70 +327,100 @@
     const JD_scoreDisplay  = document.getElementById('jd-score-display');
     const JD_muteContainer = document.getElementById('jd-mute-container');
 
-    // ── Función de inmersión: síncrona y plana ───────────────────────────────
-    // Regla crítica: requestFullscreen y orientation.lock deben ser las
-    // primeras llamadas dentro del primer stack frame del gesto de usuario.
-    // Cualquier micro-tarea, promesa o await previo invalida el token en Android.
-    function JD_launchImmersion() {
+    // ── FASE 1: pointerdown → desbloquear AudioContext ───────────────────────
+    // Se registra en captura para máxima prioridad, pero con passive:true para
+    // no penalizar el rendimiento de scroll en la pantalla START.
+    // No se llama a requestFullscreen aquí: pointerdown puede ser el inicio de
+    // un swipe, y Android revoca el token de FS API si el gesto resulta ser un
+    // movimiento. Solo se invoca JD_Audio.init(), que es liviano (crea el
+    // AudioContext en estado 'suspended' sin emitir sonido).
+    const JD_audioUnlocker = () => {
+        if (typeof JD_Audio !== 'undefined') JD_Audio.init();
+        window.removeEventListener('pointerdown', JD_audioUnlocker, { capture: true });
+        window.removeEventListener('touchstart',  JD_audioUnlocker, { capture: true });
+    };
+    window.addEventListener('pointerdown', JD_audioUnlocker, { capture: true, passive: true });
+    // touchstart como respaldo para navegadores que no soporten Pointer Events
+    window.addEventListener('touchstart',  JD_audioUnlocker, { capture: true, passive: true });
 
-        // 1. Fullscreen — PRIMERA instrucción (token activo garantizado)
-        const JD_req = JD_container
-            ? (JD_container.requestFullscreen || JD_container.webkitRequestFullscreen)
-            : null;
-        if (JD_req) JD_req.call(JD_container);
+    // ── FASE 2: click → inmersión completa ───────────────────────────────────
+    // 'click' es el evento preferido para Fullscreen API porque:
+    //   · Solo se dispara cuando no hay movimiento del dedo (≤ 4 px de drift):
+    //     el navegador interpreta intención inequívoca de tap, no de scroll.
+    //   · El User Activation Token permanece válido hasta que requestFullscreen
+    //     resuelve, ya que no hay microtareas previas que lo invaliden.
+    //   · Compatibilidad uniforme: Android Chrome, Samsung Internet, Safari iOS.
+    //
+    // CORRECCIÓN CRÍTICA: orientation.lock se encadena dentro del .then() de
+    // requestFullscreen. Llamarlo de forma síncrona antes de que la promesa
+    // resuelva provoca que Android rechace el lock silenciosamente porque el
+    // sistema operativo todavía no ha aplicado el cambio de ventana.
+    const JD_immersionTrigger = (e) => {
+        // Auto-eliminación antes de cualquier operación asíncrona
+        window.removeEventListener('click', JD_immersionTrigger, { capture: true });
 
-        // 2. Lock de orientación — SEGUNDA instrucción (mismo frame síncrono)
-        if (screen.orientation && typeof screen.orientation.lock === 'function') {
-            screen.orientation.lock('landscape').catch(() => {
-                // Si el lock falla aquí, 'fullscreenchange' lo reintenta.
-            });
-        }
+        // stopPropagation: impide que este click llegue al canvas listener de
+        // JD_Core (fase de burbuja) y desencadene startJump() al inicio de partida.
+        // JD_Core.startGame() se llama desde aquí de forma explícita.
+        e.stopPropagation();
 
-        // 3. Ocultar overlay de rotación
+        // Ocultar overlay de rotación si estuviera visible
         if (JD_overlay) JD_overlay.style.display = 'none';
 
-        // 4. Iniciar lógica del juego.
-        //    Se llama aquí porque e.stopPropagation() (ver trigger) impide
-        //    que el evento llegue al canvas listener de JD_Core.
-        //    JD_Audio.init() también es necesario para desbloquear el AudioContext.
-        if (typeof JD_Audio !== 'undefined') JD_Audio.init();
-        if (typeof JD_Core  !== 'undefined' && JD_Core.state === 'START') {
+        // Arrancar la partida: estado de juego + BGM
+        // JD_Audio.init() ya fue invocado en Fase 1 (pointerdown); si por algún
+        // motivo no lo fue (p. ej. interacción de teclado sin toque previo),
+        // JD_Core.startGame() lo llama internamente como garantía.
+        if (typeof JD_Core !== 'undefined' && JD_Core.state === 'START') {
             JD_Core.startGame();
         }
-    }
 
-    // ── Listener de primera interacción ─────────────────────────────────────
-    // { capture: true } — fase de captura: se ejecuta ANTES que cualquier
-    // listener del canvas registrado por JD_Core (fase de burbuja), garantizando
-    // que requestFullscreen sea lo primero en el stack frame del gesto.
-    // e.stopPropagation() evita que JD_Core._onActionStart procese este mismo
-    // evento y llame a startGame() o startJump() una segunda vez.
-    const JD_trigger = (e) => {
-        e.stopPropagation();
-        JD_launchImmersion();
-        window.removeEventListener('touchstart', JD_trigger, { capture: true });
-        window.removeEventListener('click',      JD_trigger, { capture: true });
+        // requestFullscreen → orientation.lock encadenado ────────────────────
+        // Se llama DESPUÉS de startGame() para no retrasar el inicio del juego
+        // mientras el SO procesa la transición a pantalla completa.
+        const JD_fsReq = JD_container && (
+            JD_container.requestFullscreen       ||
+            JD_container.webkitRequestFullscreen ||
+            JD_container.mozRequestFullScreen    ||
+            JD_container.msRequestFullscreen
+        );
+
+        if (JD_fsReq) {
+            JD_fsReq.call(JD_container)
+                .then(() => {
+                    // DENTRO del .then(): el SO ya concedió fullscreen.
+                    // orientation.lock() solo tiene éxito en este contexto.
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                        return screen.orientation.lock('landscape');
+                    }
+                })
+                .catch(() => {
+                    // Fullscreen denegado (iframe sin allow="fullscreen", política
+                    // de usuario, etc.). El juego continúa con normalidad en modo
+                    // ventana. El catch de orientation.lock también aterriza aquí.
+                });
+        }
     };
 
-    window.addEventListener('touchstart', JD_trigger, { capture: true, passive: false });
-    window.addEventListener('click',      JD_trigger, { capture: true });
+    window.addEventListener('click', JD_immersionTrigger, { capture: true });
 
-    // ── Respaldo: fullscreenchange ───────────────────────────────────────────
-    // Android puede rechazar el primer orientation.lock porque el cambio de
-    // pantalla completa no ha finalizado aún en el sistema. Este listener se
-    // dispara ~200–500 ms después (señal del SO) y reintenta el lock.
+    // ── Respaldo fullscreenchange: reintento de orientation.lock ─────────────
+    // Samsung Internet y algunos WebViews de Android disparan fullscreenchange
+    // de forma diferida (hasta 600 ms después de que requestFullscreen resuelva).
+    // Este listener captura esa señal tardía y reintenta el lock de orientación.
+    // Es idempotente: si el lock ya está activo, la llamada es un no-op.
     const JD_onFSChange = () => {
-        const JD_fs = document.fullscreenElement || document.webkitFullscreenElement;
-        if (JD_fs && screen.orientation && typeof screen.orientation.lock === 'function') {
+        const JD_inFS = document.fullscreenElement || document.webkitFullscreenElement;
+        if (JD_inFS && screen.orientation && typeof screen.orientation.lock === 'function') {
             screen.orientation.lock('landscape').catch(() => {});
         }
     };
     document.addEventListener('fullscreenchange',       JD_onFSChange);
     document.addEventListener('webkitfullscreenchange', JD_onFSChange);
 
-    // ── Listener de orientación: auto-ocultar overlay ───────────────────────
-    // Cuando el usuario gira el dispositivo manualmente (iOS/Safari),
-    // el overlay desaparece sin requerir un nuevo toque.
+    // ── Listener resize: ocultar overlay de rotación ─────────────────────────
+    // Cuando el usuario gira el dispositivo manualmente (iOS/Safari no soporta
+    // orientation.lock), el overlay desaparece sin requerir un nuevo toque.
     window.addEventListener('resize', () => {
         if (JD_overlay && window.innerWidth >= window.innerHeight) {
             JD_overlay.style.display = 'none';
