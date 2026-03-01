@@ -5,7 +5,7 @@
  *
  * ⚠️ Todas las variables usan prefijo JD_ — regla de namespacing obligatoria.
  *
- * v1.1.0 — Añade soporte Fullscreen API + orientation lock en primera interacción.
+ * v1.2.0 — Soporte Fullscreen API + orientation lock delegado al glue script.
  *           El botón de mute se gestiona desde #jd-mute-container (fuera del HUD).
  */
 
@@ -56,7 +56,7 @@ const JD_Core = {
         JD_Entities.reset(JD_Renderer.VIRT_W, JD_Renderer.GROUND_Y);
 
         // El audio se inicializa en la primera interacción real.
-        // El glue script (v1.3.0) puede llamar a startGame() antes de que
+        // El glue script (v2.0.0) puede llamar a startGame() antes de que
         // JD_firstInteract se haya marcado en JD_Core, así que se fuerza la
         // marca aquí y se inicializa el audio si aún no lo estaba.
         JD_firstInteract = true;
@@ -174,12 +174,19 @@ const JD_Core = {
     },
 
     // ── Acción unificada de inicio/salto ──────────────────────────────────────
-    // NOTA v1.3.0: El glue script de index.html registra un listener en FASE DE
-    // CAPTURA (capture: true) que se ejecuta antes que estos listeners del canvas
-    // (fase de burbuja). En el primer toque el glue llama a startGame() y luego
-    // stopPropagation(), por lo que este handler NO recibe ese primer evento.
-    // Para taps posteriores (salto, reinicio) el glue ya se ha auto-eliminado y
-    // los eventos llegan aquí con normalidad.
+    // NOTA v2.0.0 (glue script): El glue registra dos listeners en FASE DE CAPTURA:
+    //   · pointerdown (passive): desbloquea el AudioContext. Sin stopPropagation.
+    //   · click (capture): dispara requestFullscreen, luego llama a startGame() y
+    //     llama a e.stopPropagation() para que el canvas NO reciba ese primer click.
+    //     Una vez consumido, el listener se auto-elimina.
+    //
+    // Para taps posteriores (salto en vuelo, reinicio tras game over) el listener
+    // del glue ya no existe, y los eventos click/touchstart/touchend del canvas
+    // llegan aquí con normalidad a través de _onActionStart().
+    //
+    // El bloque !JD_firstInteract a continuación actúa como PLAN B para
+    // interacciones que no pasan por el canvas (p. ej. teclado), asegurando que
+    // JD_Audio.init() se invoque aunque el glue no haya procesado un pointerdown.
     _onActionStart() {
         // Desbloquear AudioContext si no se hizo aún (por si el primer tap llegó
         // por un camino distinto al canvas, p.ej. teclado sin pasar por el glue).
@@ -198,17 +205,18 @@ const JD_Core = {
     },
 
     // ── Fullscreen + orientation lock ─────────────────────────────────────────
-    // ⚠️  DEPRECADO en v1.2.1 — La gestión de fullscreen y orientation.lock
-    // ha sido trasladada íntegramente al glue script de index.html, que usa
-    // el patrón no-bloqueante (sin await) para preservar el User Gesture Token
-    // en Android. _requestFullscreen ya no se llama desde ningún lugar del módulo.
+    // ⚠️  DELEGADO en v1.2.0 — La gestión de fullscreen y orientation.lock
+    // ha sido trasladada íntegramente al glue script de index.html (v2.0.0).
+    // El glue usa un modelo de DOS FASES: pointerdown para audio y click para
+    // fullscreen, encadenando orientation.lock dentro del .then() de la promesa.
+    // _requestFullscreen ya no se llama desde ningún lugar del módulo.
     // Se conserva el stub para compatibilidad con cualquier referencia externa.
     _requestFullscreen() {
-        console.info('[JD] _requestFullscreen() deprecado — gestionado por el glue script (v1.2.1).');
+        console.info('[JD] _requestFullscreen() delegado — gestionado por el glue script (v2.0.0).');
     },
 
-    // ── Helpers de overlay — deprecados en v1.2.1 ────────────────────────────
-    // El overlay "Gira tu dispositivo" también lo gestiona el glue script.
+    // ── Helpers de overlay — delegados al glue script v2.0.0 ─────────────────
+    // El overlay "Gira tu dispositivo" lo gestiona el glue script (resize listener).
     _checkRotateOverlay()    {},
     _showRotateOverlay()     {},
     _hideRotateOverlay()     {},
@@ -216,10 +224,9 @@ const JD_Core = {
     _rotateListenerActive: false,
 
     // ── Botón de mute ─────────────────────────────────────────────────────────
-    // El botón ahora reside en #jd-mute-container (fuera del HUD superior)
-    // para evitar activaciones accidentales durante el juego.
-    // Su visibilidad según el estado del juego se gestiona desde el glue
-    // script de index.html a través de la clase CSS .jd-hidden.
+    // El botón reside en #jd-mute-container (fuera del HUD superior) para evitar
+    // activaciones accidentales durante el juego. Su visibilidad según el estado
+    // se gestiona desde el glue script v2.0.0 a través de la clase CSS .jd-hidden.
     _setupMuteBtn() {
         const JD_muteBtn = document.getElementById('jd-mute-btn');
         if (!JD_muteBtn) return;
