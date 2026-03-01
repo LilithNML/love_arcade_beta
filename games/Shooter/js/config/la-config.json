@@ -35,7 +35,7 @@
       "speed": 120,
       "pattern": "zigzag",
       "fireRate": 0.8,
-      "score": 15,
+      "score": 10,
       "coins": 5,
       "collisionRadius": 15
     },
@@ -44,7 +44,7 @@
       "speed": 70,
       "pattern": "aimed_burst",
       "fireRate": 1.6,
-      "score": 35,
+      "score": 25,
       "coins": 10,
       "collisionRadius": 18
     },
@@ -53,7 +53,7 @@
       "speed": 40,
       "pattern": "straight",
       "fireRate": 2.0,
-      "score": 60,
+      "score": 40,
       "coins": 15,
       "collisionRadius": 25
     },
@@ -62,7 +62,7 @@
       "speed": 90,
       "pattern": "homing_slow",
       "fireRate": 1.2,
-      "score": 150,
+      "score": 100,
       "coins": 20,
       "collisionRadius": 22
     },
@@ -85,8 +85,8 @@
     "bossWaves": [5, 10, 15, 20, 25, 30]
   },
   "rewards": {
-    "scoreToCoins": 15,
-    "waveCompletion": 20,
+    "scoreToCoins": 17,
+    "waveCompletion": 15,
     "milestones": [
       { "score": 500, "coins": 10, "id": "score_500" },
       { "score": 1000, "coins": 20, "id": "score_1000" },
