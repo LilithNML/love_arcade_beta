@@ -152,9 +152,9 @@ El SFX de Super Moneda tiene un pitch significativamente más agudo que el de la
 
 | Hito de puntuación | Multiplicador | Monedas pasivas (acum.) | Super Monedas (estimadas) | Total monedas |
 |---|---|---|---|---|
-| 1 000 pts | 1.0× | 25 | 0 | **25** |
-| 2 500 pts | 1.5× | 62 | 1 (×25) | **87** |
-| 5 000 pts | 2.0× | 125 | 3 (×25) | **200** |
+| 1 000 pts | 1.0× | 33 | 0 | **33** |
+| 2 500 pts | 1.5× | 83 | 1 (×30) | **113** |
+| 5 000 pts | 2.0× | 166 | 3 (×30) | **256** |
 
 > **Nota:** Las Super Monedas estimadas reflejan una tasa de spawn del 5 % a frecuencias de ciclo medias. Los valores reales varían por sesión.
 
