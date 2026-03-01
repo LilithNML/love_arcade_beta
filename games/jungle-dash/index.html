@@ -289,34 +289,29 @@
 <script src="js/JD_Core.js"></script>
 
 <!-- Glue: Fullscreen/Orientación + sincronización del HUD HTML ────────────
-     v2.0.0 — Modelo de Dos Fases (audio-first / immersion-second).
+     v2.1.0 — Corrección de causa raíz: touchstart.preventDefault() suprime click.
 
-     PROBLEMA RESUELTO:
-     La v1.3.0 usaba touchstart para disparar requestFullscreen() y llamaba a
-     screen.orientation.lock() de forma síncrona en el mismo frame, ANTES de
-     que la promesa de requestFullscreen() resolviera. Android Chrome rechaza
-     orientation.lock() si el sistema operativo no ha concedido aún fullscreen,
-     y en dispositivos de gama media el micro-congelamiento causado por inicializar
-     el AudioContext en ese mismo frame invalidaba el Transient Activation Token.
+     PROBLEMA RESUELTO (v2.1.0):
+     El canvas tiene un listener 'touchstart' con e.preventDefault() y
+     passive:false (necesario para evitar el scroll durante el juego). En Android
+     Chrome/Samsung Internet, preventDefault() en touchstart CANCELA la generación
+     del evento 'click' sintético. Por eso el trigger registrado solo en 'click'
+     nunca disparaba cuando el tap caía sobre JD_canvas — el click nunca se generaba.
 
-     SOLUCIÓN — DOS FASES SEPARADAS:
+     SOLUCIÓN — DOS RUTAS PARA EL MISMO TRIGGER:
 
-     FASE 1 · pointerdown (passive: true)
-       → Desbloquear el AudioContext únicamente.
-       → passive:true: no bloquea el hilo principal, compatible con scroll-opt.
-       → No se llama a requestFullscreen: el token de FS API requiere un gesto
-         inequívoco (sin posibilidad de scroll/swipe), no un inicio de contacto.
+     RUTA TÁCTIL · touchend (capture: true, passive: true)
+       → Se genera SIEMPRE aunque touchstart haya llamado a preventDefault().
+       → Ruta principal para Android. Filtra swipes por drift (≤ 10 px).
+       → startGame() puede haber sido llamado ya por _onActionStart(); el guard
+         (state === 'START') evita duplicados.
 
-     FASE 2 · click (capture: true)
-       → Disparar requestFullscreen().
-       → Encadenar orientation.lock() DENTRO del .then() de la promesa: en ese
-         punto el SO ya ha concedido fullscreen y el lock es aceptado.
-       → 'click' solo se dispara cuando el dedo NO se movió: garantiza que el
-         User Activation Token permanece activo en Android Chrome.
-       → stopPropagation: evita que el canvas de JD_Core reciba este click e
-         intente llamar a startJump() inmediatamente al iniciar la partida.
-       → startGame() se invoca aquí de forma explícita tras la eliminación
-         del listener, reemplazando el flujo previo que pasaba por JD_Core.         -->
+     RUTA CLICK · click (capture: true)
+       → Respaldo para desktop y Safari iOS.
+       → stopPropagation evita que JD_Core reciba este primer click.
+
+     Ambas rutas comparten JD_doImmersion() y se auto-eliminan mutuamente.
+     orientation.lock se encadena dentro del .then() de requestFullscreen.      -->
 <script>
 (function () {
     'use strict';
@@ -344,57 +339,67 @@
     // touchstart como respaldo para navegadores que no soporten Pointer Events
     window.addEventListener('touchstart',  JD_audioUnlocker, { capture: true, passive: true });
 
-    // ── FASE 2: click → inmersión completa ───────────────────────────────────
-    // 'click' es el evento preferido para Fullscreen API porque:
-    //   · Solo se dispara cuando no hay movimiento del dedo (≤ 4 px de drift):
-    //     el navegador interpreta intención inequívoca de tap, no de scroll.
-    //   · El User Activation Token permanece válido hasta que requestFullscreen
-    //     resuelve, ya que no hay microtareas previas que lo invaliden.
-    //   · Compatibilidad uniforme: Android Chrome, Samsung Internet, Safari iOS.
+    // ── FASE 2: inmersión completa ────────────────────────────────────────────
+    // PROBLEMA RAÍZ (Android): el listener 'touchstart' del canvas en JD_Core.js
+    // llama a e.preventDefault() con passive:false. Esto cancela la generación
+    // del evento 'click' sintético en Android Chrome/Samsung Internet. Por eso
+    // el trigger registrado solo en 'click' nunca disparaba cuando el tap caía
+    // sobre JD_canvas — el click nunca se generaba.
     //
-    // CORRECCIÓN CRÍTICA: orientation.lock se encadena dentro del .then() de
-    // requestFullscreen. Llamarlo de forma síncrona antes de que la promesa
-    // resuelva provoca que Android rechace el lock silenciosamente porque el
-    // sistema operativo todavía no ha aplicado el cambio de ventana.
-    const JD_immersionTrigger = (e) => {
-        // Auto-eliminación antes de cualquier operación asíncrona
-        window.removeEventListener('click', JD_immersionTrigger, { capture: true });
+    // SOLUCIÓN — DOS RUTAS PARA EL MISMO TRIGGER:
+    //   · 'touchend' (capture): se genera SIEMPRE aunque touchstart haya llamado
+    //     a preventDefault(). Es la ruta principal para dispositivos táctiles.
+    //     Se filtra por drift (≤ JD_TAP_DRIFT px) para ignorar swipes.
+    //   · 'click'    (capture): ruta de respaldo para desktop y navegadores que
+    //     no suprimen click tras preventDefault en touchstart (Safari iOS).
+    //
+    // Ambos listeners se auto-eliminan mutuamente al primer disparo válido.
+    // orientation.lock se encadena dentro del .then() de requestFullscreen:
+    // Android rechaza el lock si el SO no ha concedido aún fullscreen.
 
-        // stopPropagation: impide que este click llegue al canvas listener de
-        // JD_Core (fase de burbuja) y desencadene startJump() al inicio de partida.
-        // JD_Core.startGame() se llama desde aquí de forma explícita.
-        e.stopPropagation();
+    const JD_TAP_DRIFT   = 10; // px máximos de desplazamiento para considerar tap
+    let   JD_touchStartX = 0;
+    let   JD_touchStartY = 0;
+
+    const JD_removeTriggers = () => {
+        window.removeEventListener('touchstart', JD_trackTouchStart, { capture: true });
+        window.removeEventListener('touchend',   JD_touchTrigger,   { capture: true });
+        window.removeEventListener('click',      JD_clickTrigger,   { capture: true });
+    };
+
+    // Registra la posición inicial del toque para calcular drift en touchend
+    const JD_trackTouchStart = (e) => {
+        if (e.touches && e.touches.length > 0) {
+            JD_touchStartX = e.touches[0].clientX;
+            JD_touchStartY = e.touches[0].clientY;
+        }
+    };
+
+    // Lógica común de inmersión, invocada desde cualquiera de las dos rutas
+    const JD_doImmersion = (fsTarget) => {
+        JD_removeTriggers();
 
         // Ocultar overlay de rotación si estuviera visible
         if (JD_overlay) JD_overlay.style.display = 'none';
 
-        // Arrancar la partida: estado de juego + BGM
-        // JD_Audio.init() ya fue invocado en Fase 1 (pointerdown); si por algún
-        // motivo no lo fue (p. ej. interacción de teclado sin toque previo),
-        // JD_Core.startGame() lo llama internamente como garantía.
+        // Arrancar la partida si aún estamos en pantalla START.
+        // Para la ruta touchend JD_Core ya habrá llamado a startGame() vía
+        // _onActionStart(); este guard evita una llamada duplicada.
         if (typeof JD_Core !== 'undefined' && JD_Core.state === 'START') {
             JD_Core.startGame();
         }
 
-        // requestFullscreen → orientation.lock encadenado ────────────────────
-        // Se llama DESPUÉS de startGame() para no retrasar el inicio del juego
-        // mientras el SO procesa la transición a pantalla completa.
-        //
-        // CORRECCIÓN: en Android Chrome/Samsung Internet la API exige que
-        // requestFullscreen() se invoque sobre el elemento que recibió la
-        // interacción del usuario. Si el tap cayó sobre JD_canvas y se llamaba
-        // sobre JD_container, el navegador rechazaba la solicitud silenciosamente.
-        // Ahora se selecciona el elemento correcto según e.target.
-        const JD_fsElement = (e.target === JD_canvas) ? JD_canvas : JD_container;
-        const JD_fsReq = JD_fsElement && (
-            JD_fsElement.requestFullscreen       ||
-            JD_fsElement.webkitRequestFullscreen ||
-            JD_fsElement.mozRequestFullScreen    ||
-            JD_fsElement.msRequestFullscreen
+        // requestFullscreen sobre el elemento que recibió la interacción.
+        // Se llama DESPUÉS de startGame() para no retrasar el inicio del juego.
+        const JD_fsReq = fsTarget && (
+            fsTarget.requestFullscreen       ||
+            fsTarget.webkitRequestFullscreen ||
+            fsTarget.mozRequestFullScreen    ||
+            fsTarget.msRequestFullscreen
         );
 
         if (JD_fsReq) {
-            JD_fsReq.call(JD_fsElement)
+            JD_fsReq.call(fsTarget)
                 .then(() => {
                     // DENTRO del .then(): el SO ya concedió fullscreen.
                     // orientation.lock() solo tiene éxito en este contexto.
@@ -404,13 +409,39 @@
                 })
                 .catch(() => {
                     // Fullscreen denegado (iframe sin allow="fullscreen", política
-                    // de usuario, etc.). El juego continúa con normalidad en modo
-                    // ventana. El catch de orientation.lock también aterriza aquí.
+                    // de usuario, etc.). El juego continúa en modo ventana.
                 });
         }
     };
 
-    window.addEventListener('click', JD_immersionTrigger, { capture: true });
+    // Ruta táctil: touchend (funciona aunque touchstart haya llamado preventDefault)
+    const JD_touchTrigger = (e) => {
+        // Filtrar swipes: solo disparar si el dedo no se movió más de JD_TAP_DRIFT px
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            const dx = Math.abs(e.changedTouches[0].clientX - JD_touchStartX);
+            const dy = Math.abs(e.changedTouches[0].clientY - JD_touchStartY);
+            if (dx > JD_TAP_DRIFT || dy > JD_TAP_DRIFT) return; // swipe, ignorar
+        }
+        // Determinar el elemento tocado para pasarlo a requestFullscreen
+        const JD_touched = e.target;
+        const JD_fsTarget = (JD_touched === JD_canvas || JD_touched === JD_container)
+            ? JD_touched
+            : JD_container;
+        JD_doImmersion(JD_fsTarget);
+    };
+
+    // Ruta click: respaldo para desktop y Safari iOS
+    const JD_clickTrigger = (e) => {
+        e.stopPropagation(); // Evitar que JD_Core reciba este primer click
+        const JD_fsTarget = (e.target === JD_canvas || e.target === JD_container)
+            ? e.target
+            : JD_container;
+        JD_doImmersion(JD_fsTarget);
+    };
+
+    window.addEventListener('touchstart', JD_trackTouchStart, { capture: true, passive: true });
+    window.addEventListener('touchend',   JD_touchTrigger,   { capture: true, passive: true });
+    window.addEventListener('click',      JD_clickTrigger,   { capture: true });
 
     // ── Respaldo fullscreenchange: reintento de orientation.lock ─────────────
     // Samsung Internet y algunos WebViews de Android disparan fullscreenchange
