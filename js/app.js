@@ -1,5 +1,5 @@
 /**
- * Game Center Core v7.5 — Phase 3: Security & Gamification
+ * Game Center Core v8.1 — Phase 5: Daily Claim Security & UX Hardening
  * Compatible con gamecenter_v6_promos — migración silenciosa incluida.
  *
  * NOVEDADES v7.5:
@@ -13,6 +13,16 @@
  *  - Nuevo tema "Carmesí Arcade"
  *  - Utilidad debounce() exportada globalmente
  *  - Migración silenciosa automática de stores anteriores
+ *
+ * NOVEDADES v8.1 (Daily Claim Security):
+ *  - getNetworkTime(): sincronización con worldtimeapi.org; fallback a Date.now() con estado "Unverified"
+ *  - Bloqueo si discrepancia reloj local/red > 5 minutos ("Reloj desincronizado")
+ *  - Cambio de lógica 24 h → Día Natural (reset a las 00:00:00); elimina "desplazamiento de horario"
+ *  - Fórmula de racha basada en días calendario: diff=1 streak++, diff>1 reset, diff=0 ya reclamado
+ *  - Prevención de race conditions: btn-daily se desactiva síncronamente antes de cualquier Promise
+ *  - Feedback visual "Procesando..." mientras la petición está en vuelo
+ *  - Sanitización de saltos negativos: currentTime < lastClaimTime → mensaje informativo, racha intacta
+ *  - Recompensas críticas (Bendición Lunar) bloqueadas si el tiempo es "Unverified"
  */
 
 // =====================================================
@@ -123,6 +133,46 @@ function debounce(fn, delay = 300) {
     };
 }
 window.debounce = debounce; // Disponible globalmente para shop.html
+
+// =====================================================
+// TIEMPO DE RED — Fuente de verdad externa para el bono diario
+// =====================================================
+
+/**
+ * Consulta una API pública de tiempo para obtener una marca temporal verificada.
+ * Si la red no está disponible, retorna Date.now() con verified = false.
+ * Si la discrepancia entre el reloj de red y el local supera CLOCK_SKEW_LIMIT,
+ * retorna desynced = true y el botón de reclamo quedará bloqueado.
+ *
+ * @returns {Promise<{ time: number, verified: boolean, desynced: boolean }>}
+ */
+const CLOCK_SKEW_LIMIT = 5 * 60 * 1000; // 5 minutos en ms
+
+async function getNetworkTime() {
+    const localTime = Date.now();
+    try {
+        const controller = new AbortController();
+        const timeoutId  = setTimeout(() => controller.abort(), 5000); // 5 s timeout
+        const res = await fetch('https://worldtimeapi.org/api/ip', {
+            cache:  'no-store',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data        = await res.json();
+        const networkTime = new Date(data.datetime).getTime();
+        const skew        = Math.abs(networkTime - Date.now());
+
+        if (skew > CLOCK_SKEW_LIMIT) {
+            return { time: networkTime, verified: true, desynced: true };
+        }
+        return { time: networkTime, verified: true, desynced: false };
+    } catch (_) {
+        // Red no disponible o timeout — usar reloj local, marcar como no verificado
+        return { time: localTime, verified: false, desynced: false };
+    }
+}
 
 // =====================================================
 // WEB WORKER — Sincronización en hilo separado
@@ -367,65 +417,135 @@ window.GameCenter = {
     // ── BONO DIARIO CON RACHA ────────────────────────────────────────────────
 
     /**
-     * Reclama el bono diario.
-     * - < 24h desde último reclamo: bloqueado.
-     * - Entre 24h y 48h: racha continúa (streak++).
-     * - > 48h: racha se reinicia (streak = 1).
-     * La Bendición Lunar añade +90 monedas si está activa.
+     * Reclama el bono diario. Función async — consulta una API de tiempo externa
+     * como fuente de verdad antes de evaluar el reclamo.
+     *
+     * Lógica de días calendario (v8.1):
+     *   diff_días == 0 → ya reclamado hoy.
+     *   diff_días == 1 → racha continúa (streak + 1).
+     *   diff_días  > 1 → racha se reinicia (streak = 1).
+     *
+     * Seguridad adicional:
+     *   - currentTime < lastClaimTime → salto negativo detectado; bloquear sin tocar racha.
+     *   - Discrepancia reloj local/red > 5 min → "Reloj desincronizado"; bloquear reclamo.
+     *   - API no disponible → usar Date.now() con verified = false; bloquear Bendición Lunar.
+     *
+     * @returns {Promise<{success: boolean, reward?: number, baseReward?: number,
+     *                    moonBonus?: number, streak?: number, verified: boolean, message: string}>}
      */
-    claimDaily: () => {
-        const now     = Date.now();
+    claimDaily: async () => {
+        const { time: now, verified, desynced } = await getNetworkTime();
         const { lastClaim, streak } = store.daily;
-        const msSince = now - lastClaim;
-        const H24 = 86_400_000;
-        const H48 = 172_800_000;
 
-        if (msSince < H24) {
-            return { success: false, message: '¡Ya reclamaste tu bono hoy! Vuelve mañana.' };
+        // ── 1. Salto negativo (manipulación de reloj detectada a posteriori) ──
+        if (lastClaim > 0 && now < lastClaim) {
+            return {
+                success:  false,
+                verified,
+                message:  'Se detectó una inconsistencia horaria. Por favor, verifica la configuración de tu dispositivo.'
+            };
         }
 
-        const newStreak  = msSince < H48 ? streak + 1 : 1;
+        // ── 2. Reloj desincronizado con la red ──
+        if (desynced) {
+            return {
+                success:  false,
+                verified,
+                message:  'Reloj desincronizado. Verifica la hora de tu dispositivo e inténtalo de nuevo.'
+            };
+        }
+
+        // ── 3. Cálculo de días calendario (normalizar a medianoche) ──
+        const nowMidnight  = new Date(now).setHours(0, 0, 0, 0);
+        const lastMidnight = lastClaim > 0
+            ? new Date(lastClaim).setHours(0, 0, 0, 0)
+            : null;
+
+        // Si nunca se ha reclamado (lastClaim === 0), tratarlo como diff = 1
+        const diffDays = lastMidnight !== null
+            ? Math.round((nowMidnight - lastMidnight) / 86_400_000)
+            : 1;
+
+        if (diffDays === 0) {
+            return {
+                success:  false,
+                verified,
+                message:  '¡Ya reclamaste tu bono hoy! Vuelve mañana.'
+            };
+        }
+
+        // ── 4. Calcular nueva racha ──
+        const newStreak = diffDays === 1 ? streak + 1 : 1;
+
         const baseReward = Math.min(
             CONFIG.dailyReward + (newStreak - 1) * CONFIG.dailyStreakStep,
             CONFIG.dailyStreakCap
         );
 
-        // Bendición Lunar
+        // ── 5. Bendición Lunar (bloqueada si el tiempo no está verificado) ──
         const moonActive = store.buffs.moonBlessingExpiry > now;
-        const moonBonus  = moonActive ? 90 : 0;
+        // Si la API no está disponible (verified = false), no se otorga el bonus lunar
+        // para evitar que se abuse en modo offline.
+        const moonBonus  = (moonActive && verified) ? 90 : 0;
         const totalReward = baseReward + moonBonus;
 
+        // ── 6. Aplicar y persistir ──
         store.coins += totalReward;
-        store.daily = { lastClaim: now, streak: newStreak };
+        store.daily  = { lastClaim: now, streak: newStreak };
 
         logTransaction(
             'ingreso',
             totalReward,
-            `Bono diario · racha ${newStreak}${moonActive ? ' + Bendición Lunar' : ''}`
+            `Bono diario · racha ${newStreak}` +
+            (moonBonus ? ' + Bendición Lunar' : '') +
+            (!verified ? ' (tiempo sin verificar)' : '')
         );
 
         saveState();
         updateMoonBlessingUI();
 
+        const unverifiedNote = !verified ? ' (red no disponible)' : '';
         return {
-            success:     true,
-            reward:      totalReward,
+            success:    true,
+            reward:     totalReward,
             baseReward,
             moonBonus,
-            streak:      newStreak,
-            message:     `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}`
+            streak:     newStreak,
+            verified,
+            message:    `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}${unverifiedNote}`
         };
     },
 
-    canClaimDaily: () => Date.now() - store.daily.lastClaim >= 86_400_000,
+    /**
+     * Comprueba si el usuario puede reclamar el bono diario.
+     * Usa el reloj local para la UI (sin coste de red); la validación real
+     * con tiempo de red ocurre dentro de claimDaily().
+     * Lógica: el bono está disponible si hoy (medianoche) > último reclamo (medianoche).
+     *
+     * @returns {boolean}
+     */
+    canClaimDaily: () => {
+        const { lastClaim } = store.daily;
+        if (lastClaim === 0) return true;
+        const nowMidnight  = new Date().setHours(0, 0, 0, 0);
+        const lastMidnight = new Date(lastClaim).setHours(0, 0, 0, 0);
+        return (nowMidnight - lastMidnight) >= 86_400_000; // al menos 1 día de diferencia
+    },
 
     /**
      * Devuelve información sobre el estado de la racha actual.
+     * Usa días calendario (medianoche) para consistencia con claimDaily().
      */
     getStreakInfo: () => {
         const { lastClaim, streak } = store.daily;
-        const msSince   = Date.now() - lastClaim;
-        const nextStreak = msSince < 172_800_000 ? streak + 1 : 1;
+        const nowMidnight  = new Date().setHours(0, 0, 0, 0);
+        const lastMidnight = lastClaim > 0
+            ? new Date(lastClaim).setHours(0, 0, 0, 0)
+            : null;
+        const diffDays   = lastMidnight !== null
+            ? Math.round((nowMidnight - lastMidnight) / 86_400_000)
+            : 1;
+        const nextStreak = diffDays === 1 ? streak + 1 : 1;
         const nextReward = Math.min(
             CONFIG.dailyReward + (nextStreak - 1) * CONFIG.dailyStreakStep,
             CONFIG.dailyStreakCap
@@ -433,7 +553,7 @@ window.GameCenter = {
         return {
             streak,
             nextReward,
-            canClaim: msSince >= 86_400_000
+            canClaim: diffDays >= 1
         };
     },
 
@@ -850,18 +970,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Bono diario
+    // Bono diario — el botón se desactiva SÍNCRONAMENTE antes de cualquier operación
+    // asíncrona para prevenir el "double-tap bug" (race condition por clics rápidos).
     const dailyBtn = document.getElementById('btn-daily');
     if (dailyBtn) {
-        dailyBtn.addEventListener('click', () => {
-            const result = window.GameCenter.claimDaily();
-            const msg    = document.getElementById('daily-msg');
+        dailyBtn.addEventListener('click', async () => {
+            // ── Paso 1: desactivar de inmediato (síncrono) ──
+            dailyBtn.disabled      = true;
+            dailyBtn.style.opacity = '0.5';
+            dailyBtn.style.cursor  = 'not-allowed';
+
+            // Feedback visual "Procesando…" en el elemento de texto del botón
+            const rewardEl = document.getElementById('hud-reward-amount');
+            const span     = dailyBtn.querySelector('span');
+            const prevText = rewardEl
+                ? rewardEl.textContent
+                : (span ? span.textContent : null);
+
+            if (rewardEl)      rewardEl.textContent = '...';
+            else if (span)     span.textContent     = 'Procesando...';
+
+            // ── Paso 2: ejecutar la lógica asíncrona ──
+            const result = await window.GameCenter.claimDaily();
+
+            // ── Paso 3: mostrar mensaje y actualizar UI ──
+            const msg = document.getElementById('daily-msg');
             if (msg) {
-                msg.textContent  = result.message;
-                msg.style.color  = result.success ? '#4ade80' : '#facc15';
+                msg.textContent   = result.message;
+                msg.style.color   = result.success ? '#4ade80' : '#facc15';
                 msg.style.opacity = '1';
                 setTimeout(() => { msg.style.opacity = '0'; }, 3500);
             }
+
+            // updateDailyButton() recalcula el estado correcto del botón
+            // (puede habilitarlo si el reclamo falló por error recuperable,
+            //  o dejarlo desactivado con el contador si fue exitoso).
             updateDailyButton();
         });
     }
