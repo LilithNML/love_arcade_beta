@@ -289,9 +289,11 @@
 <script src="js/JD_Core.js"></script>
 
 <!-- Glue: Fullscreen/Orientación + sincronización del HUD HTML ────────────
-     v1.2.1 — Patrón no-bloqueante para preservar el User Gesture Token en
-     Android. Se eliminó el await en requestFullscreen y se añade un listener
-     fullscreenchange como reintento crítico para el lock de orientación.    -->
+     v1.3.0 — Ejecución Plana con Captura de Fase.
+     requestFullscreen es la primera instrucción del primer stack frame del
+     gesto. Se usa { capture: true } para disparar ANTES que cualquier listener
+     del canvas (JD_Core), preservando el Transient Activation Token en Android.
+     e.stopPropagation() evita el doble disparo en el canvas listener de JD_Core.  -->
 <script>
 (function () {
     'use strict';
@@ -302,84 +304,79 @@
     const JD_scoreDisplay  = document.getElementById('jd-score-display');
     const JD_muteContainer = document.getElementById('jd-mute-container');
 
-    // ── 1. Función atómica de lock de orientación ────────────────────────────
-    // Sin await: la invocación ocurre dentro del mismo ciclo de evento del
-    // gesto de usuario, preservando el User Gesture Token del navegador.
-    // El .catch vacío evita errores en consola cuando el API no está soportada.
-    function JD_tryLock() {
+    // ── Función de inmersión: síncrona y plana ───────────────────────────────
+    // Regla crítica: requestFullscreen y orientation.lock deben ser las
+    // primeras llamadas dentro del primer stack frame del gesto de usuario.
+    // Cualquier micro-tarea, promesa o await previo invalida el token en Android.
+    function JD_launchImmersion() {
+
+        // 1. Fullscreen — PRIMERA instrucción (token activo garantizado)
+        const JD_req = JD_container
+            ? (JD_container.requestFullscreen || JD_container.webkitRequestFullscreen)
+            : null;
+        if (JD_req) JD_req.call(JD_container);
+
+        // 2. Lock de orientación — SEGUNDA instrucción (mismo frame síncrono)
         if (screen.orientation && typeof screen.orientation.lock === 'function') {
-            screen.orientation.lock('landscape').catch(() => {});
+            screen.orientation.lock('landscape').catch(() => {
+                // Si el lock falla aquí, 'fullscreenchange' lo reintenta.
+            });
+        }
+
+        // 3. Ocultar overlay de rotación
+        if (JD_overlay) JD_overlay.style.display = 'none';
+
+        // 4. Iniciar lógica del juego.
+        //    Se llama aquí porque e.stopPropagation() (ver trigger) impide
+        //    que el evento llegue al canvas listener de JD_Core.
+        //    JD_Audio.init() también es necesario para desbloquear el AudioContext.
+        if (typeof JD_Audio !== 'undefined') JD_Audio.init();
+        if (typeof JD_Core  !== 'undefined' && JD_Core.state === 'START') {
+            JD_Core.startGame();
         }
     }
 
-    // ── 2. Función principal de inmersión ────────────────────────────────────
-    function JD_activateImmersion() {
-        // A. Solicitar pantalla completa (Standard + Webkit) — SIN await
-        //    El .then dispara tryLock cuando el fullscreen ya está confirmado.
-        const JD_reqFS = JD_container
-            ? (JD_container.requestFullscreen || JD_container.webkitRequestFullscreen)
-            : null;
+    // ── Listener de primera interacción ─────────────────────────────────────
+    // { capture: true } — fase de captura: se ejecuta ANTES que cualquier
+    // listener del canvas registrado por JD_Core (fase de burbuja), garantizando
+    // que requestFullscreen sea lo primero en el stack frame del gesto.
+    // e.stopPropagation() evita que JD_Core._onActionStart procese este mismo
+    // evento y llame a startGame() o startJump() una segunda vez.
+    const JD_trigger = (e) => {
+        e.stopPropagation();
+        JD_launchImmersion();
+        window.removeEventListener('touchstart', JD_trigger, { capture: true });
+        window.removeEventListener('click',      JD_trigger, { capture: true });
+    };
 
-        if (JD_reqFS) {
-            JD_reqFS.call(JD_container)
-                .then(() => { JD_tryLock(); })
-                .catch(e => console.info('[JD] Fullscreen rechazado:', e.message));
+    window.addEventListener('touchstart', JD_trigger, { capture: true, passive: false });
+    window.addEventListener('click',      JD_trigger, { capture: true });
+
+    // ── Respaldo: fullscreenchange ───────────────────────────────────────────
+    // Android puede rechazar el primer orientation.lock porque el cambio de
+    // pantalla completa no ha finalizado aún en el sistema. Este listener se
+    // dispara ~200–500 ms después (señal del SO) y reintenta el lock.
+    const JD_onFSChange = () => {
+        const JD_fs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (JD_fs && screen.orientation && typeof screen.orientation.lock === 'function') {
+            screen.orientation.lock('landscape').catch(() => {});
         }
+    };
+    document.addEventListener('fullscreenchange',       JD_onFSChange);
+    document.addEventListener('webkitfullscreenchange', JD_onFSChange);
 
-        // B. Intento inmediato de lock (navegadores que lo aceptan antes del
-        //    cambio de pantalla completa, o dispositivos sin fullscreen API).
-        JD_tryLock();
-
-        // C. Si el dispositivo ya está en landscape, asegurarse de que el
-        //    overlay esté oculto (puede haber quedado visible por portrait).
+    // ── Listener de orientación: auto-ocultar overlay ───────────────────────
+    // Cuando el usuario gira el dispositivo manualmente (iOS/Safari),
+    // el overlay desaparece sin requerir un nuevo toque.
+    window.addEventListener('resize', () => {
         if (JD_overlay && window.innerWidth >= window.innerHeight) {
             JD_overlay.style.display = 'none';
         }
-    }
-
-    // ── 3. Listener de respaldo: fullscreenchange ────────────────────────────
-    // Android puede rechazar el primer tryLock porque "aún no era fullscreen".
-    // Este listener dispara cuando el navegador confirma la pantalla completa
-    // (~200–500 ms después del toque) y reintenta el lock.
-    document.addEventListener('fullscreenchange', () => {
-        if (document.fullscreenElement) {
-            JD_tryLock();
-        }
-    });
-    // Prefijo webkit para Safari macOS/iPadOS
-    document.addEventListener('webkitfullscreenchange', () => {
-        if (document.webkitFullscreenElement) {
-            JD_tryLock();
-        }
     });
 
-    // ── 4. Listener de orientación: auto-ocultar overlay ─────────────────────
-    // Cuando el usuario gira el dispositivo manualmente, ocultar el overlay
-    // de "Gira tu dispositivo" sin requerir un nuevo toque.
-    window.addEventListener('resize', () => {
-        if (!JD_overlay) return;
-        if (window.innerWidth >= window.innerHeight) {
-            JD_overlay.style.display = 'none';
-        } else if (JD_overlay.style.display === 'flex') {
-            // Ya era visible: mantener visible (el usuario no giró aún)
-        }
-    });
-
-    // ── 5. Activar en la primera interacción (una sola vez) ──────────────────
-    // Se escucha sobre window (no el canvas) para capturar el gesto antes de
-    // que JD_Core lo consuma y para dar soporte a toque en cualquier zona.
-    function JD_handleFirstInteraction() {
-        JD_activateImmersion();
-        window.removeEventListener('touchstart', JD_handleFirstInteraction);
-        window.removeEventListener('click',      JD_handleFirstInteraction);
-    }
-
-    window.addEventListener('touchstart', JD_handleFirstInteraction, { passive: true });
-    window.addEventListener('click',      JD_handleFirstInteraction);
-
-    // ── 6. Ticker de UI: score, récord y visibilidad del mute (~10 fps) ──────
+    // ── Ticker de UI: score, récord y visibilidad del mute (~10 fps) ─────────
     setInterval(() => {
-        // Puntuación en tiempo real (solo en PLAYING / GAMEOVER)
+        // Puntuación en tiempo real (PLAYING / GAMEOVER)
         if (JD_scoreDisplay && typeof JD_Core !== 'undefined') {
             const JD_s = (JD_Core.state === 'PLAYING' || JD_Core.state === 'GAMEOVER')
                 ? Math.floor(JD_Core.score)
