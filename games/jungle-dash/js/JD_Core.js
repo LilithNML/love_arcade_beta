@@ -96,11 +96,11 @@ const JD_Core = {
         }
 
         // ── Conversión de monedas (v1.3.0) ────────────────────────────────────
-        // Fuente pasiva:  1 moneda por cada 40 puntos acumulados.
-        // Fuente activa:  25 monedas por cada Super Moneda recogida durante la partida.
-        // Meta de diseño: ~200 monedas en 5 000 puntos (125 pasivas + 75 de 3 super monedas).
-        const JD_passiveCoins = Math.floor(JD_score / 40);
-        const JD_activeCoins  = JD_Entities.superCoinsCollected * 25;
+        // Fuente pasiva:  1 moneda por cada 30 puntos acumulados.
+        // Fuente activa:  30 monedas por cada Super Moneda recogida durante la partida.
+        // Meta de diseño: ~256 monedas en 5 000 puntos (166 pasivas + 90 de 3 super monedas).
+        const JD_passiveCoins = Math.floor(JD_score / 30);
+        const JD_activeCoins  = JD_Entities.superCoinsCollected * 30;
         JD_coinsEarned        = JD_passiveCoins + JD_activeCoins;
 
         console.log(
