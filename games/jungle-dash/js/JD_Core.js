@@ -7,27 +7,41 @@
  *
  * v1.2.0 — Soporte Fullscreen API + orientation lock delegado al glue script.
  *           El botón de mute se gestiona desde #jd-mute-container (fuera del HUD).
+ *
+ * v1.3.0 — Sistema de recompensas optimizado:
+ *   · Multiplicador de score dinámico (1.0× / 1.5× / 2.0×) según tramos de puntuación.
+ *   · Nueva fórmula de puntuación: JD_score += (delta * 0.1) * JD_currentMultiplier.
+ *   · Economía de monedas dual: pasiva (score / 40) + activa (Super Monedas × 25).
+ *   · Detección de recogida de Super Monedas con checkItemCollection().
  */
 
 // ── Estados del juego ─────────────────────────────────────────────────────────
 const JD_STATES = Object.freeze({ START: 'START', PLAYING: 'PLAYING', GAMEOVER: 'GAMEOVER' });
 
 // ── Estado global de partida ──────────────────────────────────────────────────
-let JD_currentState  = JD_STATES.START;
-let JD_score         = 0;
-let JD_highScore     = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
-let JD_coinsEarned   = 0;
-let JD_gameSpeed     = 4.0;   // px/frame virtuales (escala con el tiempo)
-let JD_animFrameId   = null;
-let JD_lastTimestamp = 0;
-let JD_firstInteract = false; // Control de política de Autoplay de navegadores
+let JD_currentState      = JD_STATES.START;
+let JD_score             = 0;
+let JD_highScore         = parseInt(localStorage.getItem('JD_highscore') || '0', 10);
+let JD_coinsEarned       = 0;
+let JD_gameSpeed         = 4.0;   // px/frame virtuales (escala con el tiempo)
+let JD_animFrameId       = null;
+let JD_lastTimestamp     = 0;
+let JD_firstInteract     = false; // Control de política de Autoplay de navegadores
+
+// ── Multiplicador de puntuación dinámico (v1.3.0) ────────────────────────────
+// Aumenta según tramos de puntuación para premiar la longevidad.
+//   0 – 1 000 pts  → 1.0×
+//   1 001 – 3 000  → 1.5×
+//   3 001 +        → 2.0×
+let JD_currentMultiplier = 1.0;
 
 // ── Namespace JD_Core (expuesto para acceso entre módulos) ────────────────────
 const JD_Core = {
 
-    get score()    { return JD_score;    },
-    get state()    { return JD_currentState; },
-    get highScore(){ return JD_highScore; },
+    get score()      { return JD_score;           },
+    get state()      { return JD_currentState;    },
+    get highScore()  { return JD_highScore;        },
+    get multiplier() { return JD_currentMultiplier; },
 
     // ── Inicialización del sistema ────────────────────────────────────────────
     init() {
@@ -47,10 +61,11 @@ const JD_Core = {
 
     // ── Arrancar una nueva partida ────────────────────────────────────────────
     startGame() {
-        JD_currentState = JD_STATES.PLAYING;
-        JD_score        = 0;
-        JD_coinsEarned  = 0;
-        JD_gameSpeed    = 4.0;
+        JD_currentState      = JD_STATES.PLAYING;
+        JD_score             = 0;
+        JD_coinsEarned       = 0;
+        JD_gameSpeed         = 4.0;
+        JD_currentMultiplier = 1.0;
 
         JD_Physics.reset();
         JD_Entities.reset(JD_Renderer.VIRT_W, JD_Renderer.GROUND_Y);
@@ -80,9 +95,20 @@ const JD_Core = {
             localStorage.setItem('JD_highscore', Math.floor(JD_highScore));
         }
 
-        // ── Conversión de monedas: Math.floor(puntos / 500) ───────────────────
-        JD_coinsEarned = Math.floor(JD_score / 500);
-        console.log(`[JD] Partida terminada. Puntos: ${Math.floor(JD_score)}. Monedas: ${JD_coinsEarned}.`);
+        // ── Conversión de monedas (v1.3.0) ────────────────────────────────────
+        // Fuente pasiva:  1 moneda por cada 40 puntos acumulados.
+        // Fuente activa:  25 monedas por cada Super Moneda recogida durante la partida.
+        // Meta de diseño: ~200 monedas en 5 000 puntos (125 pasivas + 75 de 3 super monedas).
+        const JD_passiveCoins = Math.floor(JD_score / 40);
+        const JD_activeCoins  = JD_Entities.superCoinsCollected * 25;
+        JD_coinsEarned        = JD_passiveCoins + JD_activeCoins;
+
+        console.log(
+            `[JD] Partida terminada. Puntos: ${Math.floor(JD_score)}. ` +
+            `Monedas pasivas: ${JD_passiveCoins}. ` +
+            `Super Monedas recogidas: ${JD_Entities.superCoinsCollected} (+${JD_activeCoins} monedas). ` +
+            `Total: ${JD_coinsEarned}.`
+        );
 
         // ── Integración con Love Arcade GameCenter ────────────────────────────
         if (JD_coinsEarned > 0) {
@@ -94,7 +120,7 @@ const JD_Core = {
                 console.warn('[JD] Modo standalone — GameCenter no disponible. Monedas no acumuladas.');
             }
         } else {
-            console.log('[JD] Sin monedas (< 500 puntos). No se reporta al GameCenter.');
+            console.log('[JD] Sin monedas (< 40 puntos). No se reporta al GameCenter.');
         }
     },
 
@@ -118,9 +144,17 @@ const JD_Core = {
     // ── Actualización de lógica de juego ─────────────────────────────────────
     _update(delta) {
 
-        // ── Incremento de puntuación ─────────────────────────────────────────
-        //    +1 punto base por tick a 60fps, sin multiplicador de velocidad
-        JD_score += delta * 0.85;
+        // ── Multiplicador dinámico según tramo de puntuación (v1.3.0) ─────────
+        if (JD_score <= 1000) {
+            JD_currentMultiplier = 1.0;
+        } else if (JD_score <= 3000) {
+            JD_currentMultiplier = 1.5;
+        } else {
+            JD_currentMultiplier = 2.0;
+        }
+
+        // ── Incremento de puntuación con multiplicador ────────────────────────
+        JD_score += (delta * 0.1) * JD_currentMultiplier;
 
         // ── Escalado progresivo de velocidad ─────────────────────────────────
         //    Cada 500 puntos: +0.5 velocidad; techo en 13
@@ -135,7 +169,19 @@ const JD_Core = {
         // ── Actualizar entidades ──────────────────────────────────────────────
         JD_Entities.update(delta, JD_score, JD_gameSpeed);
 
-        // ── Detección de colisión ─────────────────────────────────────────────
+        // ── Recogida de Super Monedas (v1.3.0) ────────────────────────────────
+        // checkItemCollection usa JD_ITEM_HITBOX_FACTOR = 1.30 para magnetismo.
+        const JD_scIdx = JD_Physics.checkItemCollection(
+            JD_Entities.player,
+            JD_Entities.superCoins
+        );
+        if (JD_scIdx !== -1) {
+            JD_Entities.collectSuperCoin(JD_scIdx);
+            JD_Audio.playSuperCoin();
+            console.log(`[JD] Super Moneda recogida (#${JD_Entities.superCoinsCollected}).`);
+        }
+
+        // ── Detección de colisión con obstáculos ──────────────────────────────
         if (JD_Physics.checkCollision(JD_Entities.player, JD_Entities.obstacles)) {
             JD_Core.gameOver();
         }
