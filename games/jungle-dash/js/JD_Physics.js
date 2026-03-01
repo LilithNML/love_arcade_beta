@@ -1,6 +1,11 @@
 /**
  * JD_Physics.js — Jungle Dash | Módulo de Física
- * Gestiona gravedad, vectores de salto proporcional y detección AABB al 80%.
+ * Gestiona gravedad, vectores de salto proporcional y detección AABB.
+ *
+ * v1.3.0 — Hitbox diferencial: JD_HITBOX_FACTOR (0.80) para obstáculos y
+ *           JD_ITEM_HITBOX_FACTOR (1.30) para recompensas (monedas/ítems).
+ *           El factor expandido crea un efecto de "succión magnética" que
+ *           elimina la frustración del "casi lo agarro".
  */
 
 const JD_Physics = (() => {
@@ -11,7 +16,14 @@ const JD_Physics = (() => {
     const JD_JUMP_BOOST_VEL = -0.42; // boost adicional por frame mientras se mantiene presionado
     const JD_MAX_BOOST_MS   = 380;   // ms máximos de boost (da aprox 150px de salto)
     const JD_MAX_FALL_VEL   = 14;    // velocidad máxima de caída
-    const JD_HITBOX_FACTOR  = 0.80;  // cajas de colisión al 80% del sprite
+
+    // ── Factores de hitbox ──────────────────────────────────────────────────
+    // Los obstáculos usan un factor reductor (80 %) para dar margen visual al jugador.
+    // Los ítems de recompensa usan un factor expansor (130 %) para crear magnetismo:
+    // el jugador recoge el ítem antes de tocarlo físicamente, eliminando la
+    // frustración del "casi lo agarro".
+    const JD_HITBOX_FACTOR      = 0.80; // Obstáculos: caja al 80 % del sprite
+    const JD_ITEM_HITBOX_FACTOR = 1.30; // Ítems/monedas: caja al 130 % del sprite
 
     // ── Estado privado ──────────────────────────────────────────────────────
     let JD_vy            = 0;
@@ -19,16 +31,28 @@ const JD_Physics = (() => {
     let JD_jumpPressed   = false;
     let JD_jumpStartTime = 0;
 
-    // ── Utilidad: obtener caja AABB reducida ────────────────────────────────
-    function JD_getHitbox(entity) {
-        const JD_shrinkX = entity.w * (1 - JD_HITBOX_FACTOR) * 0.5;
-        const JD_shrinkY = entity.h * (1 - JD_HITBOX_FACTOR) * 0.5;
+    // ── Utilidad: obtener caja AABB con factor configurable ─────────────────
+    // @param {object}  entity    - entidad con {x, y, w, h}
+    // @param {number}  factor    - factor de escala de la hitbox (< 1 reduce, > 1 expande)
+    function JD_getHitboxWithFactor(entity, factor) {
+        const JD_shrinkX = entity.w * (1 - factor) * 0.5;
+        const JD_shrinkY = entity.h * (1 - factor) * 0.5;
         return {
             x: entity.x + JD_shrinkX,
             y: entity.y + JD_shrinkY,
-            w: entity.w * JD_HITBOX_FACTOR,
-            h: entity.h * JD_HITBOX_FACTOR,
+            w: entity.w * factor,
+            h: entity.h * factor,
         };
+    }
+
+    // ── AABB: intersección entre dos cajas ───────────────────────────────────
+    function JD_aabbOverlap(a, b) {
+        return !(
+            a.x + a.w < b.x ||
+            a.x > b.x + b.w ||
+            a.y + a.h < b.y ||
+            a.y > b.y + b.h
+        );
     }
 
     return {
@@ -93,25 +117,29 @@ const JD_Physics = (() => {
         },
 
         // ── Detección AABB entre jugador y array de obstáculos ───────────────
-        // Devuelve true si hay colisión, false si no.
+        // Usa JD_HITBOX_FACTOR (0.80) — cajas reducidas para mayor fairness.
+        // Devuelve true si hay colisión con algún obstáculo.
         checkCollision(player, obstacles) {
-            const JD_pBox = JD_getHitbox(player);
+            const JD_pBox = JD_getHitboxWithFactor(player, JD_HITBOX_FACTOR);
 
             for (let i = 0; i < obstacles.length; i++) {
-                const JD_obs  = obstacles[i];
-                const JD_oBox = JD_getHitbox(JD_obs);
-
-                // Separación en algún eje → sin colisión
-                if (
-                    JD_pBox.x + JD_pBox.w < JD_oBox.x ||
-                    JD_pBox.x > JD_oBox.x + JD_oBox.w ||
-                    JD_pBox.y + JD_pBox.h < JD_oBox.y ||
-                    JD_pBox.y > JD_oBox.y + JD_oBox.h
-                ) continue;
-
-                return true; // Colisión detectada
+                const JD_oBox = JD_getHitboxWithFactor(obstacles[i], JD_HITBOX_FACTOR);
+                if (JD_aabbOverlap(JD_pBox, JD_oBox)) return true;
             }
             return false;
+        },
+
+        // ── Detección AABB entre jugador y array de ítems de recompensa ──────
+        // Usa JD_ITEM_HITBOX_FACTOR (1.30) — caja expandida para efecto magnético.
+        // Devuelve el índice del primer ítem recogido, o -1 si ninguno.
+        checkItemCollection(player, items) {
+            const JD_pBox = JD_getHitboxWithFactor(player, JD_ITEM_HITBOX_FACTOR);
+
+            for (let i = 0; i < items.length; i++) {
+                const JD_iBox = JD_getHitboxWithFactor(items[i], JD_ITEM_HITBOX_FACTOR);
+                if (JD_aabbOverlap(JD_pBox, JD_iBox)) return i;
+            }
+            return -1;
         },
 
         get onGround() { return JD_onGround; }
