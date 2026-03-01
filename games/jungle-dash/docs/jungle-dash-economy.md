@@ -19,7 +19,7 @@
 
 ## 1. Objetivo de diseño
 
-La economía de v1.3.0 está diseñada para alcanzar **200 monedas** en **5 000 puntos**, con el objetivo de aumentar el *game feel* y la retención. Las recompensas se obtienen de dos fuentes complementarias:
+La economía de v1.3.0 está diseñada para alcanzar **256 monedas** en **5 000 puntos**, con el objetivo de aumentar el *game feel* y la retención. Las recompensas se obtienen de dos fuentes complementarias:
 
 | Fuente | Tipo | Monedas en 5 000 pts |
 |---|---|---|
