@@ -2,6 +2,9 @@
  * JD_Audio.js — Jungle Dash | Módulo de Audio
  * Usa Web Audio API. El BGM se inicia sólo tras la primera interacción del usuario.
  * Primero intenta cargar JD_bgm_jungle.mp3; si falla, genera audio procedural.
+ *
+ * v1.3.0 — Añadidos SFX: playCoin() y playSuperCoin() con pitch diferencial
+ *           para reforzar el feedback positivo de la economía de recompensas.
  */
 
 const JD_Audio = (() => {
@@ -122,6 +125,30 @@ const JD_Audio = (() => {
         JD_src.start();
     }
 
+    // ── Helper interno: genera un SFX de moneda con pitch configurable ──────
+    // @param {number} freqStart  - frecuencia inicial del oscilador (Hz)
+    // @param {number} freqEnd    - frecuencia final tras la rampa (Hz)
+    // @param {number} gainPeak   - volumen pico
+    // @param {number} duration   - duración total del SFX en segundos
+    function JD_playCoinSFX(freqStart, freqEnd, gainPeak, duration) {
+        if (!JD_audioCtx || JD_muted) return;
+
+        const JD_osc  = JD_audioCtx.createOscillator();
+        const JD_gain = JD_audioCtx.createGain();
+
+        JD_osc.type = 'triangle';
+        JD_osc.frequency.setValueAtTime(freqStart, JD_audioCtx.currentTime);
+        JD_osc.frequency.exponentialRampToValueAtTime(freqEnd, JD_audioCtx.currentTime + duration * 0.5);
+
+        JD_gain.gain.setValueAtTime(gainPeak, JD_audioCtx.currentTime);
+        JD_gain.gain.exponentialRampToValueAtTime(0.001, JD_audioCtx.currentTime + duration);
+
+        JD_osc.connect(JD_gain);
+        JD_gain.connect(JD_gainNode);
+        JD_osc.start();
+        JD_osc.stop(JD_audioCtx.currentTime + duration);
+    }
+
     // ── API pública ─────────────────────────────────────────────────────────
     return {
 
@@ -206,6 +233,28 @@ const JD_Audio = (() => {
             JD_filter.connect(JD_gain);
             JD_gain.connect(JD_gainNode);
             JD_src.start();
+        },
+
+        // ── SFX: Moneda normal ─────────────────────────────────────────────
+        // Tono ascendente corto (triangle 520 Hz → 880 Hz, 0.18s).
+        playCoin() {
+            JD_playCoinSFX(520, 880, 0.15, 0.18);
+        },
+
+        // ── SFX: Super Moneda ──────────────────────────────────────────────
+        // Pitch más agudo y duración más larga que la moneda normal para
+        // reforzar positivamente la recogida del ítem de mayor valor.
+        // Tono: 900 Hz → 1600 Hz con una segunda nota de remate a 2000 Hz.
+        playSuperCoin() {
+            if (!JD_audioCtx || JD_muted) return;
+
+            // Primera nota (ascenso rápido)
+            JD_playCoinSFX(900, 1600, 0.20, 0.14);
+
+            // Segunda nota de remate (trino agudo, ligeramente retardada)
+            setTimeout(() => {
+                JD_playCoinSFX(1600, 2000, 0.18, 0.18);
+            }, 100);
         },
 
         toggleMute() {
