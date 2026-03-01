@@ -1,5 +1,5 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v8.0 · Phase 4: Mobile-First & UX Optimization
+### Plataforma de Recompensas · v8.1 · Phase 5: Daily Claim Security & UX Hardening
 
 ---
 
@@ -7,6 +7,7 @@
 
 1. [Visión General](#1-visión-general)
 2. [Novedades en v8.0](#2-novedades-en-v80)
+2b. [Novedades en v8.1](#2b-novedades-en-v81--daily-claim-security--ux-hardening)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -62,6 +63,21 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 
 ---
 
+## 2b. Novedades en v8.1 — Daily Claim Security & UX Hardening
+
+| Área | Cambio |
+|---|---|
+| **Tiempo de red** | Nueva función `getNetworkTime()` consulta `worldtimeapi.org` antes de cada reclamo. Si falla, usa `Date.now()` con `verified: false`. |
+| **Reloj desincronizado** | Si la discrepancia entre red y reloj local supera 5 minutos, el reclamo se bloquea con el mensaje "Reloj desincronizado". |
+| **Lógica de día** | Sustituido el contador de 24 h exactas por **días calendario**. El bono está disponible a las 00:00:00 del día siguiente al último reclamo. |
+| **Fórmula de racha** | `diffDays === 1` → streak+1 · `diffDays > 1` → reset a 1 · `diffDays === 0` → ya reclamado. Calculado con `setHours(0,0,0,0)` para comparar medianoche contra medianoche. |
+| **Race condition** | El botón `#btn-daily` se pone a `disabled = true` de forma **síncrona** antes de cualquier `await`, evitando múltiples reclamos por doble clic. |
+| **Feedback visual** | El texto del botón cambia a `"Procesando..."` mientras la Promise está pendiente. Se restaura por `updateDailyButton()` al finalizar. |
+| **Saltos negativos** | Si `currentTime < lastClaimTime` (manipulación de reloj), se bloquea el reclamo y se muestra un mensaje informativo. La racha no se reinicia. |
+| **Unverified mode** | Si `getNetworkTime()` retorna `verified: false`, se permite el reclamo base pero se bloquea el bonus de Bendición Lunar. |
+
+---
+
 ## 3. Arquitectura del Proyecto
 
 ```
@@ -96,7 +112,7 @@ love_arcade/
 ├── styles.css              # Hoja de estilos global — Mobile-First (v8.0)
 │
 ├── js/
-│   ├── app.js              # Motor principal — GameCenter API v7.5 (actualizado v8.0)
+│   ├── app.js              # Motor principal — GameCenter API v8.1 (Daily Claim Security)
 │   └── sync-worker.js      # Web Worker — Base64 + checksum SHA-256 (sin cambios)
 │
 ├── data/
@@ -122,6 +138,8 @@ love_arcade/
 
 ## 5. app.js — El Motor
 
+### Cambios en v8.0
+
 Sin cambios en la lógica de negocio. Las únicas modificaciones en v8.0 son:
 
 **Emojis eliminados de strings internos:**
@@ -138,6 +156,86 @@ Sin cambios en la lógica de negocio. Las únicas modificaciones en v8.0 son:
 La representación visual de la luna es ahora responsabilidad exclusiva del icono Lucide `<i data-lucide="moon">` en el HTML.
 
 La función `updateMoonBlessingUI()` actualiza el `<span class="moon-blessing-badge">` (que ya contiene el icono SVG) mostrándolo u ocultándolo con la clase `hidden`. Ya no modifica el `textContent` del badge porque ese contenido es el icono SVG.
+
+### Cambios en v8.1 (Daily Claim Security)
+
+#### `getNetworkTime()` — nueva función asíncrona
+
+```javascript
+async function getNetworkTime()
+// Returns: { time: number, verified: boolean, desynced: boolean }
+```
+
+Consulta `https://worldtimeapi.org/api/ip` con un timeout de 5 segundos.
+
+| Campo | Descripción |
+|---|---|
+| `time` | Timestamp en ms a usar como "ahora" |
+| `verified` | `true` si se obtuvo de la red, `false` si es fallback local |
+| `desynced` | `true` si la diferencia red↔local supera `CLOCK_SKEW_LIMIT` (5 min) |
+
+Constante asociada: `CLOCK_SKEW_LIMIT = 5 * 60 * 1000` (ms).
+
+#### `claimDaily()` — ahora `async`
+
+Antes devolvía un objeto síncrono. Ahora retorna una `Promise` e integra cuatro capas de validación en orden:
+
+1. **Salto negativo** (`now < lastClaim`): bloquea sin tocar la racha.
+2. **Reloj desincronizado** (`desynced === true`): bloquea con advertencia.
+3. **Día calendario** (diff via `setHours(0,0,0,0)`): reemplaza el contador de 24 h exactas.
+4. **Bonus Lunar bloqueado** si `verified === false`: se otorga el reclamo base pero sin el bonus de Bendición Lunar.
+
+```javascript
+// Signature
+async claimDaily(): Promise<{
+    success: boolean,
+    reward?: number,
+    baseReward?: number,
+    moonBonus?: number,
+    streak?: number,
+    verified: boolean,
+    message: string
+}>
+```
+
+#### `canClaimDaily()` — lógica de día calendario
+
+```javascript
+// Antes (v8.0):
+canClaimDaily: () => Date.now() - store.daily.lastClaim >= 86_400_000
+
+// Ahora (v8.1):
+canClaimDaily: () => {
+    const nowMidnight  = new Date().setHours(0, 0, 0, 0);
+    const lastMidnight = new Date(lastClaim).setHours(0, 0, 0, 0);
+    return (nowMidnight - lastMidnight) >= 86_400_000;
+}
+```
+
+#### `getStreakInfo()` — lógica de día calendario
+
+Usa la misma normalización a medianoche para calcular `diffDays` y determinar si la racha continúa o se reinicia.
+
+#### Event listener de `#btn-daily`
+
+```javascript
+// Antes (v8.0): handler síncrono
+dailyBtn.addEventListener('click', () => {
+    const result = window.GameCenter.claimDaily();
+    // ...
+});
+
+// Ahora (v8.1): handler async con bloqueo inmediato
+dailyBtn.addEventListener('click', async () => {
+    // SÍNCRONO — antes de cualquier await:
+    dailyBtn.disabled      = true;
+    dailyBtn.style.opacity = '0.5';
+    // Cambiar texto a "Procesando..."
+    // ...
+    const result = await window.GameCenter.claimDaily();
+    // Restaurar estado por updateDailyButton()
+});
+```
 
 ---
 
@@ -481,9 +579,32 @@ const PROMO_CODES_HASHED = {
 
 ## 12. Sistema de Racha (Streaks)
 
-Sin cambios en v8.0. El bono diario escala según los días consecutivos de reclamo.
+### Cambio en v8.1: Día Natural vs. 24 horas exactas
 
-**Fórmula:** `recompensa = min(20 + (streak - 1) × 5, 60)`
+Hasta v8.0, el sistema verificaba si habían pasado ≥ 86.400.000 ms desde el último reclamo. Esto producía un "desplazamiento de horario": si el usuario reclamaba a las 23:55, debía esperar hasta las 23:55 del día siguiente.
+
+A partir de **v8.1**, la comparación se realiza por **día calendario** (medianoche contra medianoche):
+
+```javascript
+// Normalizar ambas fechas a las 00:00:00.000 de su día
+const nowMidnight  = new Date(now).setHours(0, 0, 0, 0);
+const lastMidnight = new Date(lastClaim).setHours(0, 0, 0, 0);
+const diffDays     = Math.round((nowMidnight - lastMidnight) / 86_400_000);
+```
+
+**Fórmula de racha:**
+
+| `diffDays` | Acción |
+|---|---|
+| `0` | Ya reclamado hoy. No se otorga recompensa. |
+| `1` | Racha continúa: `streak + 1`. |
+| `> 1` | Racha interrumpida: `streak = 1`. |
+
+Esto garantiza que un usuario que reclamó a las **23:59** puede volver a reclamar a las **00:01** del día siguiente (diff = 1 → racha continúa).
+
+**Fórmula de recompensa base** (sin cambios):
+
+`recompensa = min(20 + (streak - 1) × 5, 60)`
 
 | Día de racha | Recompensa base |
 |---|---|
@@ -507,6 +628,12 @@ Sin cambios funcionales en v8.0. La representación visual migra de emoji a icon
 | Efecto | +90 monedas por cada reclamo diario |
 | Vigencia | 7 días reales desde la activación |
 | Indicador UI | Icono `<i data-lucide="moon">` animado junto al saldo |
+
+### Restricción v8.1: modo Unverified
+
+Si `getNetworkTime()` no puede contactar la API (red caída, timeout), el reclamo diario se procesa igualmente con el reloj local (`verified: false`), **pero el bonus de Bendición Lunar no se otorga**. Esto previene que un usuario desconectado de internet abuse del buff deshábilitando la red para eludir la verificación temporal.
+
+El historial registra la operación con la nota `(tiempo sin verificar)` para auditoría.
 
 ---
 
@@ -639,6 +766,46 @@ El store mantiene un máximo de 150 entradas. La pestaña Ajustes muestra las 50
 
 ## 17. Flujos de Usuario
 
+### Flujo de Bono Diario (v8.1)
+
+```
+Usuario hace clic en #btn-daily
+    │
+    ▼ [SÍNCRONO — antes de cualquier await]
+btn.disabled = true  ·  texto → "Procesando..."
+    │
+    ▼
+getNetworkTime()  →  consulta worldtimeapi.org (timeout: 5 s)
+    ├── Éxito  →  { time: networkTs, verified: true,  desynced: false/true }
+    └── Error  →  { time: Date.now(), verified: false, desynced: false }
+    │
+    ▼ [Validaciones en orden]
+1. now < lastClaim?
+   └── SÍ → "Se detectó una inconsistencia horaria…"  [racha intacta, sin reclamo]
+2. desynced === true?
+   └── SÍ → "Reloj desincronizado…"  [bloqueo total]
+3. diffDays === 0? (mismo día calendario)
+   └── SÍ → "¡Ya reclamaste tu bono hoy!"  [bloqueo]
+    │
+    ▼ [diffDays >= 1 → reclamo válido]
+diffDays === 1 → streak + 1
+diffDays  > 1 → streak = 1
+    │
+    ▼
+baseReward = min(20 + (streak-1)×5, 60)
+moonBonus  = verified && moonActive ? 90 : 0
+totalReward = baseReward + moonBonus
+    │
+    ▼
+store.coins += totalReward  ·  store.daily = { lastClaim: now, streak }
+logTransaction(...)  ·  saveState()
+    │
+    ▼
+updateDailyButton()  →  restaura el botón al estado correcto
+                         (desactivado con contador si el reclamo fue exitoso,
+                          habilitado si falló por error recuperable)
+```
+
 ### Flujo de Wishlist y compra
 
 ```
@@ -735,13 +902,17 @@ const filteredTags = item.tags;
 
 ## 19. Seguridad y Limitaciones
 
-| Aspecto | Estado v8.0 | Detalle |
+| Aspecto | Estado v8.1 | Detalle |
 |---|---|---|
 | **Códigos promo** | ✅ Protegidos | Hash SHA-256. El texto plano no es visible en el código fuente. |
 | **Integridad de sync** | ✅ Checksum | Partidas editadas manualmente son rechazadas al importar (incluyendo archivos .txt). |
 | **Manipulación del saldo** | ⚠️ Posible | Un usuario puede editar `localStorage` directamente. Aceptable por diseño en plataforma de confianza. |
 | **Importación de archivos** | ✅ Validado | FileReader solo lee el contenido; sync-worker.js verifica el checksum SHA-256 antes de aplicar. |
 | **LocalStorage key** | ✅ Intocable | `'gamecenter_v6_promos'` no debe modificarse jamás para no perder el progreso de usuarios existentes. |
+| **Bono diario — reloj local** | ✅ Mitigado | `getNetworkTime()` contrasta el reloj local con `worldtimeapi.org`. Discrepancia > 5 min bloquea el reclamo. |
+| **Bono diario — modo offline** | ✅ Degradado gracefully | Si la API de tiempo no responde, se usa el reloj local con `verified: false`. El bonus de Bendición Lunar queda bloqueado en este modo. |
+| **Salto negativo de reloj** | ✅ Detectado | Si `now < lastClaimTime`, el reclamo se bloquea con mensaje informativo. La racha no se reinicia. |
+| **Double-tap / race condition** | ✅ Prevenido | El botón `#btn-daily` se desactiva síncronamente antes de cualquier `await`, imposibilitando múltiples reclamos simultáneos. |
 
 ---
 
@@ -781,8 +952,14 @@ const filteredTags = item.tags;
 | **stateKey** | La clave de `localStorage`: `'gamecenter_v6_promos'`. No debe modificarse jamás. |
 | **FileReader** | API nativa del navegador para leer archivos locales de forma asíncrona y no bloqueante. Usada en la importación de partidas. |
 | **Blob** | Objeto de datos binarios utilizado para generar el archivo `.txt` de exportación sin necesidad de un servidor. |
+| **getNetworkTime** | Función async (v8.1) que consulta `worldtimeapi.org` para obtener un timestamp verificado externamente. |
+| **verified** | Campo del objeto retornado por `getNetworkTime`. `true` si el tiempo viene de la red; `false` si es fallback local. |
+| **desynced** | Campo del objeto retornado por `getNetworkTime`. `true` si la diferencia entre reloj local y red supera 5 minutos. |
+| **Día Natural** | Modelo de reset de bono diario (v8.1) basado en días calendario (medianoche). Reemplaza el contador de 24 h exactas. |
+| **Race condition** | Condición de carrera donde múltiples clics rápidos disparan varias llamadas a `claimDaily()`. Prevenida en v8.1 desactivando el botón síncronamente. |
+| **CLOCK_SKEW_LIMIT** | Constante (5 min en ms). Umbral máximo de discrepancia tolerable entre reloj local y de red. |
 
 ---
 
-*Love Arcade · Documentación técnica v8.0 · Phase 4: Mobile-First & UX Optimization*
+*Love Arcade · Documentación técnica v8.1 · Phase 5: Daily Claim Security & UX Hardening*
 *Arquitectura: vanilla JS + localStorage · Sin backend · Compatible con GitHub Pages*
