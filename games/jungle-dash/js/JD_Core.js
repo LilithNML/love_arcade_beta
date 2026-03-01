@@ -55,11 +55,13 @@ const JD_Core = {
         JD_Physics.reset();
         JD_Entities.reset(JD_Renderer.VIRT_W, JD_Renderer.GROUND_Y);
 
-        // El audio sólo puede iniciarse tras la primera interacción
-        if (JD_firstInteract) {
-            JD_Audio.init();
-            JD_Audio.playBGM();
-        }
+        // El audio se inicializa en la primera interacción real.
+        // El glue script (v1.3.0) puede llamar a startGame() antes de que
+        // JD_firstInteract se haya marcado en JD_Core, así que se fuerza la
+        // marca aquí y se inicializa el audio si aún no lo estaba.
+        JD_firstInteract = true;
+        JD_Audio.init();
+        JD_Audio.playBGM();
 
         console.log('[JD] Partida iniciada.');
     },
@@ -172,12 +174,15 @@ const JD_Core = {
     },
 
     // ── Acción unificada de inicio/salto ──────────────────────────────────────
+    // NOTA v1.3.0: El glue script de index.html registra un listener en FASE DE
+    // CAPTURA (capture: true) que se ejecuta antes que estos listeners del canvas
+    // (fase de burbuja). En el primer toque el glue llama a startGame() y luego
+    // stopPropagation(), por lo que este handler NO recibe ese primer evento.
+    // Para taps posteriores (salto, reinicio) el glue ya se ha auto-eliminado y
+    // los eventos llegan aquí con normalidad.
     _onActionStart() {
-        // ── Primera interacción ───────────────────────────────────────────────
-        // Desbloquea el AudioContext (requiere gesto de usuario).
-        // Fullscreen + orientation.lock se gestionan desde el glue script de
-        // index.html mediante el patrón no-bloqueante (v1.2.1), que dispara
-        // antes que este listener (window vs canvas).
+        // Desbloquear AudioContext si no se hizo aún (por si el primer tap llegó
+        // por un camino distinto al canvas, p.ej. teclado sin pasar por el glue).
         if (!JD_firstInteract) {
             JD_firstInteract = true;
             JD_Audio.init();
