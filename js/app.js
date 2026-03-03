@@ -14,6 +14,13 @@
  *  - Utilidad debounce() exportada globalmente
  *  - Migración silenciosa automática de stores anteriores
  *
+ * NOVEDADES v9.2 (Font FOIT/FOUT, Coin Init & Treasury Grid):
+ *  - DOMContentLoaded: escribe el saldo inicial de forma SÍNCRONA y formateada
+ *    en los .coin-display ANTES de cualquier animación, eliminando el "salto"
+ *    de número crudo → formato "k".
+ *  - Tras el pintado inicial, añade .coin-badge--visible (opacity: 0→1 en 150ms)
+ *    para que el badge nunca muestre el "0" del HTML ni valores sin formatear.
+ *
  * NOVEDADES v9.1 (History API, Retry UI & Theme Fix):
  *  - applyTheme(): ahora escribe la clase `theme-{key}` en <body> y elimina
  *    todas las clases de tema previas antes de añadir la nueva.
@@ -878,17 +885,24 @@ function updateUI() {
         document.querySelectorAll('.coin-display:not(.navbar .coin-display)')
     );
 
-    // Animar con número exacto (los listeners internos de animateValue usan el valor numérico)
-    animateValue([...navbarDisplays, ...otherDisplays], _displayedCoins, store.coins);
+    if (_displayedCoins === store.coins) {
+        // Sin delta: escribir valores formateados directamente, sin animación.
+        // Evita sobrescribir el valor formateado que ya pintó el init silencioso.
+        navbarDisplays.forEach(el => { el.textContent = formatCoinsNavbar(store.coins); });
+        otherDisplays.forEach(el  => { el.textContent = store.coins; });
+    } else {
+        // Con delta: animar con número exacto y formatear navbar al terminar
+        animateValue([...navbarDisplays, ...otherDisplays], _displayedCoins, store.coins);
 
-    // Sobrescribir la navbar con el valor formateado al terminar la animación
-    // (animateValue dura ~650 ms; con 700 ms de margen evitamos parpadeos)
-    if (navbarDisplays.length) {
-        setTimeout(() => {
-            navbarDisplays.forEach(el => {
-                el.textContent = formatCoinsNavbar(store.coins);
-            });
-        }, 700);
+        // Sobrescribir la navbar con el valor formateado al terminar la animación
+        // (animateValue dura ~650 ms; con 700 ms de margen evitamos parpadeos)
+        if (navbarDisplays.length) {
+            setTimeout(() => {
+                navbarDisplays.forEach(el => {
+                    el.textContent = formatCoinsNavbar(store.coins);
+                });
+            }, 700);
+        }
     }
 
     applyAvatar();
@@ -1006,7 +1020,28 @@ function updateMoonBlessingUI() {
 document.addEventListener('DOMContentLoaded', () => {
     // Aplicar tema antes del primer paint para evitar FOUC
     applyTheme(store.theme || 'violet');
+
+    // ── v9.2: Init silencioso del saldo ──────────────────────────────────────
+    // Escribir el valor FORMATEADO de forma síncrona en todos los .coin-display
+    // ANTES de hacer visible el .coin-badge. Esto garantiza que el usuario
+    // nunca vea el "0" del HTML ni el número crudo antes del formato "k".
     _displayedCoins = store.coins;
+    document.querySelectorAll('.navbar .coin-display').forEach(el => {
+        el.textContent = formatCoinsNavbar(store.coins);
+    });
+    document.querySelectorAll('.coin-display:not(.navbar .coin-display)').forEach(el => {
+        el.textContent = store.coins;
+    });
+
+    // Hacer visible el badge con transición suave (opacity 0→1 en 150ms)
+    // requestAnimationFrame asegura que el textContent ya pintó antes de revelar.
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.coin-badge').forEach(el => {
+            el.classList.add('coin-badge--visible');
+        });
+    });
+
+    // Sincronizar el resto de la UI (avatar, botón diario, luna…)
     updateUI();
     if (window.lucide) lucide.createIcons();
 
