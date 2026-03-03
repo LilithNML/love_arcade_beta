@@ -1,5 +1,5 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v9.1 · Phase 6b: History API, Retry UI & Theme Fix
+### Plataforma de Recompensas · v9.2 · Phase 6c: Font FOIT/FOUT, Coin Init & Treasury Grid
 
 ---
 
@@ -10,6 +10,7 @@
 2b. [Novedades en v8.1](#2b-novedades-en-v81--daily-claim-security--ux-hardening)
 2c. [Novedades en v9.0 — SPA Migration](#2c-novedades-en-v90--spa-migration--performance)
 2d. [Novedades en v9.1 — History API, Retry UI & Theme Fix](#2d-novedades-en-v91--history-api-retry-ui--theme-fix)
+2e. [Novedades en v9.2 — Font FOIT/FOUT, Coin Init & Treasury Grid](#2e-novedades-en-v92--font-foitfout-coin-init--treasury-grid)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -114,6 +115,62 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 | **`<body class="theme-violet">`** | El `<body>` arranca con la clase del tema por defecto para evitar un flash sin tema antes de que `app.js` cargue. |
 | **Listener `.theme-btn` unificado** | Eliminado el registro duplicado en `app.js`. El único listener vive en `shop-logic.js` DOMContentLoaded. `setTheme()` de `app.js` sigue siendo la fuente de verdad para el store y la visual. |
 | **`styles.css`** | Nuevas reglas `.shop-error-state`, `.shop-error-title` y `.shop-error-desc` para el estado de error de red. |
+
+---
+
+## 2e. Novedades en v9.2 — Font FOIT/FOUT, Coin Init & Treasury Grid
+
+### Problema 1 — FOIT/FOUT: Salto de tipografía
+
+| Archivo | Cambio |
+|---|---|
+| `index.html` | `<link rel="preconnect">` a `fonts.googleapis.com` y `fonts.gstatic.com` antes del stylesheet. Reduce el tiempo de handshake TCP/TLS para la descarga de fuentes. |
+| `styles.css` | Dos bloques `@font-face` con `src: local('Arial')` y propiedades `size-adjust`, `ascent-override`, `descent-override` para Exo 2 y DM Sans. Cuando la web font aún no ha cargado, el navegador usa Arial escalada a las mismas métricas verticales, minimizando el reflow visible. |
+| `styles.css` | `--font-display` y `--font-body` actualizados con stacks explícitos: `'Exo 2', Arial, system-ui, sans-serif`. |
+
+El `&display=swap` del `@import` de Google Fonts ya estaba presente desde v9.0; esta entrega complementa el mecanismo con fallback de métricas ajustadas.
+
+### Problema 2 — Brinco en contador de monedas (> 10k)
+
+**Causa raíz:** `animateValue` con `start === end` escribía el valor crudo (`store.coins`) en todos los `.coin-display`, sobreescribiendo el texto formateado `"12.5k"` recién pintado.
+
+**Flujo corregido en `app.js` DOMContentLoaded:**
+
+```
+1. applyTheme(store.theme)           // tema antes del primer paint
+2. _displayedCoins = store.coins     // fijar base sin delta
+3. navbar .coin-display → formatCoinsNavbar(store.coins)  // SÍNCRONO
+4. otros .coin-display  → store.coins                     // SÍNCRONO
+5. requestAnimationFrame → .coin-badge--visible           // fade-in 150ms
+6. updateUI()                        // avatar, botón daily, luna…
+```
+
+`updateUI()` ahora detecta `_displayedCoins === store.coins` y escribe los valores formateados directamente sin pasar por `animateValue`, evitando el sobreescrito. La animación numérica solo ocurre cuando hay un delta real (ej. al ganar monedas jugando).
+
+**CSS:**
+
+```css
+.coin-badge           { opacity: 0; transition: opacity 150ms ease; }
+.coin-badge--visible  { opacity: 1; }
+```
+
+### Problema 3 — Desborde en "Mis Tesoros" (móvil < 380px)
+
+**Causa:** `#library-container` heredaba `.shop-grid` con `grid-template-columns: repeat(2, 1fr)`. En pantallas muy estrechas, las tarjetas con padding se salían del viewport.
+
+**Solución:** nueva clase `.treasury-grid` añadida junto a `.shop-grid` en `#library-container`:
+
+```css
+.treasury-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    justify-content: center;
+}
+@media (max-width: 320px) {
+    .treasury-grid { grid-template-columns: 1fr; }
+}
+```
+
+`box-sizing: border-box` ya era global desde el reset; no requirió cambios adicionales.
 
 ---
 
