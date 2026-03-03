@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
-<body>
+<body class="theme-violet">
 
     <!-- ══════════════════════════════════════════════════════════
          ELEMENTOS GLOBALES PERSISTENTES
@@ -418,6 +418,17 @@
 
                 <p id="search-results-count" class="search-count hidden"></p>
                 <div id="shop-container" class="shop-grid"></div>
+
+                <!-- Estado de error de red — visible solo si shop.json falla -->
+                <div id="shop-error-state" class="shop-error-state hidden" role="alert">
+                    <i data-lucide="wifi-off" size="40"></i>
+                    <p class="shop-error-title">No se pudo cargar el catálogo</p>
+                    <p class="shop-error-desc">Revisa tu conexión a internet e inténtalo de nuevo.</p>
+                    <button id="btn-retry-shop" class="btn-primary">
+                        <i data-lucide="refresh-cw" size="14"></i>
+                        Reintentar
+                    </button>
+                </div>
 
                 <div id="filter-empty" class="filter-empty hidden">
                     <i data-lucide="search-x" size="40"></i>
