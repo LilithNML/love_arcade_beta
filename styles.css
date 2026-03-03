@@ -1913,3 +1913,32 @@ svg { stroke-width: 2; }
     box-shadow: 0 0 10px var(--accent-glow);
     transform: translateY(-1px);
 }
+
+/* ================================================================
+   SHOP ERROR STATE — v9.1 (Network failure fallback)
+   ================================================================ */
+.shop-error-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-low);
+}
+.shop-error-state.hidden { display: none !important; }
+
+.shop-error-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-med);
+    margin: 0;
+}
+.shop-error-desc {
+    font-size: 0.82rem;
+    color: var(--text-low);
+    margin: 0;
+    max-width: 280px;
+}
