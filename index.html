@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Love Arcade</title>
+
+    <!-- ── Font preconnect: reduce FOIT/FOUT al pre-abrir la conexión con Google Fonts ── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -445,7 +450,7 @@
                         <p class="section-subtitle">Todos tus wallpapers desbloqueados</p>
                     </div>
                 </div>
-                <div id="library-container" class="shop-grid">
+                <div id="library-container" class="shop-grid treasury-grid">
                     <p style="color:var(--text-low); grid-column:1/-1; text-align:center; padding:40px 0;">Cargando tu biblioteca…</p>
                 </div>
             </section>
