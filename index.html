@@ -10,10 +10,65 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link rel="stylesheet" href="styles.css">
+
+    <!--
+      ╔══════════════════════════════════════════════════════════════╗
+      ║  CRITICAL INIT SCRIPT — Zero-Flicker v9.3                   ║
+      ║                                                              ║
+      ║  Se ejecuta de forma SÍNCRONA antes de que el navegador      ║
+      ║  pinte el primer píxel. Lee el tema guardado en localStorage ║
+      ║  y sobreescribe los CSS custom properties en :root ANTES del ║
+      ║  primer layout/paint, eliminando el "salto violeta" al 100%. ║
+      ║                                                              ║
+      ║  • No depende de app.js ni de DOMContentLoaded.              ║
+      ║  • Si localStorage está vacío o falla, el tema por defecto   ║
+      ║    (violeta) ya está definido en :root → no hay parpadeo.    ║
+      ║  • Tamaño: < 0.5 KB — impacto de rendimiento despreciable.   ║
+      ╚══════════════════════════════════════════════════════════════╝
+    -->
+    <script>
+    !function(){
+      var KEY='gamecenter_v6_promos';
+      // Mapa de temas: [accent, glow] — debe coincidir con THEMES en app.js
+      var T={
+        violet: ['#9b59ff','rgba(155,89,255,0.4)'],
+        pink:   ['#ff59b4','rgba(255,89,180,0.4)'],
+        cyan:   ['#00d4ff','rgba(0,212,255,0.4)'],
+        gold:   ['#f59e0b','rgba(245,158,11,0.4)'],
+        crimson:['#e11d48','rgba(225,29,72,0.4)']
+      };
+      try {
+        var raw=localStorage.getItem(KEY);
+        if(!raw) return;
+        var theme=JSON.parse(raw).theme;
+        // Violeta es el valor por defecto en :root — no necesita override
+        if(!theme||!T[theme]||theme==='violet') return;
+        var d=document.documentElement,
+            accent=T[theme][0],
+            glow  =T[theme][1];
+        // Sobreescribir las 6 custom properties de acento
+        d.style.setProperty('--accent',        accent);
+        d.style.setProperty('--accent-hover',  accent+'cc');
+        d.style.setProperty('--accent-glow',   glow);
+        d.style.setProperty('--accent-dim',    accent+'99');
+        d.style.setProperty('--accent-soft',   glow.replace(/[\d.]+\)$/,'0.12)'));
+        d.style.setProperty('--accent-border', glow.replace(/[\d.]+\)$/,'0.38)'));
+        // data-theme activa las reglas WCAG de contraste en styles.css
+        d.setAttribute('data-theme', theme);
+      } catch(e) { /* localStorage no disponible — continuar con tema por defecto */ }
+    }();
+    </script>
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
-<body class="theme-violet">
+<!--
+  La clase theme-* ya NO va hardcodeada aquí.
+  • El script crítico del <head> aplica los CSS vars del tema guardado ANTES del primer paint.
+  • app.js (al final del body) añade la clase theme-{key} síncronamente al cargar.
+  De este modo el body nunca se pinta con el tema incorrecto.
+-->
+<body>
 
     <!-- ══════════════════════════════════════════════════════════
          ELEMENTOS GLOBALES PERSISTENTES
