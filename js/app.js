@@ -1,5 +1,5 @@
 /**
- * Game Center Core v9.0 — Phase 6: SPA Migration & Performance
+ * Game Center Core v9.1 — Phase 6b: History API, Retry UI & Theme Fix
  * Compatible con gamecenter_v6_promos — migración silenciosa incluida.
  *
  * NOVEDADES v7.5:
@@ -13,6 +13,14 @@
  *  - Nuevo tema "Carmesí Arcade"
  *  - Utilidad debounce() exportada globalmente
  *  - Migración silenciosa automática de stores anteriores
+ *
+ * NOVEDADES v9.1 (History API, Retry UI & Theme Fix):
+ *  - applyTheme(): ahora escribe la clase `theme-{key}` en <body> y elimina
+ *    todas las clases de tema previas antes de añadir la nueva.
+ *    El atributo data-theme se mantiene para retrocompatibilidad con CSS.
+ *  - Listener de .theme-btn eliminado de DOMContentLoaded de app.js para
+ *    evitar doble-registro con shop-logic.js. La fuente de verdad es app.js
+ *    vía setTheme(); los listeners se registran una sola vez en shop-logic.js.
  *
  * NOVEDADES v9.0 (SPA Migration):
  *  - Arquitectura SPA: index.html unificado con #view-home y #view-shop.
@@ -904,15 +912,26 @@ function applyAvatar() {
 function applyTheme(key) {
     const t    = THEMES[key] || THEMES.violet;
     const root = document.documentElement;
-    // Variables clásicas (retrocompatibilidad con juegos)
+
+    // ── CSS custom properties (retrocompatibilidad con juegos) ────────────────
     root.style.setProperty('--accent',       t.accent);
     root.style.setProperty('--accent-hover', t.accent + 'cc');
     root.style.setProperty('--accent-glow',  t.glow);
-    // Variables del Design System v2 (shop / HUD)
     root.style.setProperty('--accent-dim',    t.accent + '99');
     root.style.setProperty('--accent-soft',   t.glow.replace(/[\d.]+\)$/, '0.12)'));
     root.style.setProperty('--accent-border', t.glow.replace(/[\d.]+\)$/, '0.38)'));
+
+    // ── Clase en <body>: eliminar todas las anteriores y añadir la nueva ──────
+    // Este es el mecanismo principal para que CSS pueda usar
+    // body.theme-violet .selector { ... } sin variables dinámicas.
+    const bodyClasses = document.body.classList;
+    Object.keys(THEMES).forEach(k => bodyClasses.remove(`theme-${k}`));
+    bodyClasses.add(`theme-${key}`);
+
+    // ── data-theme en <html> (retrocompatibilidad con atributo CSS selector) ──
     document.documentElement.setAttribute('data-theme', key);
+
+    // ── Actualizar estado visual de los botones de tema ───────────────────────
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.classList.toggle('theme-btn--active', btn.dataset.theme === key);
     });
@@ -1044,12 +1063,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateDailyButton();
         });
     }
-
-    // Botones de tema
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => window.GameCenter.setTheme(btn.dataset.theme));
-        btn.classList.toggle('theme-btn--active', btn.dataset.theme === (store.theme || 'violet'));
-    });
 
     // Botón Bendición Lunar
     const moonBtn = document.getElementById('btn-moon-blessing');
