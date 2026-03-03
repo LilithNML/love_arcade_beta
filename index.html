@@ -6,21 +6,38 @@
     <title>Love Arcade</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        /* ── SPA View Transition ───────────────── */
+        #view-container {
+            will-change: opacity, transform;
+        }
+        #view-container.view-exit {
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        #view-container.view-enter {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- ── TOP NAVBAR ── -->
+    <!-- ── TOP NAVBAR (Shell — siempre visible) ── -->
     <nav class="navbar glass-panel">
-        <div class="nav-brand">
+        <div class="nav-brand" id="nav-brand-link" style="cursor:pointer;">
             <i data-lucide="gamepad-2" size="26"></i>
             Love<span>Arcade</span>
         </div>
 
         <ul class="nav-links">
-            <li><a href="#" class="nav-link active">Inicio</a></li>
-            <li><a href="#games" class="nav-link">Juegos</a></li>
-            <li><a href="shop.html" class="nav-link">Tienda</a></li>
-            <li><a href="#faq" class="nav-link">Ayuda</a></li>
+            <li><a href="#/" class="nav-link" data-spa-route="/">Inicio</a></li>
+            <li><a href="#games" class="nav-link js-scroll-home">Juegos</a></li>
+            <li><a href="#/shop" class="nav-link" data-spa-route="/shop">Tienda</a></li>
+            <li><a href="#faq" class="nav-link js-scroll-home">Ayuda</a></li>
         </ul>
 
         <div class="nav-user">
@@ -41,394 +58,30 @@
         </div>
     </nav>
 
-    <!-- ── BOTTOM NAV (mobile) ── -->
+    <!-- ── BOTTOM NAV (mobile — Shell) ── -->
     <nav class="bottom-nav">
-        <a href="#" class="b-nav-item active">
+        <a href="#/" class="b-nav-item" data-spa-route="/">
             <i data-lucide="home" size="20"></i>
             <span>Inicio</span>
         </a>
-        <a href="#games" class="b-nav-item">
+        <a href="#games" class="b-nav-item js-scroll-home">
             <i data-lucide="gamepad-2" size="20"></i>
             <span>Juegos</span>
         </a>
-        <a href="shop.html" class="b-nav-item">
+        <a href="#/shop" class="b-nav-item" data-spa-route="/shop">
             <i data-lucide="shopping-bag" size="20"></i>
             <span>Tienda</span>
         </a>
-        <a href="#faq" class="b-nav-item">
+        <a href="#faq" class="b-nav-item js-scroll-home">
             <i data-lucide="help-circle" size="20"></i>
             <span>Ayuda</span>
         </a>
     </nav>
 
-    <main class="container">
-
-        <!-- ═══════════════════════════════
-             PLAYER HUD
-             ═══════════════════════════════ -->
-        <div class="player-hud">
-
-            <!-- Top row: avatar + info -->
-            <div class="hud-top">
-                <div class="hud-avatar-wrap">
-                    <label for="avatar-upload-hud">
-                        <div class="hud-avatar" id="hud-avatar-display" style="background-image: url('assets/default_avatar.png');">
-                            <i data-lucide="user" size="24"></i>
-                        </div>
-                    </label>
-                    <div class="hud-avatar-ring"></div>
-                    <input type="file" id="avatar-upload-hud" hidden accept="image/*">
-                </div>
-                <div class="hud-info">
-                    <p class="hud-greeting">Bienvenido de vuelta</p>
-                    <p class="hud-name">Lilith</p>
-                    <p class="hud-status">
-                        <span class="hud-status-dot"></span>
-                        <span>En línea · Love Arcade</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Balance + Daily bonus -->
-            <div class="hud-balance-row">
-                <div class="hud-balance">
-                    <span class="hud-balance-label">Monedas</span>
-                    <div class="hud-balance-amount">
-                        <i data-lucide="star" size="18" fill="#fbbf24" stroke="none"></i>
-                        <span class="coin-display">0</span>
-                    </div>
-                </div>
-
-                <button id="btn-daily" class="hud-daily-btn">
-                    <i data-lucide="gift" size="20"></i>
-                    <span class="hud-daily-reward" id="hud-reward-amount">+20</span>
-                    <span class="hud-daily-label">BONO DIARIO</span>
-                </button>
-            </div>
-
-            <!-- Countdown (hidden until claimed) -->
-            <div id="daily-countdown" class="hud-countdown hidden">
-                Próximo bono en: <span id="countdown-display">--:--:--</span>
-            </div>
-            <p id="daily-msg" class="daily-msg"></p>
-
-            <!-- Streak bar -->
-            <div class="hud-streak">
-                <span class="streak-label"><i data-lucide="flame" size="11"></i> Racha</span>
-                <div class="streak-days" id="streak-days">
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                    <div class="streak-day"></div>
-                </div>
-                <span class="streak-count" id="streak-count">×1</span>
-            </div>
-        </div>
-
-        <!-- ═══════════════════════════════
-             GAME CARDS
-             ═══════════════════════════════ -->
-        <div style="margin-bottom: 20px;">
-            <h2 class="section-title" style="margin-bottom: 4px;">¿Qué vamos a jugar?</h2>
-            <p class="section-subtitle">Gana monedas en cada partida</p>
-        </div>
-
-        <section id="games" class="games-grid">
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/jungle_dash_cover_art.webp');">
-                    <div class="card-badge badge-new">NUEVO</div>
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +100–150</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Jungle Dash</h3>
-                    <p class="card-desc">Controla a un jaguar en la selva y salta para esquivar obstáculos. ¿Cuánto puedes resistir?</p>
-                    <a href="games/jungle-dash" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-            
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/ollin_smash_cover_art.webp');">
-                    <div class="card-badge badge-new">NUEVO</div>
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +100–300</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Ollin Smash</h3>
-                    <p class="card-desc">Destruye todos los bloques antes de que la pelota caiga.</p>
-                    <a href="games/ollin-smash" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/space_shooter_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–50</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Vortex</h3>
-                    <p class="card-desc">Elimina todas las naves enemigas en este frenético shooter espacial.</p>
-                    <a href="games/Shooter" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/wordhunt_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–30</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Word Hunt</h3>
-                    <p class="card-desc">Encuentra todas las palabras ocultas en el tablero.</p>
-                    <a href="games/SopaDeLetras" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/pixeldrop_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +5–40</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Pixel Drop</h3>
-                    <p class="card-desc">El clásico de bloques reimaginado con giro pixelado.</p>
-                    <a href="games/pixel_drop.html" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/maze_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–35</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Laberinto</h3>
-                    <p class="card-desc">Encuentra el camino correcto a través de la oscuridad.</p>
-                    <a href="games/maze.html" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/rompecabezas_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +15–45</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Rompecabezas</h3>
-                    <p class="card-desc">Une las piezas para completar la imagen y ganar monedas.</p>
-                    <a href="games/rompecabezas" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-            <article class="game-card">
-                <div class="card-cover" style="background-image: url('assets/cover/dodger_cover_art.webp');">
-                    <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +5–60</div>
-                </div>
-                <div class="card-info">
-                    <h3 class="card-title">Dodger</h3>
-                    <p class="card-desc">Sobrevive el mayor tiempo posible a la lluvia de asteroides.</p>
-                    <a href="games/Dodger" class="btn-primary w-full" style="justify-content:center;">
-                        <i data-lucide="play" size="15"></i> Jugar Ahora
-                    </a>
-                </div>
-            </article>
-
-        </section>
-
-        <!-- ═══════════════════════════════
-             FAQ
-             ═══════════════════════════════ -->
-        <section id="faq" style="margin-top: 72px;">
-            <div class="section-header">
-                <div>
-                    <h2 class="section-title">Preguntas Frecuentes</h2>
-                    <p class="section-subtitle">Todo lo que necesitas saber</p>
-                </div>
-            </div>
-            <div class="faq-grid">
-
-                <details class="glass-panel">
-                    <summary>¿Cómo gano monedas?</summary>
-                    <div class="faq-content">
-                        Ganas monedas completando niveles en los juegos, canjeando códigos promocionales en la tienda, y reclamando el Bono Diario. La recompensa diaria escala con tu racha: empieza en 20 monedas y aumenta 5 por cada día consecutivo, hasta un máximo de 60. Activa la Bendición Lunar para sumar 90 monedas extra por reclamo.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Cómo descargo mis wallpapers?</summary>
-                    <div class="faq-content">
-                        Al canjear un item en la Tienda, el botón cambia a "Descargar" de forma instantánea. También puedes ir a la pestaña "Mis Tesoros" para ver y descargar todos tus wallpapers en cualquier momento, sin límite de veces.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Qué es el cashback?</summary>
-                    <div class="faq-content">
-                        Al comprar cualquier wallpaper, recibes automáticamente un porcentaje del precio pagado de vuelta a tu saldo. Lo verás reflejado en el toast de confirmación. Durante las ofertas especiales, el descuento y el cashback se combinan.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Qué es la Bendición Lunar?</summary>
-                    <div class="faq-content">
-                        La Bendición Lunar es un buff temporal que puedes activar desde la Tienda → Ajustes por 100 monedas. Mientras esté activa (7 días reales), cada vez que reclames el bono diario recibirás 90 monedas adicionales. El icono 🌙 aparece junto a tu saldo cuando está activo.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Cómo busco wallpapers específicos?</summary>
-                    <div class="faq-content">
-                        En la Tienda encontrarás una barra de búsqueda con debounce y filtros por categoría. Puedes filtrar por Todos, PC, Mobile, o tu Lista de Deseos. Los filtros se combinan con la búsqueda de texto en tiempo real.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Cómo cambio el tema de color?</summary>
-                    <div class="faq-content">
-                        Ve a Tienda → pestaña "Ajustes". Encontrarás el selector de tema con 5 opciones: Violeta, Rosa Neón, Cyan Arcade, Dorado y Carmesí Arcade. El color se aplica instantáneamente a toda la plataforma.
-                    </div>
-                </details>
-
-                <details class="glass-panel">
-                    <summary>¿Qué pasa si cambio de dispositivo?</summary>
-                    <div class="faq-content">
-                        Usa "Sincronizar" en la Tienda. Exporta tu partida (genera un código con checksum de integridad), pégalo en el otro dispositivo usando "Importar". Tu progreso completo —monedas, wallpapers, racha, tema y buff lunar— se transfiere al instante.
-                    </div>
-                </details>
-
-            </div>
-        </section>
-
-    </main>
+    <!-- ── SPA MOUNT POINT ── -->
+    <div id="view-container"></div>
 
     <script src="js/app.js"></script>
-    <script>
-        lucide.createIcons();
-
-        // ── Sync HUD avatar with main avatar upload ──
-        const avatarUploads = [
-            document.getElementById('avatar-upload'),
-            document.getElementById('avatar-upload-hud')
-        ];
-        const hudAvatar = document.getElementById('hud-avatar-display');
-
-        avatarUploads.forEach(input => {
-            if (!input) return;
-            input.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const url = ev.target.result;
-                    // Sync both avatar displays
-                    document.querySelectorAll('.avatar, .hud-avatar').forEach(el => {
-                        el.style.backgroundImage = `url('${url}')`;
-                        // Hide the icon inside
-                        const icon = el.querySelector('svg');
-                        if (icon) icon.style.display = 'none';
-                    });
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-
-        // ── Streak bar ──
-        function updateStreakBar() {
-            const info   = window.GameCenter?.getStreakInfo?.();
-            if (!info) return;
-            const streak = info.streak || 0;
-            const days   = document.querySelectorAll('#streak-days .streak-day');
-            days.forEach((d, i) => {
-                d.classList.remove('active', 'today');
-                if (i < streak) d.classList.add('active');
-                else if (i === streak && streak < 7) d.classList.add('today');
-            });
-            const countEl = document.getElementById('streak-count');
-            if (countEl) countEl.textContent = `×${streak}`;
-
-            // Update daily reward amount shown in HUD
-            const rewardEl = document.getElementById('hud-reward-amount');
-            if (rewardEl && window.GameCenter?.canClaimDaily?.()) {
-                const moonStatus = window.GameCenter.getMoonBlessingStatus?.();
-                const total = info.nextReward + ((moonStatus?.active) ? 90 : 0);
-                rewardEl.textContent = `+${total}`;
-            }
-        }
-
-        // ── Countdown ──
-        let _countdownInterval = null;
-
-        function updateCountdownDisplay() {
-            const canClaim    = window.GameCenter?.canClaimDaily?.();
-            const countdownEl = document.getElementById('daily-countdown');
-            const displayEl   = document.getElementById('countdown-display');
-            const dailyBtn    = document.getElementById('btn-daily');
-            if (!countdownEl || !displayEl) return;
-
-            if (canClaim) {
-                countdownEl.classList.add('hidden');
-                if (dailyBtn) dailyBtn.disabled = false;
-                if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
-                return;
-            }
-
-            countdownEl.classList.remove('hidden');
-            if (dailyBtn) dailyBtn.disabled = true;
-
-            function tick() {
-                const now      = new Date();
-                const tomorrow = new Date(now);
-                tomorrow.setHours(24, 0, 0, 0);
-                let diff = Math.max(0, tomorrow - now);
-
-                const hh = String(Math.floor(diff / 3_600_000)).padStart(2, '0');
-                diff %= 3_600_000;
-                const mm = String(Math.floor(diff / 60_000)).padStart(2, '0');
-                diff %= 60_000;
-                const ss = String(Math.floor(diff / 1_000)).padStart(2, '0');
-                displayEl.textContent = `${hh}:${mm}:${ss}`;
-
-                if (window.GameCenter?.canClaimDaily?.()) {
-                    countdownEl.classList.add('hidden');
-                    if (dailyBtn) dailyBtn.disabled = false;
-                    clearInterval(_countdownInterval);
-                    _countdownInterval = null;
-                }
-            }
-
-            tick();
-            if (!_countdownInterval) _countdownInterval = setInterval(tick, 1000);
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            updateCountdownDisplay();
-            updateStreakBar();
-
-            const dailyBtn = document.getElementById('btn-daily');
-            if (dailyBtn) {
-                dailyBtn.addEventListener('click', () => {
-                    setTimeout(() => {
-                        updateCountdownDisplay();
-                        updateStreakBar();
-                        // Refresh coin displays
-                        document.querySelectorAll('.coin-display').forEach(el => {
-                            if (window.GameCenter) el.textContent = window.GameCenter.getBalance();
-                        });
-                    }, 80);
-                });
-            }
-        });
-    </script>
+    <script src="js/router.js"></script>
 </body>
 </html>
