@@ -484,6 +484,14 @@ body::before {
 .hud-avatar-wrap {
     position: relative;
     flex-shrink: 0;
+    /* v9.3: oculto hasta que app.js haya aplicado el avatar real (o placeholder).
+       Evita el destello del avatar por defecto antes de que JS corrija la imagen. */
+    opacity: 0;
+    transition: opacity 100ms ease;
+}
+/* Clase añadida por revealUI() en app.js tras el init síncrono */
+.hud-avatar-wrap.is-ready {
+    opacity: 1;
 }
 
 .hud-avatar {
