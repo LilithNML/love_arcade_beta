@@ -1,18 +1,21 @@
 /**
- * Game Center Core v9.1 — Phase 6b: History API, Retry UI & Theme Fix
+ * Game Center Core v9.3 — Zero-Flicker Initiative
  * Compatible con gamecenter_v6_promos — migración silenciosa incluida.
  *
- * NOVEDADES v7.5:
- *  - SHA-256 para códigos promocionales (los códigos ya no son legibles en el fuente)
- *  - Checksum de integridad en exportación/importación (prevención de edición manual)
- *  - Web Worker para operaciones de sync sin bloquear el hilo principal
- *  - Sistema de racha de bono diario (streaks con premios escalonados)
- *  - Bendición Lunar: buff temporal de +90 monedas por reclamo diario
- *  - Wishlist por ítem con persistencia
- *  - Historial de transacciones estructurado {tipo, cantidad, motivo, fecha}
- *  - Nuevo tema "Carmesí Arcade"
- *  - Utilidad debounce() exportada globalmente
- *  - Migración silenciosa automática de stores anteriores
+ * NOVEDADES v9.3 (Zero-Flicker Initiative):
+ *  - Script crítico inline en <head> de index.html: lee el tema del
+ *    localStorage y sobreescribe los CSS custom properties en :root ANTES
+ *    del primer paint, eliminando el "salto violeta" al 100%.
+ *  - INIT síncrono: applyTheme(), init de saldo, updateDailyButton(),
+ *    updateMoonBlessingUI() y applyAvatar() se ejecutan síncronamente al
+ *    final de <body> (fuera de DOMContentLoaded). Dado que app.js está al
+ *    final del body, el DOM ya existe pero el navegador aún no ha pintado,
+ *    por lo que todos los valores correctos se escriben antes del primer frame.
+ *  - revealUI(): añade .is-ready y .coin-badge--visible en el siguiente RAF,
+ *    garantizando que los contenedores de datos críticos sólo se revelan
+ *    después de que sus valores reales han sido escritos.
+ *  - styles.css: .hud-avatar-wrap comienza con opacity:0 y transiciona a 1
+ *    cuando recibe .is-ready, evitando el destello del avatar por defecto.
  *
  * NOVEDADES v9.2 (Font FOIT/FOUT, Coin Init & Treasury Grid):
  *  - DOMContentLoaded: escribe el saldo inicial de forma SÍNCRONA y formateada
@@ -1015,33 +1018,75 @@ function updateMoonBlessingUI() {
 }
 
 // =====================================================
-// INIT
+// REVEAL UI — v9.3 Zero-Flicker
 // =====================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // Aplicar tema antes del primer paint para evitar FOUC
-    applyTheme(store.theme || 'violet');
-
-    // ── v9.2: Init silencioso del saldo ──────────────────────────────────────
-    // Escribir el valor FORMATEADO de forma síncrona en todos los .coin-display
-    // ANTES de hacer visible el .coin-badge. Esto garantiza que el usuario
-    // nunca vea el "0" del HTML ni el número crudo antes del formato "k".
-    _displayedCoins = store.coins;
-    document.querySelectorAll('.navbar .coin-display').forEach(el => {
-        el.textContent = formatCoinsNavbar(store.coins);
-    });
-    document.querySelectorAll('.coin-display:not(.navbar .coin-display)').forEach(el => {
-        el.textContent = store.coins;
-    });
-
-    // Hacer visible el badge con transición suave (opacity 0→1 en 150ms)
-    // requestAnimationFrame asegura que el textContent ya pintó antes de revelar.
+/**
+ * Añade la clase .is-ready a los contenedores de datos críticos,
+ * disparando su transición de opacidad (0 → 1) en el siguiente frame.
+ * Se llama DESPUÉS de escribir los valores correctos en el DOM para que
+ * el usuario nunca vea el estado "vacío" o con datos por defecto del HTML.
+ */
+function revealUI() {
     requestAnimationFrame(() => {
+        // coin-badge: usa su propia clase para compatibilidad con v9.2
         document.querySelectorAll('.coin-badge').forEach(el => {
             el.classList.add('coin-badge--visible');
         });
+        // hud-avatar-wrap: se revela solo cuando el avatar (o el placeholder)
+        // ya está correctamente pintado
+        document.querySelectorAll('.hud-avatar-wrap').forEach(el => {
+            el.classList.add('is-ready');
+        });
     });
+}
 
-    // Sincronizar el resto de la UI (avatar, botón diario, luna…)
+// =====================================================
+// INIT SÍNCRONO — v9.3 Zero-Flicker Initiative
+// ─────────────────────────────────────────────────────────────────────────────
+// app.js está posicionado al FINAL de <body>. En ese punto el navegador ya
+// ha parseado todo el HTML y los elementos del DOM existen, pero NO ha
+// realizado el primer layout/paint todavía (las scripts síncronas bloquean el
+// render). Esto nos permite escribir datos reales en el DOM ANTES de que el
+// usuario vea cualquier píxel, eliminando los tres tipos de parpadeo:
+//
+//   1. Theme Flash     → applyTheme() antes del primer paint
+//   2. Coin Jitter     → escribe saldo formateado antes del primer paint
+//   3. State Sync Gap  → updateDailyButton() y updateMoonBlessingUI() inmediatos
+// =====================================================
+
+// 1. TEMA — elimina el "salto violeta" para cualquier usuario con otro tema.
+//    El script crítico del <head> ya habrá ajustado los CSS vars; applyTheme()
+//    añade la clase theme-{key} al <body> y actualiza los botones de ajustes.
+applyTheme(store.theme || 'violet');
+
+// 2. SALDO — escribe el valor formateado síncronamente.
+//    El .coin-badge tiene opacity:0 por CSS; nunca pintará el "0" del HTML.
+_displayedCoins = store.coins;
+document.querySelectorAll('.navbar .coin-display').forEach(el => {
+    el.textContent = formatCoinsNavbar(store.coins);
+});
+document.querySelectorAll('.coin-display:not(.navbar .coin-display)').forEach(el => {
+    el.textContent = store.coins;
+});
+
+// 3. BOTÓN DIARIO Y LUNA — corrige el estado (activo/desactivado, texto de
+//    recompensa) antes del primer paint, eliminando el "salto de estado".
+updateDailyButton();
+updateMoonBlessingUI();
+
+// 4. AVATAR — aplica la imagen guardada síncronamente (si existe).
+applyAvatar();
+
+// 5. REVEAL — añade .is-ready + .coin-badge--visible en el siguiente frame,
+//    DESPUÉS de que los valores correctos ya estén pintados.
+revealUI();
+
+// =====================================================
+// EVENT LISTENERS — DOMContentLoaded
+// Los listeners no afectan al primer paint; se registran aquí por claridad.
+// =====================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Re-sincronizar UI por si algún sub-módulo modificó el DOM
     updateUI();
     if (window.lucide) lucide.createIcons();
 
@@ -1073,12 +1118,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Feedback visual "Procesando…" en el elemento de texto del botón
             const rewardEl = document.getElementById('hud-reward-amount');
             const span     = dailyBtn.querySelector('span');
-            const prevText = rewardEl
-                ? rewardEl.textContent
-                : (span ? span.textContent : null);
 
-            if (rewardEl)      rewardEl.textContent = '...';
-            else if (span)     span.textContent     = 'Procesando...';
+            if (rewardEl)  rewardEl.textContent = '...';
+            else if (span) span.textContent     = 'Procesando...';
 
             // ── Paso 2: ejecutar la lógica asíncrona ──
             const result = await window.GameCenter.claimDaily();
