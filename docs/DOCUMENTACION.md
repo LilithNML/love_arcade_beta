@@ -1,5 +1,5 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v9.2 · Phase 6c: Font FOIT/FOUT, Coin Init & Treasury Grid
+### Plataforma de Recompensas · v9.3 · Zero-Flicker Initiative
 
 ---
 
@@ -11,6 +11,7 @@
 2c. [Novedades en v9.0 — SPA Migration](#2c-novedades-en-v90--spa-migration--performance)
 2d. [Novedades en v9.1 — History API, Retry UI & Theme Fix](#2d-novedades-en-v91--history-api-retry-ui--theme-fix)
 2e. [Novedades en v9.2 — Font FOIT/FOUT, Coin Init & Treasury Grid](#2e-novedades-en-v92--font-foitfout-coin-init--treasury-grid)
+2f. [Novedades en v9.3 — Zero-Flicker Initiative](#2f-novedades-en-v93--zero-flicker-initiative)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -171,6 +172,99 @@ El `&display=swap` del `@import` de Google Fonts ya estaba presente desde v9.0; 
 ```
 
 `box-sizing: border-box` ya era global desde el reset; no requirió cambios adicionales.
+
+---
+
+## 2f. Novedades en v9.3 — Zero-Flicker Initiative
+
+Esta entrega elimina los tres tipos de parpadeo (FOUC / Hydration Gap) que afectaban a la experiencia de carga.
+
+### Causa Raíz
+
+La "inteligencia" de la página (JavaScript) se ejecutaba demasiado tarde. El navegador pintaba el HTML estático con el **tema violeta, 0 monedas y avatar vacío**, y solo cuando DOMContentLoaded se disparaba, JS corregía esos valores. El usuario percibía un parpadeo de colores, un salto de contador y un destello del avatar por defecto.
+
+### Fix A — Theme Flash (salto de color al cargar)
+
+**Archivo:** `index.html`
+
+**Causa:** `<body class="theme-violet">` hardcodeado. El navegador pintaba la web en violeta y milisegundos después JS cambiaba la clase al tema real del usuario.
+
+**Solución:** Script crítico inline en `<head>`, que se ejecuta síncronamente **antes del primer layout/paint**.
+
+```html
+<!-- En <head>, justo antes de Lucide -->
+<script>
+!function(){
+  var KEY='gamecenter_v6_promos';
+  var T={
+    violet: ['#9b59ff','rgba(155,89,255,0.4)'],
+    pink:   ['#ff59b4','rgba(255,89,180,0.4)'],
+    // ...
+  };
+  try {
+    var theme = JSON.parse(localStorage.getItem(KEY)||'{}').theme;
+    if(!theme||!T[theme]||theme==='violet') return; // violeta ya es el default en :root
+    var d=document.documentElement, accent=T[theme][0], glow=T[theme][1];
+    d.style.setProperty('--accent', accent);
+    // ... (6 custom properties)
+    d.setAttribute('data-theme', theme);
+  } catch(e) {}
+}();
+</script>
+```
+
+El tag `<body>` ya **no tiene clase hardcodeada**. `applyTheme()` en app.js sigue añadiendo `theme-{key}` al body síncronamente (defensa en profundidad).
+
+### Fix B — Coin Jitter y State Sync Gap
+
+**Archivo:** `app.js`
+
+**Causa:** El bloque `DOMContentLoaded` esperaba a que *todo* el documento terminara de cargar para ejecutar `applyTheme()`, `updateDailyButton()`, etc. En ese intervalo el usuario veía los valores por defecto del HTML.
+
+**Solución:** Mover TODO el trabajo visual fuera de `DOMContentLoaded` a ejecución **síncrona** al final del `<body>`. Como `app.js` está posicionado al final de body, el DOM ya existe, pero el navegador NO ha pintado todavía (las scripts síncronas bloquean el render).
+
+```
+Antes (v9.2):          DOMContentLoaded → applyTheme → init saldo → revealUI
+Ahora (v9.3):          Script síncrono → applyTheme → init saldo → revealUI
+                        DOMContentLoaded → solo registra event listeners
+```
+
+| Función movida a sync | Efecto |
+|---|---|
+| `applyTheme()` | Tema correcto antes del primer pixel (defensa en profundidad del Fix A) |
+| Init de `.coin-display` | Nunca muestra "0" |
+| `updateDailyButton()` | Botón diario en estado correcto desde el primer frame |
+| `updateMoonBlessingUI()` | Badge lunar correcto desde el primer frame |
+| `applyAvatar()` | Avatar real antes del primer paint |
+| `revealUI()` | Fade-in de `.coin-badge` y `.hud-avatar-wrap` |
+
+### Fix C — Avatar Wrap Flash
+
+**Archivo:** `styles.css`
+
+**Causa:** `.hud-avatar-wrap` era visible inmediatamente con el avatar por defecto (`assets/default_avatar.png`) antes de que JS aplicara la imagen guardada.
+
+**Solución:**
+
+```css
+.hud-avatar-wrap {
+    opacity: 0;
+    transition: opacity 100ms ease;
+}
+.hud-avatar-wrap.is-ready {
+    opacity: 1;
+}
+```
+
+`revealUI()` en app.js añade `.is-ready` al hud-avatar-wrap en el siguiente `requestAnimationFrame`, garantizando que el avatar real (o el placeholder si no hay guardado) ya esté cargado antes de revelarse.
+
+### Resumen de archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `index.html` | Script crítico inline en `<head>` + eliminar `class="theme-violet"` del `<body>` |
+| `app.js` | INIT síncrono fuera de DOMContentLoaded + nueva función `revealUI()` |
+| `styles.css` | `.hud-avatar-wrap { opacity: 0 }` + `.hud-avatar-wrap.is-ready { opacity: 1 }` |
 
 ---
 
