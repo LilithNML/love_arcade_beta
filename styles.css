@@ -4,7 +4,35 @@
    Typography: Exo 2 (display/numbers) + DM Sans (body)
    ================================================================ */
 
+/* ── Google Fonts: display=swap ya está incluido en la URL para reducir FOIT ── */
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+/*
+ * Fuentes de sistema con métricas ajustadas para reducir el "salto" visible
+ * mientras Google Fonts carga (técnica "size-adjust fallback").
+ * size-adjust escala la fuente de sistema al mismo tamaño óptico que Exo 2/DM Sans,
+ * minimizando el reflow entre la fuente fallback y la web font final.
+ */
+@font-face {
+    font-family: 'Exo 2';
+    src: local('Arial');
+    font-style: normal;
+    font-weight: 400 900;
+    size-adjust: 104%;
+    ascent-override: 90%;
+    descent-override: 22%;
+    line-gap-override: 0%;
+}
+@font-face {
+    font-family: 'DM Sans';
+    src: local('Arial');
+    font-style: normal;
+    font-weight: 400 700;
+    size-adjust: 100%;
+    ascent-override: 92%;
+    descent-override: 24%;
+    line-gap-override: 0%;
+}
 
 /* ── Prevent text autosizing & horizontal overflow ── */
 html {
@@ -73,9 +101,9 @@ html {
     --bottom-nav-height: 62px;
 
     /* ── Typography ── */
-    --font-display: 'Exo 2', sans-serif;
-    --font-body:    'DM Sans', sans-serif;
-    --font-mono:    'JetBrains Mono', monospace;
+    --font-display: 'Exo 2', Arial, system-ui, sans-serif;
+    --font-body:    'DM Sans', Arial, system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'Courier New', monospace;
 
     /* ── Shadows ── */
     --shadow-sm:  0 2px 12px rgba(0,0,0,0.4);
@@ -303,6 +331,13 @@ body::before {
     align-items: center;
     gap: 6px;
     box-shadow: 0 0 12px var(--accent-glow);
+    /* v9.2: oculto hasta que GameCenter sincroniza el saldo formateado */
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+/* Clase añadida por app.js tras la sincronización inicial */
+.coin-badge--visible {
+    opacity: 1;
 }
 
 /* ── Avatar ── */
@@ -1941,4 +1976,25 @@ svg { stroke-width: 2; }
     color: var(--text-low);
     margin: 0;
     max-width: 280px;
+}
+
+/* ================================================================
+   TREASURY GRID — v9.2 (Mis Tesoros — overflow fix on < 380px)
+   ================================================================ */
+/*
+ * #library-container usa .shop-grid .treasury-grid.
+ * Sobreescribimos el grid-template-columns con auto-fit + minmax para que
+ * la cuadrícula se adapte a cualquier ancho sin desbordarse en móvil pequeño.
+ * box-sizing: border-box ya está global desde el reset.
+ */
+.treasury-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    justify-content: center;
+}
+
+/* En pantallas muy pequeñas (< 380px) forzamos a 1 columna si 140px no cabe */
+@media (max-width: 320px) {
+    .treasury-grid {
+        grid-template-columns: 1fr;
+    }
 }
