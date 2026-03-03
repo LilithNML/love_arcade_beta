@@ -946,7 +946,12 @@ function updateMoonBlessingUI() {
 }
 
 // =====================================================
-// INIT
+// INIT — Arquitectura SPA v9.0
+// Los elementos de cada vista son dinámicos (se montan/desmontan
+// con el router). Por eso todos los listeners de elementos de vista
+// usan DELEGACIÓN DE EVENTOS desde document, en vez de adjuntarse
+// a elementos fijos. Esto garantiza que funcionen sin importar cuándo
+// o cuántas veces se monte la vista.
 // =====================================================
 document.addEventListener('DOMContentLoaded', () => {
     // Aplicar tema antes del primer paint para evitar FOUC
@@ -955,45 +960,39 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     if (window.lucide) lucide.createIcons();
 
-    // Avatar upload
-    const avatarInput = document.getElementById('avatar-upload');
-    if (avatarInput) {
-        avatarInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                window.GameCenter.setAvatar(evt.target.result);
-                if (window.lucide) lucide.createIcons();
-            };
-            reader.readAsDataURL(file);
-        });
-    }
+    // ── Avatar upload (delegado — cubre navbar shell + HUD home view) ──────────
+    // `change` burbujea en inputs de tipo file, por lo que la delegación funciona.
+    document.addEventListener('change', (e) => {
+        if (!e.target.matches('#avatar-upload, #avatar-upload-hud')) return;
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            window.GameCenter.setAvatar(evt.target.result);
+            if (window.lucide) lucide.createIcons();
+        };
+        reader.readAsDataURL(file);
+    });
 
-    // Bono diario — el botón se desactiva SÍNCRONAMENTE antes de cualquier operación
-    // asíncrona para prevenir el "double-tap bug" (race condition por clics rápidos).
-    const dailyBtn = document.getElementById('btn-daily');
-    if (dailyBtn) {
-        dailyBtn.addEventListener('click', async () => {
-            // ── Paso 1: desactivar de inmediato (síncrono) ──
+    // ── Delegación de clicks para elementos de vistas dinámicas ───────────────
+    document.addEventListener('click', async (e) => {
+
+        // ── Bono diario ────────────────────────────────────────────────────────
+        // Desactivar SÍNCRONAMENTE antes de cualquier await para prevenir el
+        // "double-tap bug" (race condition por clics rápidos).
+        const dailyBtn = e.target.closest('#btn-daily');
+        if (dailyBtn && !dailyBtn.disabled) {
             dailyBtn.disabled      = true;
             dailyBtn.style.opacity = '0.5';
             dailyBtn.style.cursor  = 'not-allowed';
 
-            // Feedback visual "Procesando…" en el elemento de texto del botón
             const rewardEl = document.getElementById('hud-reward-amount');
             const span     = dailyBtn.querySelector('span');
-            const prevText = rewardEl
-                ? rewardEl.textContent
-                : (span ? span.textContent : null);
-
             if (rewardEl)      rewardEl.textContent = '...';
             else if (span)     span.textContent     = 'Procesando...';
 
-            // ── Paso 2: ejecutar la lógica asíncrona ──
             const result = await window.GameCenter.claimDaily();
 
-            // ── Paso 3: mostrar mensaje y actualizar UI ──
             const msg = document.getElementById('daily-msg');
             if (msg) {
                 msg.textContent   = result.message;
@@ -1001,24 +1000,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg.style.opacity = '1';
                 setTimeout(() => { msg.style.opacity = '0'; }, 3500);
             }
-
-            // updateDailyButton() recalcula el estado correcto del botón
-            // (puede habilitarlo si el reclamo falló por error recuperable,
-            //  o dejarlo desactivado con el contador si fue exitoso).
             updateDailyButton();
-        });
-    }
+            return;
+        }
 
-    // Botones de tema
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => window.GameCenter.setTheme(btn.dataset.theme));
-        btn.classList.toggle('theme-btn--active', btn.dataset.theme === (store.theme || 'violet'));
-    });
+        // ── Botones de tema ────────────────────────────────────────────────────
+        const themeBtn = e.target.closest('.theme-btn');
+        if (themeBtn?.dataset.theme) {
+            window.GameCenter.setTheme(themeBtn.dataset.theme);
+            return;
+        }
 
-    // Botón Bendición Lunar
-    const moonBtn = document.getElementById('btn-moon-blessing');
-    if (moonBtn) {
-        moonBtn.addEventListener('click', () => {
+        // ── Bendición Lunar ────────────────────────────────────────────────────
+        const moonBtn = e.target.closest('#btn-moon-blessing');
+        if (moonBtn) {
             const result = window.GameCenter.buyMoonBlessing();
             const msg    = document.getElementById('moon-blessing-msg');
             if (result.success) {
@@ -1027,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (msg) { msg.textContent = '✗ Monedas insuficientes (necesitas 100)'; msg.style.color = '#ff4757'; }
             }
             if (msg) { msg.style.opacity = '1'; setTimeout(() => { msg.style.opacity = '0'; }, 3500); }
-        });
-    }
+            return;
+        }
+    });
 });
