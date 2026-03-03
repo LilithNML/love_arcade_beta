@@ -1,5 +1,5 @@
 /**
- * spa-router.js — Love Arcade v9.0
+ * spa-router.js — Love Arcade v9.1
  * ─────────────────────────────────────────────────────────────────────────────
  * Router de navegación para la arquitectura Single Page Application.
  *
@@ -10,13 +10,20 @@
  *  - Llamar a window.GameCenter.syncUI() para sincronizar saldo en todos los
  *    indicadores (Navbar + HUD) inmediatamente tras la transición.
  *  - Re-inicializar Lucide en la vista entrante.
- *  - Restaurar el scroll a 0,0 con comportamiento instantáneo (sin animación)
- *    para evitar desorientación visual en móvil.
+ *  - Restaurar el scroll a 0,0 con comportamiento instantáneo (sin animación).
  *  - Manejar data-anchor para deep-links dentro de la vista Inicio (#games, #faq).
+ *  - [v9.1] Integrar la History API: botón Atrás vuelve a vista anterior sin recargar.
+ *
+ * HISTORY API (v9.1):
+ *  - navigateTo() llama a history.pushState({ viewId, anchor }) en cada
+ *    transición, registrando la entrada en el historial del navegador.
+ *  - window.addEventListener('popstate') escucha Atrás/Adelante y llama a
+ *    _applyView() SIN un nuevo pushState, evitando entradas duplicadas.
+ *  - En DOMContentLoaded se usa history.replaceState para el estado inicial
+ *    (evita que el primer "Atrás" genere una entrada huérfana).
  *
  * RESTRICCIONES DE RENDIMIENTO:
- *  - Cero reflows: la transición usa únicamente .hidden (display:none) sin
- *    animar propiedades que generen layout (top, height, margin, etc.).
+ *  - Cero reflows: la transición usa únicamente .hidden (display:none).
  *  - El router NO hace fetch ni accede a APIs externas.
  *  - Event listeners registrados una sola vez (DOMContentLoaded).
  */
@@ -24,109 +31,94 @@
 (function () {
     'use strict';
 
-    // ── Constantes ────────────────────────────────────────────────────────────
-
     const VIEWS = ['home', 'shop'];
 
-    /**
-     * Mapa de ids de vista → elementos del DOM.
-     * Se construye en DOMContentLoaded para garantizar que el DOM está listo.
-     * @type {Object.<string, HTMLElement>}
-     */
+    /** @type {Object.<string, HTMLElement>} */
     let viewEls = {};
 
-    /** Vista activa en este momento. @type {string} */
+    /** @type {string} */
     let currentView = 'home';
 
-    // ── API pública ───────────────────────────────────────────────────────────
+    // ── Núcleo de transición (sin History API) ────────────────────────────────
 
     /**
-     * Navega a una vista por su id.
+     * Aplica la transición visual a una vista SIN registrar en el historial.
+     * Ruta interna: usada tanto por navigateTo() como por el handler popstate.
+     *
      * @param {'home'|'shop'} viewId
-     * @param {string|null}   [anchor]  ID del elemento al que hacer scroll dentro
-     *                                  de la vista (sin el #). Opcional.
+     * @param {string|null}   [anchor]
      */
-    function navigateTo(viewId, anchor) {
+    function _applyView(viewId, anchor) {
         if (!viewEls[viewId]) return;
 
-        // Mostrar/ocultar vistas
         VIEWS.forEach(id => {
             viewEls[id].classList.toggle('hidden', id !== viewId);
         });
 
         currentView = viewId;
 
-        // Sincronizar estado activo en ambas navbars
         _syncNavHighlight(viewId);
-
-        // Actualizar todos los .coin-display y el HUD de forma animada
         window.GameCenter?.syncUI?.();
-
-        // Re-inicializar iconos Lucide en la vista entrante (por contenido dinámico)
         if (window.lucide) lucide.createIcons();
 
-        // Scroll instantáneo al inicio (o al anchor indicado)
         if (anchor) {
-            // Pequeño delay para que la vista sea visible antes del scroll
             requestAnimationFrame(() => {
                 const target = document.getElementById(anchor);
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         } else {
             window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
-        // Callbacks de vista específicos
-        if (viewId === 'home') {
-            window.HomeView?.refresh?.();
-        }
-        if (viewId === 'shop') {
-            window.ShopView?.onEnter?.();
-        }
+        if (viewId === 'home') window.HomeView?.refresh?.();
+        if (viewId === 'shop') window.ShopView?.onEnter?.();
     }
 
-    /** Devuelve la vista activa actual. @returns {string} */
+    // ── API pública ───────────────────────────────────────────────────────────
+
+    /**
+     * Navega a una vista por su id y registra la entrada en el historial.
+     *
+     * @param {'home'|'shop'} viewId
+     * @param {string|null}   [anchor]   ID del elemento al que hacer scroll (sin #).
+     * @param {boolean}       [replace]  Si true, usa replaceState (para estado inicial).
+     */
+    function navigateTo(viewId, anchor, replace) {
+        const state = { viewId, anchor: anchor || null };
+
+        if (replace) {
+            history.replaceState(state, '');
+        } else if (viewId !== currentView) {
+            // Solo pushState si realmente cambiamos de vista; evita duplicados
+            // al pulsar repetidamente el mismo enlace de nav.
+            history.pushState(state, '');
+        }
+
+        _applyView(viewId, anchor);
+    }
+
+    /** @returns {string} id de la vista activa. */
     function getCurrentView() {
         return currentView;
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
 
-    /**
-     * Actualiza las clases .active en los nodos de nav para reflejar la vista activa.
-     * Solo opera sobre elementos con [data-view]; los hrefs de anchor (#games) no
-     * se marcan como activos de la misma forma.
-     *
-     * @param {string} viewId
-     */
     function _syncNavHighlight(viewId) {
-        // Top navbar links
         document.querySelectorAll('.nav-link[data-view]').forEach(link => {
-            // El link es "activo" si su data-view coincide Y no tiene un anchor específico
-            const isActive = link.dataset.view === viewId && !link.dataset.anchor;
-            link.classList.toggle('active', isActive);
+            link.classList.toggle('active', link.dataset.view === viewId && !link.dataset.anchor);
         });
-
-        // Bottom nav items
         document.querySelectorAll('.b-nav-item[data-view]').forEach(item => {
-            const isActive = item.dataset.view === viewId && !item.dataset.anchor;
-            item.classList.toggle('active', isActive);
+            item.classList.toggle('active', item.dataset.view === viewId && !item.dataset.anchor);
         });
     }
 
-    /**
-     * Registra un listener de clic en un elemento de navegación.
-     * @param {Element} el
-     */
     function _bindNavItem(el) {
         el.addEventListener('click', (e) => {
             e.preventDefault();
             const viewId = el.dataset.view;
             const anchor = el.dataset.anchor || null;
 
-            // Si ya estamos en la misma vista sin anchor, solo hacer scroll al top
             if (viewId === currentView && !anchor) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 return;
@@ -146,15 +138,27 @@
             if (el) viewEls[id] = el;
         });
 
-        // Registrar listeners en todos los elementos de navegación con data-view
+        // Registrar listeners de navegación
         document.querySelectorAll('[data-view]').forEach(el => {
-            if (viewEls[el.dataset.view]) {
-                _bindNavItem(el);
-            }
+            if (viewEls[el.dataset.view]) _bindNavItem(el);
         });
 
-        // Estado inicial de highlight
         _syncNavHighlight('home');
+
+        // ── History API: estado inicial ───────────────────────────────────────
+        // replaceState (no pushState) para que la entrada inicial quede en el
+        // historial sin crear un salto extra hacia "atrás".
+        navigateTo('home', null, /* replace= */ true);
+
+        // ── Popstate: botón Atrás / Adelante ─────────────────────────────────
+        // El navegador restaura el state y dispara 'popstate'. Usamos _applyView
+        // directamente para NO generar una nueva entrada (evita bucle infinito).
+        window.addEventListener('popstate', (e) => {
+            const state  = e.state;
+            const viewId = VIEWS.includes(state?.viewId) ? state.viewId : 'home';
+            const anchor = state?.anchor || null;
+            _applyView(viewId, anchor);
+        });
     });
 
     // ── Exposición global ─────────────────────────────────────────────────────
