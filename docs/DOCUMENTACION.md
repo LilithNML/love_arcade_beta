@@ -1,5 +1,5 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v9.0 · Phase 6: SPA Migration & Performance
+### Plataforma de Recompensas · v9.1 · Phase 6b: History API, Retry UI & Theme Fix
 
 ---
 
@@ -9,6 +9,7 @@
 2. [Novedades en v8.0](#2-novedades-en-v80)
 2b. [Novedades en v8.1](#2b-novedades-en-v81--daily-claim-security--ux-hardening)
 2c. [Novedades en v9.0 — SPA Migration](#2c-novedades-en-v90--spa-migration--performance)
+2d. [Novedades en v9.1 — History API, Retry UI & Theme Fix](#2d-novedades-en-v91--history-api-retry-ui--theme-fix)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -100,6 +101,22 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 
 ---
 
+## 2d. Novedades en v9.1 — History API, Retry UI & Theme Fix
+
+| Área | Cambio |
+|---|---|
+| **History API** | `spa-router.js` ahora llama a `history.pushState()` en cada transición de vista. El botón Atrás del navegador/móvil vuelve a la vista anterior sin recargar. |
+| **Popstate handler** | `window.addEventListener('popstate')` restaura la vista desde `e.state.viewId` usando `_applyView()` (sin nuevo pushState, evitando bucle). |
+| **Estado inicial** | `history.replaceState({ viewId:'home' })` al cargar garantiza que la primera entrada del historial sea válida. |
+| **Retry UI** | `#shop-error-state` añadido en `index.html` dentro de `#tab-catalog`. Se muestra si `fetch('data/shop.json')` falla con mensaje de error y botón `#btn-retry-shop`. |
+| **`loadCatalog()`** | Función encapsulada en `shop-logic.js`. Maneja loading, error, y reintento. El botón Reintentar la llama de nuevo. El listener del retry usa `dataset.bound` para no duplicarse. |
+| **`applyTheme()` refactorizado** | Elimina todas las clases `theme-*` del `<body>` y añade la nueva (`theme-violet`, `theme-pink`, etc.). Esto garantiza que el cambio sea inmediato y visible en toda la SPA. |
+| **`<body class="theme-violet">`** | El `<body>` arranca con la clase del tema por defecto para evitar un flash sin tema antes de que `app.js` cargue. |
+| **Listener `.theme-btn` unificado** | Eliminado el registro duplicado en `app.js`. El único listener vive en `shop-logic.js` DOMContentLoaded. `setTheme()` de `app.js` sigue siendo la fuente de verdad para el store y la visual. |
+| **`styles.css`** | Nuevas reglas `.shop-error-state`, `.shop-error-title` y `.shop-error-desc` para el estado de error de red. |
+
+---
+
 ## 3. Arquitectura del Proyecto
 
 ```
@@ -174,6 +191,42 @@ love_arcade/
 ---
 
 ## 5. app.js — El Motor
+
+### Cambios en v9.1 (Theme Fix)
+
+#### `applyTheme()` — refactorizado
+
+El problema: `applyTheme` solo aplicaba CSS custom properties en `:root` y el atributo `data-theme` en `<html>`, pero no escribía ninguna clase en `<body>`. Si el CSS usaba selectores del tipo `body.theme-crimson .selector {}`, el cambio no era visible.
+
+**Solución:** `applyTheme` ahora hace tres cosas en orden:
+
+```javascript
+function applyTheme(key) {
+    // 1. Actualizar CSS custom properties (retrocompatibilidad con juegos)
+    root.style.setProperty('--accent', t.accent);
+    // ...
+
+    // 2. Limpiar clases de tema previas y añadir la nueva en <body>
+    Object.keys(THEMES).forEach(k => document.body.classList.remove(`theme-${k}`));
+    document.body.classList.add(`theme-${key}`);
+
+    // 3. data-theme en <html> (retrocompatibilidad)
+    document.documentElement.setAttribute('data-theme', key);
+
+    // 4. Sincronizar estado visual de los botones
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('theme-btn--active', btn.dataset.theme === key);
+    });
+}
+```
+
+El `<body>` arranca con `class="theme-violet"` en el HTML para evitar un flash sin tema antes de que `app.js` ejecute el primer `applyTheme`.
+
+#### Listener `.theme-btn` — deduplicado
+
+En v9.0, el listener de clic en `.theme-btn` estaba registrado dos veces: en `app.js` DOMContentLoaded y en `shop-logic.js` DOMContentLoaded. Esto causaba que `setTheme()` se llamara dos veces por clic.
+
+**Solución v9.1:** el registro en `app.js` DOMContentLoaded fue eliminado. El único listener vive en `shop-logic.js`. `setTheme()` sigue siendo la fuente de verdad para el store y la lógica visual.
 
 ### Cambios en v9.0 (SPA Migration)
 
@@ -346,6 +399,38 @@ Los filtros del catálogo también se reducen a `Todos`, `PC`, `Mobile` y `Wishl
 
 A partir de v9.0, `index.html` es el **único archivo HTML** de la plataforma. Contiene las dos vistas de la aplicación, la navbar y bottom-nav globales, y todos los modales.
 
+### Cambios en v9.1
+
+#### `<body class="theme-violet">`
+
+El `<body>` arranca con la clase del tema por defecto. Esto evita un FOUC (Flash Of Unstyled Content) en el selector de temas antes de que `app.js` ejecute `applyTheme()`. Si el usuario ya tenía guardado otro tema en localStorage, `applyTheme()` reemplaza la clase inmediatamente en el primer ciclo.
+
+```html
+<!-- v9.0 -->
+<body>
+
+<!-- v9.1 -->
+<body class="theme-violet">
+```
+
+#### `#shop-error-state` — UI de error de red
+
+Añadido dentro de `#tab-catalog`, inicialmente oculto. Se hace visible cuando `loadCatalog()` detecta un fallo de red:
+
+```html
+<div id="shop-error-state" class="shop-error-state hidden" role="alert">
+    <i data-lucide="wifi-off" size="40"></i>
+    <p class="shop-error-title">No se pudo cargar el catálogo</p>
+    <p class="shop-error-desc">Revisa tu conexión e inténtalo de nuevo.</p>
+    <button id="btn-retry-shop" class="btn-primary">
+        <i data-lucide="refresh-cw" size="14"></i>
+        Reintentar
+    </button>
+</div>
+```
+
+El botón `#btn-retry-shop` es enlazado por `loadCatalog()` en `shop-logic.js`.
+
 ### Jerarquía del DOM
 
 ```
@@ -449,20 +534,47 @@ window.ShopView = {
 window.resetFilters = resetFilters; // Compatible con onclick="resetFilters()" en HTML
 ```
 
-### Inicialización única
+### Cambios en v9.1
 
-El `DOMContentLoaded` de este módulo se ejecuta **una sola vez** cuando la SPA carga. Registra todos los event listeners de la tienda y lanza `fetch('data/shop.json')` guardando el resultado en `allItems`. Las navegaciones posteriores a la vista de Tienda no vuelven a hacer fetch.
+#### `loadCatalog()` — carga con manejo de errores y reintento
+
+En v9.0 el fetch era inline en DOMContentLoaded y no tenía gestión de errores. En v9.1 se extrae a la función `loadCatalog()`:
 
 ```javascript
-// fetch() ejecutado UNA SOLA VEZ al cargar la página
-fetch('data/shop.json')
-    .then(r => r.json())
-    .then(items => {
-        allItems = items;  // Cache en memoria de por vida de la sesión
-        filterItems();
-        renderLibrary(items);
-        updateWishlistCost();
+function loadCatalog() {
+    // 1. Mostrar loading, ocultar error state y grid anterior
+    // 2. fetch('data/shop.json') con verificación HTTP
+    // 3a. Éxito: renderizar catálogo, ocultar error state
+    // 3b. Error: mostrar #shop-error-state con botón #btn-retry-shop
+    //     El retry llama de nuevo a loadCatalog() (retry pattern)
+}
+```
+
+El botón de reintento usa `dataset.bound` para no registrar el listener múltiples veces:
+
+```javascript
+if (retryBtn && !retryBtn.dataset.bound) {
+    retryBtn.dataset.bound = 'true';
+    retryBtn.addEventListener('click', () => {
+        delete retryBtn.dataset.bound;
+        loadCatalog();
     });
+}
+```
+
+#### Listener `.theme-btn` — única fuente de verdad
+
+El listener de `.theme-btn` fue eliminado de `app.js` y vive exclusivamente en el `DOMContentLoaded` de este módulo. Delega a `window.GameCenter.setTheme()`.
+
+### Inicialización única (v9.0+)
+
+El `DOMContentLoaded` de este módulo se ejecuta **una sola vez** cuando la SPA carga. Registra todos los event listeners de la tienda y llama a `loadCatalog()` que guarda el resultado en `allItems`. Las navegaciones posteriores a la vista de Tienda no vuelven a hacer fetch.
+
+```javascript
+// v9.1: loadCatalog() encapsula fetch + error handling + retry
+loadCatalog();
+// → si OK: allItems = items, filterItems(), renderLibrary()
+// → si KO: mostrar #shop-error-state con botón de reintento
 ```
 
 ### `window.ShopView.onEnter()`
@@ -495,30 +607,58 @@ Módulo IIFE responsable exclusivo de la navegación entre vistas.
 
 ```javascript
 window.SpaRouter = {
-    navigateTo(viewId, anchor?),  // Navega a 'home' o 'shop'
-    getCurrentView()              // Devuelve el id de la vista activa
+    navigateTo(viewId, anchor?, replace?),  // Navega a 'home' o 'shop'
+    getCurrentView()                         // Devuelve el id de la vista activa
 };
 ```
 
-### `navigateTo(viewId, anchor?)`
+### `navigateTo(viewId, anchor?, replace?)`
 
 ```javascript
-SpaRouter.navigateTo('shop');         // Ir a Tienda
-SpaRouter.navigateTo('home', 'faq'); // Ir a Inicio y scroll a #faq
+SpaRouter.navigateTo('shop');         // Ir a Tienda (pushState)
+SpaRouter.navigateTo('home', 'faq'); // Ir a Inicio y scroll a #faq (pushState)
+SpaRouter.navigateTo('home', null, true); // Estado inicial (replaceState)
 ```
 
 Pasos internos al llamar a `navigateTo`:
 
+1. `history.pushState({ viewId, anchor })` — registra la entrada en el historial (o `replaceState` si `replace=true`).
+2. Llama a `_applyView(viewId, anchor)` con la lógica de transición visual.
+
+### `_applyView(viewId, anchor)` — transición pura
+
+Función interna que aplica la transición SIN tocar el historial. Es la que llama el handler de `popstate` para evitar un bucle de entradas:
+
 1. Alterna `.hidden` entre `#view-home` y `#view-shop`.
 2. Actualiza clases `.active` en navbar y bottom-nav.
-3. Llama a `window.GameCenter.syncUI()` — sincroniza saldo en todos los indicadores.
-4. Llama a `lucide.createIcons()` — re-inicializa iconos SVG de la vista entrante.
+3. Llama a `window.GameCenter.syncUI()`.
+4. Llama a `lucide.createIcons()`.
 5. `window.scrollTo({ top: 0, behavior: 'instant' })` o scroll suave al anchor.
 6. Ejecuta el callback de vista: `window.HomeView.refresh()` o `window.ShopView.onEnter()`.
 
+### History API — botón Atrás/Adelante (v9.1)
+
+```javascript
+// Al cargar la página — registrar estado inicial
+navigateTo('home', null, /* replace= */ true);
+// → history.replaceState({ viewId: 'home', anchor: null }, '')
+
+// Al navegar a Tienda — registrar nueva entrada
+navigateTo('shop');
+// → history.pushState({ viewId: 'shop', anchor: null }, '')
+
+// Al pulsar Atrás — restaurar vista anterior SIN pushState
+window.addEventListener('popstate', (e) => {
+    const viewId = VIEWS.includes(e.state?.viewId) ? e.state.viewId : 'home';
+    _applyView(viewId, e.state?.anchor || null); // ← sin pushState
+});
+```
+
+**Por qué `_applyView` en popstate y no `navigateTo`:** si usáramos `navigateTo` en el handler popstate, generaríamos un nuevo pushState por cada Atrás, creando un historial infinito que nunca permitiría salir de la app.
+
 ### Sin reflows
 
-La transición usa únicamente la clase `.hidden` (`display: none !important`). **No se animan** propiedades que generen layout (top, height, margin, opacity). Esto evita el "Layout Thrashing" que causaba lag en la versión multi-página.
+La transición usa únicamente la clase `.hidden` (`display: none !important`). No se animan propiedades de layout.
 
 ---
 
