@@ -1,8 +1,15 @@
 /**
- * shop-logic.js — Love Arcade v9.0
+ * shop-logic.js — Love Arcade v9.1
  * ─────────────────────────────────────────────────────────────────────────────
  * Contiene toda la lógica de la vista Tienda, extraída del script inline de
  * shop.html como parte de la migración a arquitectura SPA.
+ *
+ * NOVEDADES v9.1:
+ *  - loadCatalog(): función encapsulada con manejo de errores y reintento.
+ *    Si fetch falla, muestra #shop-error-state con botón #btn-retry-shop.
+ *  - El listener de .theme-btn fue eliminado de shop-logic.js. El único registro
+ *    de este listener vive en app.js vía setTheme(), que ahora también escribe
+ *    la clase `theme-{key}` en <body>. Esto elimina el doble-registro.
  *
  * DEPENDENCIAS (deben estar cargadas ANTES en el DOM):
  *  - js/app.js          → window.GameCenter, window.ECONOMY, window.debounce
@@ -814,6 +821,74 @@ window.ShopView = {
     }
 };
 
+// ── Carga del catálogo con manejo de errores y reintento ─────────────────────
+
+/**
+ * Descarga shop.json y renderiza el catálogo.
+ * Si la petición falla (red, 404, 500), oculta el grid y muestra
+ * #shop-error-state con un botón de reintento que vuelve a llamar a esta función.
+ *
+ * Puede llamarse múltiples veces de forma segura (retry pattern):
+ * cada invocación resetea el estado de error y muestra el indicador de carga.
+ */
+function loadCatalog() {
+    const gridEl    = document.getElementById('shop-container');
+    const errorEl   = document.getElementById('shop-error-state');
+    const retryBtn  = document.getElementById('btn-retry-shop');
+    const emptyEl   = document.getElementById('filter-empty');
+
+    // Mostrar estado de carga; ocultar error previo y grid
+    if (gridEl)  { gridEl.classList.add('hidden'); gridEl.innerHTML = ''; }
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+
+    // Mostrar spinner en el grid mientras carga
+    if (gridEl) {
+        gridEl.classList.remove('hidden');
+        gridEl.innerHTML =
+            '<p style="color:var(--text-low); grid-column:1/-1; text-align:center; padding:40px 0;">' +
+            '<i data-lucide="loader" size="24" style="display:block; margin:0 auto 10px; opacity:0.4;"></i>' +
+            'Cargando catálogo…</p>';
+        if (window.lucide) lucide.createIcons({ nodes: [gridEl] });
+    }
+
+    fetch('data/shop.json')
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(items => {
+            allItems = items;
+            if (gridEl) gridEl.innerHTML = '';
+            filterItems();
+            renderLibrary(items);
+            updateWishlistCost();
+
+            // Asegurar que el error state está oculto si se cargó correctamente
+            if (errorEl) errorEl.classList.add('hidden');
+        })
+        .catch(err => {
+            console.error('[ShopLogic] Error cargando shop.json:', err);
+
+            // Ocultar grid y mostrar error state
+            if (gridEl)  gridEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.add('hidden');
+            if (errorEl) {
+                errorEl.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons({ nodes: [errorEl] });
+            }
+
+            // Botón de reintento — registrar listener solo una vez usando dataset
+            if (retryBtn && !retryBtn.dataset.bound) {
+                retryBtn.dataset.bound = 'true';
+                retryBtn.addEventListener('click', () => {
+                    delete retryBtn.dataset.bound; // Permitir re-bind tras retry
+                    loadCatalog();
+                });
+            }
+        });
+}
+
 // ── DOMContentLoaded — Registro de event listeners (una sola vez) ─────────────
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -873,21 +948,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
     });
 
-    // ── Cargar catálogo UNA SOLA VEZ ──────────────────────────────────────────
-    fetch('data/shop.json')
-        .then(r => r.json())
-        .then(items => {
-            allItems = items;
-            filterItems();
-            renderLibrary(items);
-            updateWishlistCost();
-        })
-        .catch(err => {
-            console.error('Error cargando shop.json:', err);
-            const cont = document.getElementById('shop-container');
-            if (cont) cont.innerHTML =
-                '<p style="color:var(--error); grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo.</p>';
-        });
+    // ── Cargar catálogo UNA SOLA VEZ (con manejo de errores y reintento) ────────
+    loadCatalog();
 
     // Promo code
     document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
@@ -951,13 +1013,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file);
     });
 
-    // Theme buttons
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (window.GameCenter) window.GameCenter.setTheme(btn.dataset.theme);
-        });
-    });
-
     // Moon Blessing button
     const moonBtn = document.getElementById('btn-moon-blessing');
     if (moonBtn) {
@@ -976,6 +1031,16 @@ document.addEventListener('DOMContentLoaded', () => {
             renderMoonBlessingStatus();
         });
     }
+
+    // ── Theme buttons — fuente de verdad única ────────────────────────────────
+    // app.js eliminó su propio listener en v9.1 para evitar doble-registro.
+    // setTheme() en app.js actualiza store, CSS vars, clase en <body> y el
+    // estado activo de todos los .theme-btn en un solo lugar.
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (window.GameCenter) window.GameCenter.setTheme(btn.dataset.theme);
+        });
+    });
 
     if (window.lucide) lucide.createIcons();
 });
