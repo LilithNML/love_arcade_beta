@@ -1,5 +1,5 @@
 /**
- * Game Center Core v8.1 — Phase 5: Daily Claim Security & UX Hardening
+ * Game Center Core v9.0 — Phase 6: SPA Migration & Performance
  * Compatible con gamecenter_v6_promos — migración silenciosa incluida.
  *
  * NOVEDADES v7.5:
@@ -13,6 +13,14 @@
  *  - Nuevo tema "Carmesí Arcade"
  *  - Utilidad debounce() exportada globalmente
  *  - Migración silenciosa automática de stores anteriores
+ *
+ * NOVEDADES v9.0 (SPA Migration):
+ *  - Arquitectura SPA: index.html unificado con #view-home y #view-shop.
+ *  - shop.html eliminado; toda su lógica migrada a js/shop-logic.js.
+ *  - Nuevo módulo js/spa-router.js intercepta navegación sin recargas.
+ *  - getState(): expone lectura segura del store para módulos externos.
+ *  - syncUI(): fuerza sincronización completa del saldo sin esperar a saveState().
+ *  - Worker path actualizado a 'js/sync-worker.js' (estructura js/).
  *
  * NOVEDADES v8.1 (Daily Claim Security):
  *  - getNetworkTime(): sincronización con worldtimeapi.org; fallback a Date.now() con estado "Unverified"
@@ -686,7 +694,35 @@ window.GameCenter = {
         saveState();
         applyTheme(key);
     },
-    getTheme: () => store.theme || 'violet'
+    getTheme: () => store.theme || 'violet',
+
+    // ── SPA / MÓDULOS EXTERNOS ────────────────────────────────────────────────
+
+    /**
+     * Devuelve una lectura segura (sin referencia) del estado público del store.
+     * Usado por shop-logic.js (renderStreakCalendar) y spa-router.js.
+     * No expone el objeto store completo para evitar mutaciones externas.
+     * @returns {{ coins: number, streak: number, theme: string, moonBlessingExpiry: number }}
+     */
+    getState: () => ({
+        coins:               store.coins,
+        streak:              store.daily?.streak || 0,
+        theme:               store.theme || 'violet',
+        moonBlessingExpiry:  store.buffs?.moonBlessingExpiry || 0
+    }),
+
+    /**
+     * Fuerza una sincronización visual completa del saldo en todos los
+     * indicadores de la UI (Navbar .coin-display + HUD .coin-display).
+     * Llamado por spa-router.js al navegar entre vistas para garantizar
+     * que el saldo sea siempre correcto al entrar a cualquier vista.
+     * Resetea _displayedCoins para que animateValue arranque desde el valor
+     * correcto en vez del último valor animado.
+     */
+    syncUI: () => {
+        _displayedCoins = store.coins;
+        updateUI();
+    }
 };
 
 // =====================================================
@@ -946,12 +982,7 @@ function updateMoonBlessingUI() {
 }
 
 // =====================================================
-// INIT — Arquitectura SPA v9.0
-// Los elementos de cada vista son dinámicos (se montan/desmontan
-// con el router). Por eso todos los listeners de elementos de vista
-// usan DELEGACIÓN DE EVENTOS desde document, en vez de adjuntarse
-// a elementos fijos. Esto garantiza que funcionen sin importar cuándo
-// o cuántas veces se monte la vista.
+// INIT
 // =====================================================
 document.addEventListener('DOMContentLoaded', () => {
     // Aplicar tema antes del primer paint para evitar FOUC
@@ -960,39 +991,45 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     if (window.lucide) lucide.createIcons();
 
-    // ── Avatar upload (delegado — cubre navbar shell + HUD home view) ──────────
-    // `change` burbujea en inputs de tipo file, por lo que la delegación funciona.
-    document.addEventListener('change', (e) => {
-        if (!e.target.matches('#avatar-upload, #avatar-upload-hud')) return;
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            window.GameCenter.setAvatar(evt.target.result);
-            if (window.lucide) lucide.createIcons();
-        };
-        reader.readAsDataURL(file);
-    });
+    // Avatar upload
+    const avatarInput = document.getElementById('avatar-upload');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                window.GameCenter.setAvatar(evt.target.result);
+                if (window.lucide) lucide.createIcons();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
 
-    // ── Delegación de clicks para elementos de vistas dinámicas ───────────────
-    document.addEventListener('click', async (e) => {
-
-        // ── Bono diario ────────────────────────────────────────────────────────
-        // Desactivar SÍNCRONAMENTE antes de cualquier await para prevenir el
-        // "double-tap bug" (race condition por clics rápidos).
-        const dailyBtn = e.target.closest('#btn-daily');
-        if (dailyBtn && !dailyBtn.disabled) {
+    // Bono diario — el botón se desactiva SÍNCRONAMENTE antes de cualquier operación
+    // asíncrona para prevenir el "double-tap bug" (race condition por clics rápidos).
+    const dailyBtn = document.getElementById('btn-daily');
+    if (dailyBtn) {
+        dailyBtn.addEventListener('click', async () => {
+            // ── Paso 1: desactivar de inmediato (síncrono) ──
             dailyBtn.disabled      = true;
             dailyBtn.style.opacity = '0.5';
             dailyBtn.style.cursor  = 'not-allowed';
 
+            // Feedback visual "Procesando…" en el elemento de texto del botón
             const rewardEl = document.getElementById('hud-reward-amount');
             const span     = dailyBtn.querySelector('span');
+            const prevText = rewardEl
+                ? rewardEl.textContent
+                : (span ? span.textContent : null);
+
             if (rewardEl)      rewardEl.textContent = '...';
             else if (span)     span.textContent     = 'Procesando...';
 
+            // ── Paso 2: ejecutar la lógica asíncrona ──
             const result = await window.GameCenter.claimDaily();
 
+            // ── Paso 3: mostrar mensaje y actualizar UI ──
             const msg = document.getElementById('daily-msg');
             if (msg) {
                 msg.textContent   = result.message;
@@ -1000,20 +1037,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg.style.opacity = '1';
                 setTimeout(() => { msg.style.opacity = '0'; }, 3500);
             }
+
+            // updateDailyButton() recalcula el estado correcto del botón
+            // (puede habilitarlo si el reclamo falló por error recuperable,
+            //  o dejarlo desactivado con el contador si fue exitoso).
             updateDailyButton();
-            return;
-        }
+        });
+    }
 
-        // ── Botones de tema ────────────────────────────────────────────────────
-        const themeBtn = e.target.closest('.theme-btn');
-        if (themeBtn?.dataset.theme) {
-            window.GameCenter.setTheme(themeBtn.dataset.theme);
-            return;
-        }
+    // Botones de tema
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => window.GameCenter.setTheme(btn.dataset.theme));
+        btn.classList.toggle('theme-btn--active', btn.dataset.theme === (store.theme || 'violet'));
+    });
 
-        // ── Bendición Lunar ────────────────────────────────────────────────────
-        const moonBtn = e.target.closest('#btn-moon-blessing');
-        if (moonBtn) {
+    // Botón Bendición Lunar
+    const moonBtn = document.getElementById('btn-moon-blessing');
+    if (moonBtn) {
+        moonBtn.addEventListener('click', () => {
             const result = window.GameCenter.buyMoonBlessing();
             const msg    = document.getElementById('moon-blessing-msg');
             if (result.success) {
@@ -1022,7 +1063,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (msg) { msg.textContent = '✗ Monedas insuficientes (necesitas 100)'; msg.style.color = '#ff4757'; }
             }
             if (msg) { msg.style.opacity = '1'; setTimeout(() => { msg.style.opacity = '0'; }, 3500); }
-            return;
-        }
-    });
+        });
+    }
 });
