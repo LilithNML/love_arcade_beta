@@ -1,0 +1,981 @@
+/**
+ * shop-logic.js — Love Arcade v9.0
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Contiene toda la lógica de la vista Tienda, extraída del script inline de
+ * shop.html como parte de la migración a arquitectura SPA.
+ *
+ * DEPENDENCIAS (deben estar cargadas ANTES en el DOM):
+ *  - js/app.js          → window.GameCenter, window.ECONOMY, window.debounce
+ *  - lucide             → window.lucide
+ *  - canvas-confetti    → window.confetti
+ *
+ * OPTIMIZACIONES DE RENDIMIENTO:
+ *  - fetch('data/shop.json') se ejecuta UNA SOLA VEZ en DOMContentLoaded y
+ *    precarga el catálogo completo en memoria (variable allItems).
+ *  - La búsqueda usa window.debounce() para evitar sobrecargar el hilo principal.
+ *  - Los toasts usan .remove() tras su animación de salida (limpieza del DOM).
+ *  - El confetti solo se dispara cuando la pestaña está activa (document.hidden check).
+ *
+ * NOTAS SPA:
+ *  - Todos los event listeners se registran una sola vez en DOMContentLoaded.
+ *  - window.ShopView.onEnter() es llamado por spa-router.js al entrar a la vista
+ *    de Tienda, permitiendo refrescar estado sin re-inicializar todo.
+ *  - resetFilters() es global (window) para compatibilidad con el onclick inline
+ *    del botón "Ver todo el catálogo" en el HTML.
+ */
+
+// ── Estado del catálogo (módulo privado) ──────────────────────────────────────
+let allItems     = [];
+let activeFilter = 'Todos';
+let searchQuery  = '';
+
+// ── Confirm Modal ─────────────────────────────────────────────────────────────
+let _modalResolve = null;
+
+function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
+    document.getElementById('modal-title').textContent   = title;
+    document.getElementById('modal-body').innerHTML      = bodyHTML;
+    document.getElementById('modal-confirm').textContent = confirmText;
+    document.getElementById('modal-error').textContent   = '';
+    const overlay = document.getElementById('confirm-modal');
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => document.getElementById('modal-confirm').focus());
+    return new Promise(resolve => { _modalResolve = resolve; });
+}
+
+function _closeModal(value) {
+    document.getElementById('confirm-modal').classList.add('hidden');
+    if (_modalResolve) { _modalResolve(value); _modalResolve = null; }
+}
+
+// ── Wallpaper Preview Modal ───────────────────────────────────────────────────
+function openPreviewModal(item) {
+    const modal     = document.getElementById('preview-modal');
+    const img       = document.getElementById('preview-img');
+    const nameEl    = document.getElementById('preview-name');
+    const actionsEl = document.getElementById('preview-actions');
+    const eco       = window.ECONOMY;
+
+    img.src            = item.image;
+    img.alt            = item.name;
+    nameEl.textContent = item.name;
+
+    const isOwned    = GameCenter.getBoughtCount(item.id) > 0;
+    const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+
+    if (isOwned) {
+        const url = GameCenter.getDownloadUrl(item.id, item.file);
+        actionsEl.innerHTML = url
+            ? `<a href="${url}" download class="btn-primary vault-btn" style="flex:1; justify-content:center;">
+                   <i data-lucide="download" size="14"></i> Descargar
+               </a>`
+            : `<button class="btn-primary" style="flex:1; justify-content:center; opacity:0.5;" disabled>
+                   <i data-lucide="check" size="14"></i> Obtenido
+               </button>`;
+        actionsEl.innerHTML +=
+            `<button class="btn-ghost" style="flex:1; justify-content:center;" id="preview-close-btn">Volver</button>`;
+    } else {
+        actionsEl.innerHTML =
+            `<button class="btn-ghost" style="flex:1; justify-content:center;" id="preview-close-btn">Volver</button>
+             <button class="btn-primary preview-buy-btn" style="flex:2; justify-content:center;"
+                     data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                 <i data-lucide="star" size="13" fill="#fbbf24" stroke="none"></i>
+                 Canjear · ${finalPrice}
+             </button>`;
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons({ nodes: [actionsEl] });
+
+    actionsEl.querySelector('.preview-buy-btn')?.addEventListener('click', async () => {
+        modal.classList.add('hidden');
+        const parsed = JSON.parse(
+            actionsEl.querySelector('.preview-buy-btn').dataset.item.replace(/&#39;/g, "'")
+        );
+        await initiatePurchase(parsed, null);
+    });
+
+    document.getElementById('preview-close-btn')?.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.shop-tab').forEach(b =>
+        b.classList.toggle('active', b.dataset.tab === tab)
+    );
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+    if (tab === 'settings') {
+        renderHistory();
+        renderMoonBlessingStatus();
+        renderStreakCalendar();
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+function filterItems() {
+    if (!allItems.length) return;
+
+    const filtered = allItems.filter(item => {
+        let matchesFilter;
+        if      (activeFilter === 'Todos')       matchesFilter = true;
+        else if (activeFilter === 'Wishlist')    matchesFilter = GameCenter.isWishlisted(item.id);
+        else if (activeFilter === 'NoObtenidos') matchesFilter = GameCenter.getBoughtCount(item.id) === 0;
+        else                                     matchesFilter = Array.isArray(item.tags) && item.tags.includes(activeFilter);
+
+        const matchesSearch = !searchQuery
+            || item.name.toLowerCase().includes(searchQuery)
+            || (item.desc || '').toLowerCase().includes(searchQuery)
+            || (Array.isArray(item.tags) && item.tags.some(t => t.toLowerCase().includes(searchQuery)));
+
+        return matchesFilter && matchesSearch;
+    });
+
+    const wishlisted = filtered.filter(item =>  GameCenter.isWishlisted(item.id));
+    const others     = filtered.filter(item => !GameCenter.isWishlisted(item.id));
+    renderShop([...wishlisted, ...others]);
+
+    const countEl = document.getElementById('search-results-count');
+    const emptyEl = document.getElementById('filter-empty');
+    const gridEl  = document.getElementById('shop-container');
+    const sorted  = [...wishlisted, ...others];
+
+    if (sorted.length === 0) {
+        gridEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        countEl.classList.add('hidden');
+    } else {
+        gridEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+        const isFiltered = activeFilter !== 'Todos' || searchQuery;
+        countEl.textContent = isFiltered ? `${sorted.length} resultado${sorted.length !== 1 ? 's' : ''}` : '';
+        countEl.classList.toggle('hidden', !isFiltered);
+    }
+    updateWishlistCost();
+}
+
+function resetFilters() {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-filter="Todos"]').classList.add('active');
+    activeFilter = 'Todos';
+    searchQuery  = '';
+    const searchInput = document.getElementById('search-input');
+    const clearBtn    = document.getElementById('search-clear');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn)    clearBtn.classList.add('hidden');
+    filterItems();
+}
+// Exponer globalmente (compatible con onclick="resetFilters()" en el HTML)
+window.resetFilters = resetFilters;
+
+// ── Wishlist Cost ─────────────────────────────────────────────────────────────
+function updateWishlistCost() {
+    const banner = document.getElementById('wishlist-cost-banner');
+    const textEl = document.getElementById('wishlist-cost-text');
+    if (!banner || !textEl || !allItems.length) return;
+
+    const unowned = allItems.filter(item =>
+        GameCenter.isWishlisted(item.id) && GameCenter.getBoughtCount(item.id) === 0
+    );
+    if (unowned.length === 0) { banner.classList.add('hidden'); return; }
+
+    const eco   = window.ECONOMY;
+    const total = unowned.reduce((sum, item) => {
+        const price = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+        return sum + price;
+    }, 0);
+
+    const balance = GameCenter.getBalance();
+    const needed  = Math.max(0, total - balance);
+    const count   = unowned.length;
+    const plural  = count !== 1 ? 's' : '';
+
+    textEl.innerHTML = needed > 0
+        ? `Necesitas <strong>${needed} ⭐</strong> más para toda tu lista (<strong>${count}</strong> ítem${plural})`
+        : `¡Tienes saldo para toda tu lista! (<strong>${count}</strong> ítem${plural})`;
+
+    banner.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons({ nodes: [banner] });
+}
+
+// ── Render: Streak Calendar ───────────────────────────────────────────────────
+function renderStreakCalendar() {
+    const cal = document.getElementById('settings-streak-calendar');
+    if (!cal) return;
+    const info    = window.GameCenter?.getStreakInfo?.();
+    const streak  = info?.streak || 0;
+    const days    = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+    const rewards = [20, 25, 30, 35, 40, 50, 60];
+
+    cal.innerHTML = days.map((day, i) => {
+        let cls = 'streak-cal-dot';
+        if      (i < streak)  cls += ' claimed';
+        else if (i === streak) cls += ' today';
+        return `<div class="streak-cal-day">
+            <span class="streak-cal-label">${day}</span>
+            <div class="${cls}" title="${rewards[i]} monedas">
+                ${i < streak ? '<i data-lucide="check" size="10"></i>' : rewards[i]}
+            </div>
+        </div>`;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons({ nodes: [cal] });
+}
+
+// ── Render: Catálogo ──────────────────────────────────────────────────────────
+function renderShop(items) {
+    const container = document.getElementById('shop-container');
+    container.innerHTML = '';
+    if (!items.length) return;
+
+    items.forEach(item => {
+        const bought     = GameCenter.getBoughtCount(item.id);
+        const isOwned    = bought > 0;
+        const isWished   = GameCenter.isWishlisted(item.id);
+        const eco        = window.ECONOMY;
+        const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+
+        const priceHTML = eco.isSaleActive && !isOwned
+            ? `<div class="shop-price">
+                   <span class="price-original">${item.price}</span>
+                   <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i>
+                   <span class="price-sale">${finalPrice}</span>
+               </div>`
+            : `<div class="shop-price">
+                   <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i>
+                   ${isOwned ? '<span style="color:var(--success);">Obtenido</span>' : item.price}
+               </div>`;
+
+        let actionHTML;
+        if (isOwned) {
+            const url = GameCenter.getDownloadUrl(item.id, item.file);
+            actionHTML = url
+                ? `<a href="${url}" download class="btn-primary vault-btn"
+                       style="width:100%; justify-content:center; font-size:0.78rem; padding:7px;">
+                       <i data-lucide="download" size="13"></i> Descargar
+                   </a>`
+                : `<button class="btn-primary"
+                       style="width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;"
+                       disabled>
+                       <i data-lucide="check" size="13"></i> Obtenido
+                   </button>`;
+        } else {
+            actionHTML =
+                `<div style="display:flex; gap:5px; width:100%;">
+                    <button class="btn-ghost shop-preview-btn"
+                            style="flex-shrink:0; padding:7px 9px;"
+                            data-id="${item.id}" title="Vista previa">
+                        <i data-lucide="eye" size="13"></i>
+                    </button>
+                    <button class="btn-primary shop-buy-btn"
+                            style="flex:1; justify-content:center; font-size:0.78rem; padding:7px;"
+                            data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                        <i data-lucide="star" size="11" fill="#fbbf24" stroke="none"></i> ${finalPrice}
+                    </button>
+                </div>`;
+        }
+
+        const card = document.createElement('article');
+        card.className = 'glass-panel shop-card';
+        // will-change en tarjetas para GPU-compositing del hover/transform
+        card.style.willChange = 'transform, opacity';
+        card.innerHTML =
+            `${!isOwned
+                ? `<button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
+                           data-id="${item.id}"
+                           title="${isWished ? 'Quitar de lista' : 'Agregar a lista de deseos'}">
+                       <i data-lucide="heart" size="12"></i>
+                   </button>`
+                : ''}
+            <img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+            ${isOwned ? '<div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>' : ''}
+            ${eco.isSaleActive && !isOwned
+                ? '<div class="sale-card-badge"><i data-lucide="zap" size="9" fill="currentColor" stroke="none"></i> OFERTA</div>'
+                : ''}
+            <div style="width:100%;">
+                <h3 class="card-name">${item.name}</h3>
+                ${priceHTML}
+                ${actionHTML}
+            </div>`;
+
+        container.appendChild(card);
+    });
+
+    // Wishlist listeners
+    container.querySelectorAll('.wishlist-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id    = parseInt(btn.dataset.id, 10);
+            const isNow = GameCenter.toggleWishlist(id);
+            btn.classList.toggle('wishlist-btn--active', isNow);
+            btn.title = isNow ? 'Quitar de lista' : 'Agregar a lista de deseos';
+            btn.innerHTML = '<i data-lucide="heart" size="12"></i>';
+            if (window.lucide) lucide.createIcons({ nodes: [btn] });
+            updateWishlistCost();
+        });
+    });
+
+    // Preview listeners
+    container.querySelectorAll('.shop-preview-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = allItems.find(i => i.id === parseInt(btn.dataset.id, 10));
+            if (item) openPreviewModal(item);
+        });
+    });
+
+    // Buy listeners
+    container.querySelectorAll('.shop-buy-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            try {
+                const item = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
+                await initiatePurchase(item, btn);
+            } catch (e) { console.error('Error parsing item', e); }
+        });
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Render: Biblioteca ────────────────────────────────────────────────────────
+function renderLibrary(items) {
+    const container = document.getElementById('library-container');
+    const inventory = GameCenter.getInventory();
+    const owned     = items.filter(item => inventory[item.id] > 0);
+
+    if (owned.length === 0) {
+        container.innerHTML =
+            `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-low);">
+                <i data-lucide="archive" size="40" style="opacity:0.25; display:block; margin:0 auto 12px;"></i>
+                <p style="font-family:var(--font-display); font-size:1rem; font-weight:700; color:var(--text-med);">Tu biblioteca está vacía</p>
+                <p style="font-size:0.8rem; margin-top:6px;">Canjea wallpapers en el Catálogo.</p>
+            </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = '';
+    owned.forEach(item => {
+        const url  = GameCenter.getDownloadUrl(item.id, item.file);
+        const card = document.createElement('article');
+        card.className     = 'glass-panel shop-card';
+        card.style.willChange = 'transform, opacity';
+
+        const actionsHTML = url
+            ? `<div style="display:flex; gap:5px; width:100%; margin-top:8px;">
+                   <a href="${url}" download
+                      class="btn-primary vault-btn"
+                      style="flex:1; justify-content:center; font-size:0.78rem; padding:7px;">
+                       <i data-lucide="download" size="13"></i> Descargar
+                   </a>
+                   <button class="btn-mail library-mail-btn"
+                           data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'
+                           data-url="${url}"
+                           aria-label="Enviar enlace de descarga por correo para ${item.name.replace(/"/g, '&quot;')}"
+                           title="Enviar por correo">
+                       <i data-lucide="send" size="13"></i>
+                   </button>
+               </div>`
+            : `<button class="btn-primary"
+                       style="margin-top:8px; width:100%; justify-content:center; opacity:0.5; font-size:0.78rem; padding:7px;"
+                       disabled>
+                   <i data-lucide="check" size="13"></i> Sin archivo
+               </button>`;
+
+        card.innerHTML =
+            `<img src="${item.image}" alt="${item.name}" class="shop-img" loading="lazy">
+            <div class="owned-badge"><i data-lucide="check-circle-2" size="10"></i> Tuyo</div>
+            <div style="width:100%;">
+                <h3 class="card-name">${item.name}</h3>
+                ${actionsHTML}
+            </div>`;
+
+        container.appendChild(card);
+    });
+
+    container.querySelectorAll('.library-mail-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            try {
+                const item        = JSON.parse(btn.dataset.item.replace(/&#39;/g, "'"));
+                const relativeUrl = btn.dataset.url;
+                const absoluteUrl = new URL(relativeUrl, window.location.href).href;
+                openEmailModal(item, absoluteUrl);
+            } catch (e) { console.error('MailBtn error', e); }
+        });
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Render: Historial ─────────────────────────────────────────────────────────
+function renderHistory() {
+    const container = document.getElementById('history-list');
+    if (!container) return;
+    const history = GameCenter.getHistory();
+
+    if (!history.length) {
+        container.innerHTML =
+            '<p style="color:var(--text-low); font-size:0.8rem; text-align:center; padding:16px 0;">Sin transacciones aún.</p>';
+        return;
+    }
+
+    container.innerHTML = history.slice(0, 50).map(entry => {
+        if (entry.tipo) {
+            const isIn  = entry.tipo === 'ingreso';
+            const fecha = new Date(entry.fecha).toLocaleString('es-MX', {
+                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+            return `<div class="history-entry">
+                <span class="history-icon ${isIn ? 'history-icon--in' : 'history-icon--out'}">${isIn ? '+' : '-'}</span>
+                <div class="history-detail">
+                    <span class="history-motivo">${entry.motivo}</span>
+                    <span class="history-fecha">${fecha}</span>
+                </div>
+                <span class="history-amount ${isIn ? 'history-amount--in' : 'history-amount--out'}">
+                    ${isIn ? '+' : '-'}${entry.cantidad}
+                </span>
+            </div>`;
+        } else {
+            const fecha  = entry.date
+                ? new Date(entry.date).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : '—';
+            const isCode = entry.itemId === 'promo_code';
+            return `<div class="history-entry">
+                <span class="history-icon ${isCode ? 'history-icon--in' : 'history-icon--out'}">${isCode ? '+' : '-'}</span>
+                <div class="history-detail">
+                    <span class="history-motivo">${entry.name || 'Transacción'}</span>
+                    <span class="history-fecha">${fecha}</span>
+                </div>
+                <span class="history-amount ${isCode ? 'history-amount--in' : 'history-amount--out'}">
+                    ${isCode ? `+${entry.price || '?'}` : `-${entry.price || '?'}`}
+                </span>
+            </div>`;
+        }
+    }).join('');
+}
+
+// ── Compra ────────────────────────────────────────────────────────────────────
+async function initiatePurchase(item, btn) {
+    const eco        = window.ECONOMY;
+    const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
+    const cashback   = Math.floor(finalPrice * eco.cashbackRate);
+    const netCost    = finalPrice - cashback;
+
+    const bodyHTML =
+        `<div class="modal-product-row">
+            <span class="modal-label">Wallpaper</span>
+            <span class="modal-value" style="color:var(--text-high); font-size:0.85rem;">${item.name}</span>
+        </div>
+        ${eco.isSaleActive
+            ? `<div class="modal-product-row">
+                   <span class="modal-label">Precio original</span>
+                   <span class="modal-strikethrough">${item.price} ⭐</span>
+               </div>
+               <div class="modal-product-row">
+                   <span class="modal-label">Con oferta</span>
+                   <span class="modal-value--sale">${finalPrice} ⭐</span>
+               </div>`
+            : `<div class="modal-product-row">
+                   <span class="modal-label">Precio</span>
+                   <span class="modal-value">${item.price} ⭐</span>
+               </div>`}
+        ${cashback > 0
+            ? `<div class="modal-product-row">
+                   <span class="modal-label">Cashback</span>
+                   <span class="modal-value--cashback">+${cashback} ⭐</span>
+               </div>`
+            : ''}
+        <div class="modal-product-row modal-product-row--total">
+            <span class="modal-label" style="font-weight:700;">Costo neto</span>
+            <span class="modal-value--total">${netCost} ⭐</span>
+        </div>`;
+
+    const confirmed = await openConfirmModal({
+        title:       '¿Canjear wallpaper?',
+        bodyHTML,
+        confirmText: `Canjear · ${finalPrice} ⭐`
+    });
+    if (!confirmed) return;
+
+    const result = GameCenter.buyItem(item);
+    if (result.success) {
+        filterItems();
+        renderLibrary(allItems);
+        document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+        fireConfetti();
+        const cbNote = result.cashback > 0 ? ` <strong>+${result.cashback} cashback</strong> devueltas.` : '';
+        showToast(`"${item.name}" desbloqueado.${cbNote} Ve a <strong>Mis Tesoros</strong>.`, 'success');
+        updateWishlistCost();
+    } else {
+        if (result.reason === 'coins') {
+            if (btn) shakeElement(btn);
+            showToast('No tienes suficientes monedas.', 'error');
+        }
+    }
+}
+
+function shakeElement(el) {
+    el.classList.remove('anim-shake');
+    void el.offsetWidth; // force reflow to restart animation
+    el.classList.add('anim-shake');
+    el.addEventListener('animationend', () => el.classList.remove('anim-shake'), { once: true });
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+function fireConfetti() {
+    // No disparar si la pestaña está inactiva (performance)
+    if (document.hidden) return;
+    // Verificar que estamos en la vista de Tienda
+    if (window.SpaRouter?.getCurrentView?.() !== 'shop') return;
+
+    const colors = ['#9b59ff', '#ff59b4', '#fbbf24', '#22d07a', '#00d4ff'];
+    confetti({ particleCount: 55, angle: 60,  spread: 65, origin: { x: 0, y: 0.7 }, colors });
+    confetti({ particleCount: 55, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors });
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(html, type = 'success') {
+    const toast     = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    toast.innerHTML = html;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast--visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast--visible');
+        // .remove() tras la animación → limpieza del DOM (no solo ocultado)
+        setTimeout(() => toast.remove(), 400);
+    }, 4500);
+}
+
+// ── Código Promo ──────────────────────────────────────────────────────────────
+async function handleRedeem() {
+    const input  = document.getElementById('promo-input');
+    const msg    = document.getElementById('promo-msg');
+    const btn    = document.getElementById('btn-redeem');
+    const code   = input.value.trim();
+    if (!code) return;
+
+    btn.disabled = true;
+    const result = await window.GameCenter.redeemPromoCode(code);
+    btn.disabled = false;
+
+    if (result.success) {
+        showMsg(msg, result.message, 'var(--success)');
+        input.value = '';
+        input.style.borderColor = '';
+        document.querySelectorAll('.coin-display').forEach(el => el.textContent = GameCenter.getBalance());
+        if (!document.hidden) {
+            confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#fbbf24','#9b59ff','#22d07a'] });
+        }
+    } else {
+        showMsg(msg, result.message, 'var(--error)');
+        input.style.borderColor = 'var(--error)';
+        shakeElement(btn);
+    }
+}
+
+// ── Sincronización ────────────────────────────────────────────────────────────
+async function handleExport() {
+    const msg = document.getElementById('export-msg');
+    const btn = document.getElementById('btn-export');
+    btn.disabled = true;
+    showMsg(msg, 'Generando código con checksum…', 'var(--text-low)');
+
+    const code = await GameCenter.exportSave();
+    btn.disabled = false;
+
+    if (!code) { showMsg(msg, 'Error al generar el código.', 'var(--error)'); return; }
+
+    let clipboardOk = false;
+    try {
+        await navigator.clipboard.writeText(code);
+        clipboardOk = true;
+    } catch (_) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            Object.assign(ta.style, { position:'fixed', opacity:'0', top:'0', left:'0' });
+            document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+            document.body.removeChild(ta); clipboardOk = true;
+        } catch (_2) {}
+    }
+
+    try {
+        const blob = new Blob([code], { type: 'text/plain' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `love-arcade-backup-${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (_) {}
+
+    showMsg(msg, clipboardOk
+        ? '✓ Código copiado al portapapeles y archivo .txt descargado.'
+        : '✓ Archivo .txt descargado.', 'var(--success)');
+}
+
+async function handleImport() {
+    const code = document.getElementById('import-input').value.trim();
+    const msg  = document.getElementById('import-msg');
+    const btn  = document.getElementById('btn-import');
+
+    if (!code) { showMsg(msg, 'Carga un archivo o pega un código.', 'var(--error)'); return; }
+
+    const confirmed = await openConfirmModal({
+        title:    'Importar partida',
+        bodyHTML:
+            `<div class="modal-warning">
+                Esto <strong>reemplazará tu progreso actual</strong> (monedas, wallpapers, racha y ajustes).<br><br>
+                Esta acción no se puede deshacer.
+            </div>`,
+        confirmText: 'Sí, importar'
+    });
+    if (!confirmed) return;
+
+    btn.disabled = true;
+    showMsg(msg, 'Verificando integridad…', 'var(--text-low)');
+
+    const result = await GameCenter.importSave(code);
+    btn.disabled = false;
+
+    if (result.success) {
+        showMsg(msg, '✓ Importado correctamente. Recargando…', 'var(--success)');
+        setTimeout(() => location.reload(), 1200);
+    } else {
+        showMsg(msg, result.message || 'Código inválido o corrupto.', 'var(--error)');
+    }
+}
+
+// ── Moon Blessing Status ──────────────────────────────────────────────────────
+function renderMoonBlessingStatus() {
+    const status   = GameCenter.getMoonBlessingStatus();
+    const statusEl = document.getElementById('moon-blessing-status');
+    if (!statusEl) return;
+    if (status.active) {
+        statusEl.textContent = `Activa · expira ${status.expiresAt}`;
+        statusEl.className   = 'eco-badge eco-badge--moon';
+    } else {
+        statusEl.textContent = 'Inactiva';
+        statusEl.className   = 'eco-badge';
+    }
+}
+
+// ── Sale Banner + Economy Info ────────────────────────────────────────────────
+function initSaleBanner() {
+    const eco    = window.ECONOMY;
+    const banner = document.getElementById('sale-banner');
+    if (!banner) return;
+    if (eco.isSaleActive) {
+        banner.classList.remove('hidden');
+        const pct     = Math.round((1 - eco.saleMultiplier) * 100);
+        const badgeEl = document.getElementById('sale-badge-pct');
+        document.getElementById('sale-label-text').textContent = `¡${eco.saleLabel}!`;
+        document.getElementById('sale-desc-text').textContent  =
+            `${pct}% de descuento + ${Math.round(eco.cashbackRate * 100)}% de cashback en toda la tienda.`;
+        if (badgeEl) badgeEl.textContent = `${pct}%`;
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+function initEconomyInfo() {
+    const eco    = window.ECONOMY;
+    const saleEl = document.getElementById('eco-sale-status');
+    const cbEl   = document.getElementById('eco-cashback');
+    if (!saleEl || !cbEl) return;
+    const pct = Math.round((1 - eco.saleMultiplier) * 100);
+    saleEl.textContent = eco.isSaleActive ? `${pct}% OFF activo` : 'Sin oferta activa';
+    saleEl.className   = 'eco-badge' + (eco.isSaleActive ? ' eco-badge--sale' : '');
+    cbEl.textContent   = `${Math.round(eco.cashbackRate * 100)}% en cada compra`;
+    cbEl.className     = 'eco-badge eco-badge--green';
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function showMsg(el, text, color) {
+    if (!el) return;
+    el.innerHTML     = text;
+    el.style.color   = color;
+    el.style.opacity = '1';
+}
+
+// ── Email Modal ───────────────────────────────────────────────────────────────
+let _emailItem        = null;
+let _emailAbsoluteUrl = '';
+
+function openEmailModal(item, absoluteUrl) {
+    _emailItem        = item;
+    _emailAbsoluteUrl = absoluteUrl;
+
+    const thumbEl = document.getElementById('email-modal-thumb');
+    const nameEl  = document.getElementById('email-modal-item-name');
+    if (thumbEl) { thumbEl.src = item.image; thumbEl.alt = item.name; }
+    if (nameEl)  { nameEl.textContent = item.name; }
+
+    const inputEl = document.getElementById('email-modal-input');
+    if (inputEl) {
+        inputEl.value = window.MailHelper.getLastMailRecipient();
+        _setEmailError(false);
+    }
+
+    const fallbackEl = document.getElementById('email-fallback');
+    if (fallbackEl) fallbackEl.classList.remove('visible');
+
+    const modal = document.getElementById('email-modal');
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons({ nodes: [modal] });
+    requestAnimationFrame(() => { if (inputEl) inputEl.focus(); });
+}
+
+function _closeEmailModal() {
+    document.getElementById('email-modal').classList.add('hidden');
+    _emailItem        = null;
+    _emailAbsoluteUrl = '';
+}
+
+function _setEmailError(show, msg = 'Introduce un correo electrónico válido.') {
+    const errorEl   = document.getElementById('email-modal-error');
+    const errorText = document.getElementById('email-modal-error-text');
+    const inputEl   = document.getElementById('email-modal-input');
+    if (!errorEl || !inputEl) return;
+    if (show) {
+        if (errorText) errorText.textContent = msg;
+        errorEl.classList.add('visible');
+        inputEl.classList.add('email-input--error');
+        inputEl.setAttribute('aria-invalid', 'true');
+    } else {
+        errorEl.classList.remove('visible');
+        inputEl.classList.remove('email-input--error');
+        inputEl.setAttribute('aria-invalid', 'false');
+    }
+}
+
+async function _handleEmailConfirm() {
+    if (!_emailItem || !_emailAbsoluteUrl) return;
+
+    const inputEl    = document.getElementById('email-modal-input');
+    const saveCb     = document.getElementById('email-save-checkbox');
+    const fallbackEl = document.getElementById('email-fallback');
+    const fallUrlEl  = document.getElementById('email-fallback-url');
+
+    const email = (inputEl?.value || '').trim();
+
+    if (!window.MailHelper.isValidEmail(email)) {
+        _setEmailError(true);
+        inputEl?.focus();
+        return;
+    }
+    _setEmailError(false);
+
+    const { uri, tooLong } = window.MailHelper.buildMailtoLink(_emailItem, _emailAbsoluteUrl, email);
+
+    if (tooLong) {
+        if (fallbackEl) fallbackEl.classList.add('visible');
+        if (fallUrlEl)  fallUrlEl.textContent = _emailAbsoluteUrl;
+        if (window.lucide) lucide.createIcons({ nodes: [fallbackEl] });
+
+        const copyBtn = document.getElementById('email-copy-btn');
+        if (copyBtn) {
+            const freshBtn = copyBtn.cloneNode(true);
+            copyBtn.parentNode.replaceChild(freshBtn, copyBtn);
+            document.getElementById('email-copy-btn').addEventListener('click', async () => {
+                const ok  = await window.MailHelper.copyToClipboard(_emailAbsoluteUrl);
+                const lbl = document.getElementById('email-copy-label');
+                if (lbl) lbl.textContent = ok ? '✓ Enlace copiado' : 'No se pudo copiar';
+                setTimeout(() => { if (lbl) lbl.textContent = 'Copiar enlace de descarga'; }, 2500);
+            });
+        }
+        if (saveCb?.checked) window.MailHelper.saveLastMailRecipient(email);
+        return;
+    }
+
+    if (saveCb?.checked) window.MailHelper.saveLastMailRecipient(email);
+    window.location.href = uri;
+    setTimeout(_closeEmailModal, 300);
+}
+
+// ── ShopView API pública (usada por spa-router.js) ────────────────────────────
+window.ShopView = {
+    /**
+     * Llamado por spa-router.js cada vez que se entra a la vista de Tienda.
+     * Refresca el estado de economía y los badges de luna sin re-renderizar
+     * el catálogo completo (que ya está en memoria).
+     */
+    onEnter() {
+        initEconomyInfo();
+        renderMoonBlessingStatus();
+        // Actualizar saldo en el badge de coin-display de la navbar
+        document.querySelectorAll('.coin-display').forEach(el => {
+            el.textContent = window.GameCenter?.getBalance?.() ?? 0;
+        });
+        if (window.lucide) lucide.createIcons();
+    }
+};
+
+// ── DOMContentLoaded — Registro de event listeners (una sola vez) ─────────────
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Inicializar banner y economía al cargar
+    initSaleBanner();
+    initEconomyInfo();
+    renderMoonBlessingStatus();
+    renderStreakCalendar();
+
+    // Confirm modal
+    document.getElementById('modal-cancel').addEventListener('click',  () => _closeModal(false));
+    document.getElementById('modal-confirm').addEventListener('click', () => _closeModal(true));
+    document.getElementById('confirm-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) _closeModal(false);
+    });
+
+    // Preview modal
+    document.getElementById('preview-close').addEventListener('click', () => {
+        document.getElementById('preview-modal').classList.add('hidden');
+    });
+    document.getElementById('preview-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) document.getElementById('preview-modal').classList.add('hidden');
+    });
+
+    // Email modal
+    document.getElementById('email-modal-cancel').addEventListener('click', _closeEmailModal);
+    document.getElementById('email-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) _closeEmailModal();
+    });
+    document.getElementById('email-modal-confirm').addEventListener('click', _handleEmailConfirm);
+    document.getElementById('email-modal-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') _handleEmailConfirm();
+    });
+    document.getElementById('email-modal-input').addEventListener('input', () => {
+        _setEmailError(false);
+    });
+
+    // Escape global cierra todos los modales
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('preview-modal').classList.add('hidden');
+            _closeEmailModal();
+        }
+    });
+
+    // Toggle código promo
+    document.getElementById('btn-promo-toggle').addEventListener('click', () => {
+        const toggleBtn = document.getElementById('btn-promo-toggle');
+        const section   = document.getElementById('promo-section');
+        const expanded  = toggleBtn.getAttribute('aria-expanded') === 'true';
+        toggleBtn.setAttribute('aria-expanded', String(!expanded));
+        section.setAttribute('aria-hidden',    String(expanded));
+        section.classList.toggle('promo-section--collapsed', expanded);
+        section.classList.toggle('promo-section--open', !expanded);
+        if (!expanded) setTimeout(() => document.getElementById('promo-input').focus(), 50);
+        if (window.lucide) lucide.createIcons({ nodes: [toggleBtn] });
+    });
+
+    // ── Cargar catálogo UNA SOLA VEZ ──────────────────────────────────────────
+    fetch('data/shop.json')
+        .then(r => r.json())
+        .then(items => {
+            allItems = items;
+            filterItems();
+            renderLibrary(items);
+            updateWishlistCost();
+        })
+        .catch(err => {
+            console.error('Error cargando shop.json:', err);
+            const cont = document.getElementById('shop-container');
+            if (cont) cont.innerHTML =
+                '<p style="color:var(--error); grid-column:1/-1; text-align:center; padding:40px 0;">Error al cargar el catálogo.</p>';
+        });
+
+    // Promo code
+    document.getElementById('btn-redeem').addEventListener('click', handleRedeem);
+    document.getElementById('promo-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleRedeem();
+    });
+
+    // Tabs
+    document.querySelectorAll('.shop-tab').forEach(btn =>
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+    );
+
+    // Search con debounce
+    const searchInput  = document.getElementById('search-input');
+    const clearBtn     = document.getElementById('search-clear');
+    const debouncedFilter = window.debounce(() => {
+        searchQuery = searchInput.value.trim().toLowerCase();
+        filterItems();
+    }, 300);
+
+    searchInput.addEventListener('input', () => {
+        clearBtn.classList.toggle('hidden', !searchInput.value);
+        debouncedFilter();
+    });
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchQuery       = '';
+        clearBtn.classList.add('hidden');
+        filterItems();
+        searchInput.focus();
+    });
+
+    // Filter pills
+    document.querySelectorAll('.pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            activeFilter = pill.dataset.filter;
+            filterItems();
+        });
+    });
+
+    // Sync
+    document.getElementById('btn-export')?.addEventListener('click', handleExport);
+    document.getElementById('btn-import')?.addEventListener('click', handleImport);
+
+    document.getElementById('import-file')?.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const nameEl = document.getElementById('import-file-name');
+        if (nameEl) nameEl.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload  = evt => {
+            const ta = document.getElementById('import-input');
+            if (ta) ta.value = evt.target.result.trim();
+            showMsg(document.getElementById('import-msg'),
+                `Archivo "${file.name}" cargado. Haz clic en Importar.`, 'var(--text-med)');
+        };
+        reader.onerror = () =>
+            showMsg(document.getElementById('import-msg'), 'Error al leer.', 'var(--error)');
+        reader.readAsText(file);
+    });
+
+    // Theme buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (window.GameCenter) window.GameCenter.setTheme(btn.dataset.theme);
+        });
+    });
+
+    // Moon Blessing button
+    const moonBtn = document.getElementById('btn-moon-blessing');
+    if (moonBtn) {
+        moonBtn.addEventListener('click', () => {
+            const result = window.GameCenter.buyMoonBlessing();
+            const msg    = document.getElementById('moon-blessing-msg');
+            if (result.success) {
+                if (msg) { msg.textContent = `✓ Activa hasta ${result.expiresAt}`; msg.style.color = '#c084fc'; }
+            } else {
+                if (msg) { msg.textContent = '✗ Monedas insuficientes (necesitas 100)'; msg.style.color = '#ff4757'; }
+            }
+            if (msg) {
+                msg.style.opacity = '1';
+                setTimeout(() => { msg.style.opacity = '0'; }, 3500);
+            }
+            renderMoonBlessingStatus();
+        });
+    }
+
+    if (window.lucide) lucide.createIcons();
+});
