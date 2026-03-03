@@ -7,37 +7,26 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-    <style>
-        /* ── SPA View Transition ───────────────── */
-        #view-container {
-            will-change: opacity, transform;
-        }
-        #view-container.view-exit {
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.18s ease, transform 0.18s ease;
-        }
-        #view-container.view-enter {
-            opacity: 1;
-            transform: translateY(0);
-            transition: opacity 0.22s ease, transform 0.22s ease;
-        }
-    </style>
 </head>
 <body>
 
-    <!-- ── TOP NAVBAR (Shell — siempre visible) ── -->
+    <!-- ══════════════════════════════════════════════════════════
+         ELEMENTOS GLOBALES PERSISTENTES
+         Existen una sola vez, visibles en todas las vistas.
+         ══════════════════════════════════════════════════════════ -->
+
+    <!-- ── TOP NAVBAR ── -->
     <nav class="navbar glass-panel">
-        <div class="nav-brand" id="nav-brand-link" style="cursor:pointer;">
+        <div class="nav-brand">
             <i data-lucide="gamepad-2" size="26"></i>
             Love<span>Arcade</span>
         </div>
 
         <ul class="nav-links">
-            <li><a href="#/" class="nav-link" data-spa-route="/">Inicio</a></li>
-            <li><a href="#games" class="nav-link js-scroll-home">Juegos</a></li>
-            <li><a href="#/shop" class="nav-link" data-spa-route="/shop">Tienda</a></li>
-            <li><a href="#faq" class="nav-link js-scroll-home">Ayuda</a></li>
+            <li><a href="#" class="nav-link active" data-view="home">Inicio</a></li>
+            <li><a href="#" class="nav-link" data-view="home" data-anchor="games">Juegos</a></li>
+            <li><a href="#" class="nav-link" data-view="shop">Tienda</a></li>
+            <li><a href="#" class="nav-link" data-view="home" data-anchor="faq">Ayuda</a></li>
         </ul>
 
         <div class="nav-user">
@@ -58,30 +47,851 @@
         </div>
     </nav>
 
-    <!-- ── BOTTOM NAV (mobile — Shell) ── -->
+    <!-- ── BOTTOM NAV (mobile) ── -->
     <nav class="bottom-nav">
-        <a href="#/" class="b-nav-item" data-spa-route="/">
+        <a href="#" class="b-nav-item active" data-view="home">
             <i data-lucide="home" size="20"></i>
             <span>Inicio</span>
         </a>
-        <a href="#games" class="b-nav-item js-scroll-home">
+        <a href="#" class="b-nav-item" data-view="home" data-anchor="games">
             <i data-lucide="gamepad-2" size="20"></i>
             <span>Juegos</span>
         </a>
-        <a href="#/shop" class="b-nav-item" data-spa-route="/shop">
+        <a href="#" class="b-nav-item" data-view="shop">
             <i data-lucide="shopping-bag" size="20"></i>
             <span>Tienda</span>
         </a>
-        <a href="#faq" class="b-nav-item js-scroll-home">
+        <a href="#" class="b-nav-item" data-view="home" data-anchor="faq">
             <i data-lucide="help-circle" size="20"></i>
             <span>Ayuda</span>
         </a>
     </nav>
 
-    <!-- ── SPA MOUNT POINT ── -->
-    <div id="view-container"></div>
+    <!-- ══════════════════════════════════════════════════════════
+         VISTAS (SPA) — Solo una es visible a la vez.
+         La clase .hidden aplica display:none !important.
+         ══════════════════════════════════════════════════════════ -->
+    <main class="container">
 
+        <!-- ═══════════════════════════════════════════
+             VISTA: INICIO
+             ═══════════════════════════════════════════ -->
+        <div id="view-home">
+
+            <!-- ── PLAYER HUD ── -->
+            <div class="player-hud">
+
+                <div class="hud-top">
+                    <div class="hud-avatar-wrap">
+                        <label for="avatar-upload-hud">
+                            <div class="hud-avatar" id="hud-avatar-display" style="background-image: url('assets/default_avatar.png');">
+                                <i data-lucide="user" size="24"></i>
+                            </div>
+                        </label>
+                        <div class="hud-avatar-ring"></div>
+                        <input type="file" id="avatar-upload-hud" hidden accept="image/*">
+                    </div>
+                    <div class="hud-info">
+                        <p class="hud-greeting">Bienvenido de vuelta</p>
+                        <p class="hud-name">Lilith</p>
+                        <p class="hud-status">
+                            <span class="hud-status-dot"></span>
+                            <span>En línea · Love Arcade</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="hud-balance-row">
+                    <div class="hud-balance">
+                        <span class="hud-balance-label">Monedas</span>
+                        <div class="hud-balance-amount">
+                            <i data-lucide="star" size="18" fill="#fbbf24" stroke="none"></i>
+                            <span class="coin-display">0</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-daily" class="hud-daily-btn">
+                        <i data-lucide="gift" size="20"></i>
+                        <span class="hud-daily-reward" id="hud-reward-amount">+20</span>
+                        <span class="hud-daily-label">BONO DIARIO</span>
+                    </button>
+                </div>
+
+                <div id="daily-countdown" class="hud-countdown hidden">
+                    Próximo bono en: <span id="countdown-display">--:--:--</span>
+                </div>
+                <p id="daily-msg" class="daily-msg"></p>
+
+                <div class="hud-streak">
+                    <span class="streak-label"><i data-lucide="flame" size="11"></i> Racha</span>
+                    <div class="streak-days" id="streak-days">
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                        <div class="streak-day"></div>
+                    </div>
+                    <span class="streak-count" id="streak-count">×1</span>
+                </div>
+            </div>
+
+            <!-- ── GAME CARDS ── -->
+            <div style="margin-bottom: 20px;">
+                <h2 class="section-title" style="margin-bottom: 4px;">¿Qué vamos a jugar?</h2>
+                <p class="section-subtitle">Gana monedas en cada partida</p>
+            </div>
+
+            <section id="games" class="games-grid">
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/jungle_dash_cover_art.webp');">
+                        <div class="card-badge badge-new">NUEVO</div>
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +100–150</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Jungle Dash</h3>
+                        <p class="card-desc">Controla a un jaguar en la selva y salta para esquivar obstáculos. ¿Cuánto puedes resistir?</p>
+                        <a href="games/jungle-dash" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/ollin_smash_cover_art.webp');">
+                        <div class="card-badge badge-new">NUEVO</div>
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +100–300</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Ollin Smash</h3>
+                        <p class="card-desc">Destruye todos los bloques antes de que la pelota caiga.</p>
+                        <a href="games/ollin-smash" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/space_shooter_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–50</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Vortex</h3>
+                        <p class="card-desc">Elimina todas las naves enemigas en este frenético shooter espacial.</p>
+                        <a href="games/Shooter" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/wordhunt_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–30</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Word Hunt</h3>
+                        <p class="card-desc">Encuentra todas las palabras ocultas en el tablero.</p>
+                        <a href="games/SopaDeLetras" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/pixeldrop_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +5–40</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Pixel Drop</h3>
+                        <p class="card-desc">El clásico de bloques reimaginado con giro pixelado.</p>
+                        <a href="games/pixel_drop.html" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/maze_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +10–35</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Laberinto</h3>
+                        <p class="card-desc">Encuentra el camino correcto a través de la oscuridad.</p>
+                        <a href="games/maze.html" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/rompecabezas_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +15–45</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Rompecabezas</h3>
+                        <p class="card-desc">Une las piezas para completar la imagen y ganar monedas.</p>
+                        <a href="games/rompecabezas" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+                <article class="game-card">
+                    <div class="card-cover" style="background-image: url('assets/cover/dodger_cover_art.webp');">
+                        <div class="card-reward"><i data-lucide="star" size="10" fill="#fbbf24" stroke="none"></i> +5–60</div>
+                    </div>
+                    <div class="card-info">
+                        <h3 class="card-title">Dodger</h3>
+                        <p class="card-desc">Sobrevive el mayor tiempo posible a la lluvia de asteroides.</p>
+                        <a href="games/Dodger" class="btn-primary w-full" style="justify-content:center;">
+                            <i data-lucide="play" size="15"></i> Jugar Ahora
+                        </a>
+                    </div>
+                </article>
+
+            </section>
+
+            <!-- ── FAQ ── -->
+            <section id="faq" style="margin-top: 72px;">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Preguntas Frecuentes</h2>
+                        <p class="section-subtitle">Todo lo que necesitas saber</p>
+                    </div>
+                </div>
+                <div class="faq-grid">
+
+                    <details class="glass-panel">
+                        <summary>¿Cómo gano monedas?</summary>
+                        <div class="faq-content">
+                            Ganas monedas completando niveles en los juegos, canjeando códigos promocionales en la tienda, y reclamando el Bono Diario. La recompensa diaria escala con tu racha: empieza en 20 monedas y aumenta 5 por cada día consecutivo, hasta un máximo de 60. Activa la Bendición Lunar para sumar 90 monedas extra por reclamo.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Cómo descargo mis wallpapers?</summary>
+                        <div class="faq-content">
+                            Al canjear un item en la Tienda, el botón cambia a "Descargar" de forma instantánea. También puedes ir a la pestaña "Mis Tesoros" para ver y descargar todos tus wallpapers en cualquier momento, sin límite de veces.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Qué es el cashback?</summary>
+                        <div class="faq-content">
+                            Al comprar cualquier wallpaper, recibes automáticamente un porcentaje del precio pagado de vuelta a tu saldo. Lo verás reflejado en el toast de confirmación. Durante las ofertas especiales, el descuento y el cashback se combinan.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Qué es la Bendición Lunar?</summary>
+                        <div class="faq-content">
+                            La Bendición Lunar es un buff temporal que puedes activar desde la Tienda → Ajustes por 100 monedas. Mientras esté activa (7 días reales), cada vez que reclames el bono diario recibirás 90 monedas adicionales. El icono 🌙 aparece junto a tu saldo cuando está activo.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Cómo busco wallpapers específicos?</summary>
+                        <div class="faq-content">
+                            En la Tienda encontrarás una barra de búsqueda con debounce y filtros por categoría. Puedes filtrar por Todos, PC, Mobile, o tu Lista de Deseos. Los filtros se combinan con la búsqueda de texto en tiempo real.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Cómo cambio el tema de color?</summary>
+                        <div class="faq-content">
+                            Ve a Tienda → pestaña "Ajustes". Encontrarás el selector de tema con 5 opciones: Violeta, Rosa Neón, Cyan Arcade, Dorado y Carmesí Arcade. El color se aplica instantáneamente a toda la plataforma.
+                        </div>
+                    </details>
+
+                    <details class="glass-panel">
+                        <summary>¿Qué pasa si cambio de dispositivo?</summary>
+                        <div class="faq-content">
+                            Usa "Sincronizar" en la Tienda. Exporta tu partida (genera un código con checksum de integridad), pégalo en el otro dispositivo usando "Importar". Tu progreso completo —monedas, wallpapers, racha, tema y buff lunar— se transfiere al instante.
+                        </div>
+                    </details>
+
+                </div>
+            </section>
+
+        </div><!-- /#view-home -->
+
+
+        <!-- ═══════════════════════════════════════════
+             VISTA: TIENDA
+             ═══════════════════════════════════════════ -->
+        <div id="view-shop" class="hidden">
+
+            <!-- ── SALE BANNER ── -->
+            <div id="sale-banner" class="sale-banner hidden">
+                <div class="sale-banner__ticket">
+                    <div class="sale-banner__notch-left"></div>
+                    <div class="sale-banner__notch-right"></div>
+                    <div class="sale-banner__icon">
+                        <i data-lucide="zap" size="20" fill="currentColor" stroke="none"></i>
+                    </div>
+                    <div class="sale-banner__content">
+                        <p class="sale-banner__title" id="sale-label-text">¡OFERTA ESPECIAL!</p>
+                        <p class="sale-banner__desc" id="sale-desc-text">Descuento activo en toda la tienda.</p>
+                    </div>
+                    <div class="sale-banner__badge" id="sale-badge-pct">20%</div>
+                </div>
+            </div>
+
+            <!-- ── CÓDIGO PROMO ── -->
+            <div class="promo-toggle-wrap">
+                <button id="btn-promo-toggle" class="btn-ghost promo-toggle-btn" aria-expanded="false" aria-controls="promo-section">
+                    <i data-lucide="ticket-percent" size="14"></i>
+                    <span>¿Tienes un código promocional?</span>
+                    <i data-lucide="chevron-down" size="13" class="promo-chevron"></i>
+                </button>
+                <section id="promo-section" class="glass-panel promo-section promo-section--collapsed" aria-hidden="true">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <div class="promo-icon-wrap">
+                            <i data-lucide="ticket-percent" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800; letter-spacing:-0.2px;">Canjear código</h3>
+                            <p style="margin:0; font-size:0.75rem; color:var(--text-low);">Introduce tu cupón para recibir monedas instantáneas</p>
+                        </div>
+                    </div>
+                    <div class="promo-input-group">
+                        <input type="text" id="promo-input" placeholder="Ej: AMOR2024" class="promo-input">
+                        <button id="btn-redeem" class="btn-primary">
+                            <span>Canjear</span>
+                            <i data-lucide="sparkles" size="14"></i>
+                        </button>
+                    </div>
+                    <p id="promo-msg" class="feedback-msg"></p>
+                </section>
+            </div>
+
+            <!-- ── TABS ── -->
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-tab="catalog">
+                    <i data-lucide="layout-grid" size="13"></i> Catálogo
+                </button>
+                <button class="shop-tab" data-tab="library">
+                    <i data-lucide="archive" size="13"></i> Mis Tesoros
+                </button>
+                <button class="shop-tab" data-tab="sync">
+                    <i data-lucide="refresh-cw" size="13"></i> Sincronizar
+                </button>
+                <button class="shop-tab" data-tab="settings">
+                    <i data-lucide="settings-2" size="13"></i> Ajustes
+                </button>
+            </div>
+
+            <!-- ── TAB: CATÁLOGO ── -->
+            <section id="tab-catalog" class="tab-panel">
+                <div class="shop-toolbar">
+                    <div class="search-wrap">
+                        <i data-lucide="search" size="14" class="search-icon"></i>
+                        <input type="text" id="search-input" class="search-input"
+                               placeholder="Buscar wallpaper…" autocomplete="off">
+                        <button id="search-clear" class="search-clear hidden" aria-label="Limpiar">
+                            <i data-lucide="x" size="12"></i>
+                        </button>
+                    </div>
+                    <div class="filter-pills" id="filter-pills">
+                        <button class="pill active" data-filter="Todos">Todos</button>
+                        <button class="pill" data-filter="NoObtenidos">
+                            <i data-lucide="sparkles" size="10"></i> Nuevos
+                        </button>
+                        <button class="pill" data-filter="PC">
+                            <i data-lucide="monitor" size="10"></i> PC
+                        </button>
+                        <button class="pill" data-filter="Mobile">
+                            <i data-lucide="smartphone" size="10"></i> Mobile
+                        </button>
+                        <button class="pill pill--wishlist" data-filter="Wishlist">
+                            <i data-lucide="heart" size="10"></i> Lista de deseos
+                        </button>
+                    </div>
+                </div>
+
+                <div id="wishlist-cost-banner" class="wishlist-cost-banner hidden">
+                    <i data-lucide="heart" size="12" fill="currentColor" style="color:#ff4f7a; flex-shrink:0;"></i>
+                    <span id="wishlist-cost-text"></span>
+                </div>
+
+                <p id="search-results-count" class="search-count hidden"></p>
+                <div id="shop-container" class="shop-grid"></div>
+
+                <div id="filter-empty" class="filter-empty hidden">
+                    <i data-lucide="search-x" size="40"></i>
+                    <p>Sin resultados para tu búsqueda.</p>
+                    <button class="btn-ghost" onclick="resetFilters()">Ver todo el catálogo</button>
+                </div>
+            </section>
+
+            <!-- ── TAB: MIS TESOROS ── -->
+            <section id="tab-library" class="tab-panel hidden">
+                <div class="section-header" style="margin-bottom:16px;">
+                    <div>
+                        <h2 class="section-title">Mis Tesoros</h2>
+                        <p class="section-subtitle">Todos tus wallpapers desbloqueados</p>
+                    </div>
+                </div>
+                <div id="library-container" class="shop-grid">
+                    <p style="color:var(--text-low); grid-column:1/-1; text-align:center; padding:40px 0;">Cargando tu biblioteca…</p>
+                </div>
+            </section>
+
+            <!-- ── TAB: SINCRONIZAR ── -->
+            <section id="tab-sync" class="tab-panel hidden">
+                <div class="section-header" style="margin-bottom:16px;">
+                    <div>
+                        <h2 class="section-title">Sincronizar Partida</h2>
+                        <p class="section-subtitle">Transfiere tu progreso entre dispositivos</p>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; background:var(--accent-soft); border:1px solid var(--accent-border); font-size:0.72rem; font-weight:700; color:var(--accent);">
+                        <i data-lucide="shield-check" size="12"></i> Checksum SHA-256
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; background:var(--success-soft); border:1px solid rgba(34,208,122,0.3); font-size:0.72rem; font-weight:700; color:var(--success);">
+                        <i data-lucide="lock" size="12"></i> Anti-edición
+                    </div>
+                </div>
+
+                <div class="memory-card">
+                    <div class="memory-card__header">
+                        <div class="memory-card__chip memory-card__chip--export">
+                            <i data-lucide="upload-cloud" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 class="memory-card__title">Exportar partida</h3>
+                            <p class="memory-card__sub">Genera un código de seguridad y descarga respaldo .txt</p>
+                        </div>
+                    </div>
+                    <button id="btn-export" class="btn-primary" style="position:relative; z-index:1;">
+                        <i data-lucide="download-cloud" size="15"></i>
+                        <span>Exportar y descargar</span>
+                    </button>
+                    <p id="export-msg" class="feedback-msg"></p>
+                </div>
+
+                <div class="memory-card" style="border-color:rgba(34,208,122,0.25);">
+                    <div class="memory-card__header">
+                        <div class="memory-card__chip memory-card__chip--import">
+                            <i data-lucide="download-cloud" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 class="memory-card__title">Importar partida</h3>
+                            <p class="memory-card__sub">Carga tu respaldo .txt o pega el código manualmente</p>
+                        </div>
+                    </div>
+
+                    <label for="import-file" class="btn-ghost file-label" style="position:relative; z-index:1;">
+                        <i data-lucide="file-up" size="14"></i> Cargar archivo .txt
+                    </label>
+                    <input type="file" id="import-file" accept=".txt" hidden>
+                    <span id="import-file-name" class="file-name-display">Ningún archivo seleccionado</span>
+
+                    <div class="sync-separator" style="position:relative; z-index:1;">o pega el código manualmente</div>
+                    <textarea id="import-input" class="sync-textarea" placeholder="Pega tu código aquí…" style="position:relative; z-index:1;"></textarea>
+
+                    <button id="btn-import" class="btn-primary" style="margin-top:10px; width:100%; justify-content:center; position:relative; z-index:1; background:linear-gradient(135deg,#22d07a,#16a85e); color:#041a0a;">
+                        <i data-lucide="check-circle" size="15"></i>
+                        <span>Importar progreso</span>
+                    </button>
+                    <p id="import-msg" class="feedback-msg"></p>
+                </div>
+            </section>
+
+            <!-- ── TAB: AJUSTES ── -->
+            <section id="tab-settings" class="tab-panel hidden">
+                <div class="section-header" style="margin-bottom:16px;">
+                    <div>
+                        <h2 class="section-title">Ajustes</h2>
+                        <p class="section-subtitle">Personaliza tu experiencia</p>
+                    </div>
+                </div>
+
+                <!-- Tema de color -->
+                <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.1rem;">
+                        <div class="promo-icon-wrap">
+                            <i data-lucide="palette" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Tema de color</h3>
+                            <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Elige el acento visual de toda la plataforma</p>
+                        </div>
+                    </div>
+                    <div class="theme-grid">
+                        <button class="theme-btn" data-theme="violet">
+                            <span class="theme-swatch" style="background:#9b59ff;"></span>
+                            <span class="theme-name">Violeta</span>
+                            <i data-lucide="check" size="12" class="theme-check"></i>
+                        </button>
+                        <button class="theme-btn" data-theme="pink">
+                            <span class="theme-swatch" style="background:#ff59b4;"></span>
+                            <span class="theme-name">Rosa Neón</span>
+                            <i data-lucide="check" size="12" class="theme-check"></i>
+                        </button>
+                        <button class="theme-btn" data-theme="cyan">
+                            <span class="theme-swatch" style="background:#00d4ff;"></span>
+                            <span class="theme-name">Cyan Arcade</span>
+                            <i data-lucide="check" size="12" class="theme-check"></i>
+                        </button>
+                        <button class="theme-btn" data-theme="gold">
+                            <span class="theme-swatch" style="background:#f59e0b;"></span>
+                            <span class="theme-name">Dorado</span>
+                            <i data-lucide="check" size="12" class="theme-check"></i>
+                        </button>
+                        <button class="theme-btn" data-theme="crimson">
+                            <span class="theme-swatch" style="background:#e11d48;"></span>
+                            <span class="theme-name">Carmesí</span>
+                            <i data-lucide="check" size="12" class="theme-check"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bendición Lunar -->
+                <div class="glass-panel settings-card" style="margin-bottom:1rem; border-color:rgba(192,132,252,0.2);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <div class="promo-icon-wrap moon-icon-wrap">
+                            <i data-lucide="moon" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Bendición Lunar</h3>
+                            <p style="margin:0; font-size:0.72rem; color:var(--text-low);">+90 monedas extra en cada bono diario durante 7 días</p>
+                        </div>
+                    </div>
+                    <div class="economy-info" style="margin-bottom:14px;">
+                        <div class="economy-row">
+                            <span style="font-size:0.85rem; color:var(--text-med);">Estado</span>
+                            <span id="moon-blessing-status" class="eco-badge">Cargando…</span>
+                        </div>
+                        <div class="economy-row">
+                            <span style="font-size:0.85rem; color:var(--text-med);">Costo</span>
+                            <span class="eco-badge eco-badge--gold">100 monedas</span>
+                        </div>
+                        <div class="economy-row">
+                            <span style="font-size:0.85rem; color:var(--text-med);">Efecto</span>
+                            <span class="eco-badge eco-badge--moon">+90 por día</span>
+                        </div>
+                    </div>
+                    <button id="btn-moon-blessing" class="btn-primary moon-btn" style="width:100%; justify-content:center;">
+                        <i data-lucide="moon" size="14"></i>
+                        <span>Activar Bendición Lunar (100 monedas)</span>
+                    </button>
+                    <p id="moon-blessing-msg" class="feedback-msg"></p>
+                </div>
+
+                <!-- Racha semanal -->
+                <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <div class="promo-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                            <i data-lucide="flame" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Racha Diaria</h3>
+                            <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Vuelve cada día para aumentar tu recompensa</p>
+                        </div>
+                    </div>
+                    <div class="streak-calendar" id="settings-streak-calendar"></div>
+                    <p style="font-size:0.72rem; color:var(--text-low); margin-top:10px; text-align:center;">
+                        Cada día de racha aumenta +5 monedas (máx. 60)
+                    </p>
+                </div>
+
+                <!-- Estado de la economía -->
+                <div class="glass-panel settings-card" style="margin-bottom:1rem;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <div class="promo-icon-wrap" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);">
+                            <i data-lucide="trending-up" color="#120900" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Estado de la economía</h3>
+                            <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Descuentos y cashback activos</p>
+                        </div>
+                    </div>
+                    <div class="economy-info">
+                        <div class="economy-row">
+                            <span style="font-size:0.85rem; color:var(--text-med);">Descuento global</span>
+                            <span id="eco-sale-status" class="eco-badge">—</span>
+                        </div>
+                        <div class="economy-row">
+                            <span style="font-size:0.85rem; color:var(--text-med);">Cashback por compra</span>
+                            <span id="eco-cashback" class="eco-badge eco-badge--green">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial de transacciones -->
+                <div class="glass-panel settings-card">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <div class="promo-icon-wrap" style="background:rgba(148,163,184,0.2);">
+                            <i data-lucide="scroll-text" color="white" size="18"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-family:var(--font-display); font-size:0.95rem; font-weight:800;">Historial de transacciones</h3>
+                            <p style="margin:0; font-size:0.72rem; color:var(--text-low);">Últimos movimientos de tu saldo</p>
+                        </div>
+                    </div>
+                    <div id="history-list" class="history-list">
+                        <p style="color:var(--text-low); font-size:0.8rem; text-align:center; padding:20px 0;">Cargando…</p>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /#view-shop -->
+
+    </main><!-- /.container -->
+
+
+    <!-- ══════════════════════════════════════════════════════════
+         ZONA DE MODALES — Fuera de <main> y de las vistas.
+         position:fixed toma el viewport completo como referencia.
+         Soluciona el bug de scroll causado por overflow/stacking.
+         ══════════════════════════════════════════════════════════ -->
+
+    <!-- ── WALLPAPER PREVIEW MODAL ── -->
+    <div id="preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Vista previa de wallpaper">
+        <div class="modal-box" style="max-width:500px; padding:0; overflow:hidden; background:#070710;">
+            <div id="preview-img-wrap" style="width:100%; aspect-ratio:16/9; position:relative; overflow:hidden; background:var(--bg-surface);">
+                <img id="preview-img" src="" alt="" style="width:100%; height:100%; object-fit:cover;">
+                <button id="preview-close" aria-label="Cerrar" style="position:absolute; top:10px; right:10px; background:rgba(7,7,13,0.8); border:1px solid rgba(255,255,255,0.15); color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(8px); transition:0.2s;">
+                    <i data-lucide="x" size="16"></i>
+                </button>
+            </div>
+            <div style="padding:18px 20px;">
+                <h3 id="preview-name" style="font-family:var(--font-display); font-size:1.05rem; font-weight:900; margin-bottom:6px;"></h3>
+                <div id="preview-actions" style="display:flex; gap:8px; margin-top:14px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── CUSTOM CONFIRM MODAL ── -->
+    <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-box">
+            <h3 id="modal-title" class="modal-title"></h3>
+            <div id="modal-body" class="modal-body"></div>
+            <p id="modal-error" class="modal-error"></p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn-ghost">Cancelar</button>
+                <button id="modal-confirm" class="btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── EMAIL MODAL ── -->
+    <div id="email-modal"
+         class="modal-overlay hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="email-modal-title">
+        <div class="modal-box" style="max-width:420px;">
+
+            <div class="email-modal-header" id="email-modal-header" aria-hidden="true">
+                <img id="email-modal-thumb" src="" alt="" class="email-modal-thumb">
+                <div>
+                    <p class="email-modal-item-name" id="email-modal-item-name"></p>
+                    <p class="email-modal-item-sub">Enviar enlace de descarga</p>
+                </div>
+            </div>
+
+            <h3 id="email-modal-title" class="modal-title" style="margin-bottom:14px;">
+                Enviar por correo
+            </h3>
+
+            <div class="email-input-wrap">
+                <i data-lucide="mail" size="15" class="email-input-icon"></i>
+                <input
+                    id="email-modal-input"
+                    type="email"
+                    class="email-input"
+                    placeholder="tu@correo.com"
+                    autocomplete="email"
+                    inputmode="email"
+                    aria-label="Correo electrónico destino"
+                    aria-describedby="email-modal-error"
+                >
+            </div>
+
+            <p id="email-modal-error" class="email-error-msg" role="alert" aria-live="polite">
+                <i data-lucide="alert-circle" size="12"></i>
+                <span id="email-modal-error-text">Introduce un correo válido.</span>
+            </p>
+
+            <div class="email-save-row">
+                <input type="checkbox" id="email-save-checkbox" checked>
+                <label for="email-save-checkbox">Recordar este correo para la próxima vez</label>
+            </div>
+
+            <div id="email-fallback" class="email-fallback" role="region" aria-label="Alternativa de copia">
+                <p class="email-fallback-title">
+                    <i data-lucide="alert-triangle" size="13"></i>
+                    Enlace demasiado largo para correo
+                </p>
+                <p class="email-fallback-desc">
+                    Algunos clientes de correo no admiten URLs muy largas en el asunto/cuerpo.
+                    Copia el enlace directamente y pégalo en tu mensaje:
+                </p>
+                <code id="email-fallback-url" class="email-fallback-url"></code>
+                <button id="email-copy-btn" class="btn-primary" style="width:100%; justify-content:center; font-size:0.82rem;">
+                    <i data-lucide="copy" size="14"></i>
+                    <span id="email-copy-label">Copiar enlace de descarga</span>
+                </button>
+            </div>
+
+            <div class="email-tip" role="note">
+                <i data-lucide="info" size="13"></i>
+                <span>
+                    Se abrirá tu cliente de correo con el mensaje pre-rellenado.
+                    El archivo no se adjunta; solo se incluye el enlace de descarga.
+                </span>
+            </div>
+
+            <div class="modal-actions" style="margin-top:18px;">
+                <button id="email-modal-cancel" class="btn-ghost" style="flex:1; justify-content:center;">
+                    Cancelar
+                </button>
+                <button id="email-modal-confirm" class="btn-primary" style="flex:2; justify-content:center;">
+                    <i data-lucide="send" size="14"></i>
+                    Abrir correo
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCRIPTS — Orden estricto:
+         1. app.js      → GameCenter, store, updateUI (núcleo)
+         2. shop-logic.js → Catálogo, compras, sync, ajustes
+         3. spa-router.js → Navegación SPA entre vistas
+         Inline final: lucide + lógica exclusiva de la vista Inicio
+         ══════════════════════════════════════════════════════════ -->
     <script src="js/app.js"></script>
-    <script src="js/router.js"></script>
+    <script src="js/shop-logic.js"></script>
+    <script src="js/spa-router.js"></script>
+
+    <script>
+        // ── Inicializar iconos de Lucide ─────────────────────────────────────
+        lucide.createIcons();
+
+        // ── Sincronizar avatar HUD con input de navbar ───────────────────────
+        const avatarUploads = [
+            document.getElementById('avatar-upload'),
+            document.getElementById('avatar-upload-hud')
+        ];
+        avatarUploads.forEach(input => {
+            if (!input) return;
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const url = ev.target.result;
+                    document.querySelectorAll('.avatar, .hud-avatar').forEach(el => {
+                        el.style.backgroundImage = `url('${url}')`;
+                        const icon = el.querySelector('svg');
+                        if (icon) icon.style.display = 'none';
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // ── Racha (vista Inicio) ─────────────────────────────────────────────
+        function updateStreakBar() {
+            const info = window.GameCenter?.getStreakInfo?.();
+            if (!info) return;
+            const streak = info.streak || 0;
+            document.querySelectorAll('#streak-days .streak-day').forEach((d, i) => {
+                d.classList.remove('active', 'today');
+                if (i < streak)             d.classList.add('active');
+                else if (i === streak && streak < 7) d.classList.add('today');
+            });
+            const countEl = document.getElementById('streak-count');
+            if (countEl) countEl.textContent = `×${streak}`;
+
+            const rewardEl = document.getElementById('hud-reward-amount');
+            if (rewardEl && window.GameCenter?.canClaimDaily?.()) {
+                const moon  = window.GameCenter.getMoonBlessingStatus?.();
+                const total = info.nextReward + ((moon?.active) ? 90 : 0);
+                rewardEl.textContent = `+${total}`;
+            }
+        }
+
+        // ── Countdown (vista Inicio) ─────────────────────────────────────────
+        let _countdownInterval = null;
+
+        function updateCountdownDisplay() {
+            const canClaim    = window.GameCenter?.canClaimDaily?.();
+            const countdownEl = document.getElementById('daily-countdown');
+            const displayEl   = document.getElementById('countdown-display');
+            const dailyBtn    = document.getElementById('btn-daily');
+            if (!countdownEl || !displayEl) return;
+
+            if (canClaim) {
+                countdownEl.classList.add('hidden');
+                if (dailyBtn) dailyBtn.disabled = false;
+                if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+                return;
+            }
+
+            countdownEl.classList.remove('hidden');
+            if (dailyBtn) dailyBtn.disabled = true;
+
+            function tick() {
+                const now      = new Date();
+                const tomorrow = new Date(now);
+                tomorrow.setHours(24, 0, 0, 0);
+                let diff = Math.max(0, tomorrow - now);
+                const hh = String(Math.floor(diff / 3_600_000)).padStart(2, '0');
+                diff %= 3_600_000;
+                const mm = String(Math.floor(diff / 60_000)).padStart(2, '0');
+                diff %= 60_000;
+                const ss = String(Math.floor(diff / 1_000)).padStart(2, '0');
+                if (displayEl) displayEl.textContent = `${hh}:${mm}:${ss}`;
+
+                if (window.GameCenter?.canClaimDaily?.()) {
+                    countdownEl.classList.add('hidden');
+                    if (dailyBtn) dailyBtn.disabled = false;
+                    clearInterval(_countdownInterval);
+                    _countdownInterval = null;
+                }
+            }
+
+            tick();
+            if (!_countdownInterval) _countdownInterval = setInterval(tick, 1000);
+        }
+
+        // ── API pública para la vista Inicio (usada por spa-router.js) ────────
+        window.HomeView = {
+            refresh() {
+                updateCountdownDisplay();
+                updateStreakBar();
+            }
+        };
+
+        // ── Inicialización en carga ──────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            updateCountdownDisplay();
+            updateStreakBar();
+
+            const dailyBtn = document.getElementById('btn-daily');
+            if (dailyBtn) {
+                dailyBtn.addEventListener('click', () => {
+                    setTimeout(() => {
+                        updateCountdownDisplay();
+                        updateStreakBar();
+                        document.querySelectorAll('.coin-display').forEach(el => {
+                            if (window.GameCenter) el.textContent = window.GameCenter.getBalance();
+                        });
+                    }, 80);
+                });
+            }
+        });
+    </script>
+
 </body>
 </html>
