@@ -1288,18 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Botón Bendición Lunar
-    const moonBtn = document.getElementById('btn-moon-blessing');
-    if (moonBtn) {
-        moonBtn.addEventListener('click', () => {
-            const result = window.GameCenter.buyMoonBlessing();
-            const msg    = document.getElementById('moon-blessing-msg');
-            if (result.success) {
-                if (msg) { msg.textContent = `✓ Activa hasta ${result.expiresAt}`; msg.style.color = '#c084fc'; }
-            } else {
-                if (msg) { msg.textContent = '✗ Monedas insuficientes (necesitas 100)'; msg.style.color = '#ff4757'; }
-            }
-            if (msg) { msg.style.opacity = '1'; setTimeout(() => { msg.style.opacity = '0'; }, 3500); }
-        });
-    }
+    // NOTA: El listener de #btn-moon-blessing fue eliminado en v9.x (SPA Migration).
+    // La Bendición Lunar es un elemento de la vista Tienda; su handler vive
+    // exclusivamente en shop-logic.js para evitar el doble-registro de eventos.
 });
