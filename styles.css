@@ -463,6 +463,23 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    /*
+     * v9.3: oculto durante el setup síncrono.
+     * Evita dos parpadeos simultáneos:
+     *  1. Botón diario: transition:all animaría opacity 1→0.5 aunque JS
+     *     setee disabled síncronamente (la transición CSS se dispara igual).
+     *  2. Countdown: display:none → block introduce un layout-shift que empuja
+     *     .hud-streak hacia abajo, visible incluso con JS síncrono.
+     * revealUI() en app.js añade .is-ready en el siguiente RAF, una vez que
+     * todos los estados (botón, countdown, racha) ya están correctamente
+     * pintados en el DOM oculto.
+     */
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+/* Clase añadida por revealUI() en app.js tras el init síncrono completo */
+.player-hud.is-ready {
+    opacity: 1;
 }
 
 /* Ambient glow behind HUD */
