@@ -5,6 +5,21 @@
  * Módulo 3 / 5: Keyboard + TouchEvents.
  * Previene el scroll involuntario del navegador durante el juego.
  * Soporta flick rápido con umbral reducido y swipes lentos.
+ *
+ * CHANGELOG v1.1
+ * ──────────────
+ * [FIX]  Audio Latency en Android: lumina_resumeAudio() se llama explícitamente
+ *        en cada touchstart para garantizar que el AudioContext esté activo antes
+ *        de que el usuario levante el dedo.
+ * [FIX]  Ghost Moves: el spawn de nueva ficha ya está protegido en lumina_core.js
+ *        con el booleano hasMoved; aquí se refuerza no ejecutando ninguna lógica
+ *        de recompensa si result.moved === false.
+ * [UPD]  Integración con nuevo sistema de recompensas (lumina_bridge.js v1.1):
+ *        - lumina_accumulateEnergyMerge() reemplaza a lumina_rewardEnergyMerge()
+ *        - lumina_notifyMaxTile() notifica al bridge cuando se alcanza la ficha 512
+ *        - lumina_reportFinalSession() se llama UNA SOLA VEZ en GameOver y Win
+ * [UPD]  lumina_showGameOver() y lumina_showWin() reciben el objeto sessionData
+ *        para poblar el nuevo modal de resumen de ingresos.
  */
 
 'use strict';
@@ -26,7 +41,7 @@ function lumina_initInput() {
     area.addEventListener('touchmove',  lumina_onTouchMove,  { passive: false });
     area.addEventListener('touchend',   lumina_onTouchEnd,   { passive: false });
 
-    console.log('[LUMINA] Input module v1.0 loaded.');
+    console.log('[LUMINA] Input module v1.1 loaded.');
 }
 
 // ─── Teclado ──────────────────────────────────────────────────────────────────
@@ -52,7 +67,11 @@ function lumina_onTouchStart(e) {
     lumina_touchStartX = t.clientX;
     lumina_touchStartY = t.clientY;
     lumina_touchStartT = performance.now();
-    // No llamar preventDefault aquí para no bloquear el scroll fuera del tablero
+
+    // CORRECCIÓN v1.1: Reanudar AudioContext explícitamente en touchstart.
+    // En Android, el contexto puede quedar en 'suspended' y causar latencia
+    // si solo se reanuda en touchend. Llamar resume() aquí lo activa a tiempo.
+    lumina_resumeAudio();
 }
 
 function lumina_onTouchMove(e) {
@@ -95,7 +114,7 @@ function lumina_handleMove(direction) {
     // Si ya ganó, solo se mueve si está en modo "keep going"
     if (lumina_gameWon && !lumina_keepGoing) return;
 
-    lumina_inputEnabled = false; // Bloquear input durante la animación CSS (150 ms)
+    lumina_inputEnabled = false; // Bloquear input durante la animación CSS (160 ms)
 
     const prevScore = lumina_score;
     const result    = lumina_move(direction);
@@ -117,8 +136,17 @@ function lumina_handleMove(direction) {
             });
         }
 
-        // ── Recompensas por fichas de energía ──
-        if (result.energyMerges > 0) lumina_rewardEnergyMerge(result.energyMerges);
+        // ── Acumulación de monedas por fichas de energía (sin reportar) ──
+        // CAMBIO v1.1: reemplaza lumina_rewardEnergyMerge() por acumulación local.
+        if (result.energyMerges > 0) {
+            lumina_accumulateEnergyMerge(result.energyMerges);
+        }
+
+        // ── Notificar hito de ficha máxima al bridge (para multiplicador ×1.5) ──
+        const currentMax = lumina_getMaxTileValue();
+        if (currentMax >= 512) {
+            lumina_notifyMaxTile(currentMax);
+        }
 
         // ── Combo ──
         lumina_updateComboMeter();
@@ -134,17 +162,22 @@ function lumina_handleMove(direction) {
         lumina_saveGameState();
 
         // ── Condiciones de victoria/derrota ──
+        // CAMBIO v1.1: reportFinalSession() se llama UNA SOLA VEZ aquí.
         if (!lumina_gameWon && lumina_checkWin()) {
-            lumina_gameWon = true;
+            lumina_gameWon   = true;
             lumina_keepGoing = false;
             setTimeout(() => {
-                lumina_showWin();
+                const sessionData = lumina_reportFinalSession();
+                lumina_showWin(sessionData);
                 lumina_playWinSound();
-                lumina_rewardWin();
                 lumina_doHaptic(50);
             }, 400);
+
         } else if (lumina_gameOver) {
-            setTimeout(() => lumina_showGameOver(), 300);
+            setTimeout(() => {
+                const sessionData = lumina_reportFinalSession();
+                lumina_showGameOver(sessionData);
+            }, 300);
         }
     }
 
@@ -157,4 +190,4 @@ function lumina_doHaptic(ms) {
     try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) {}
 }
 
-console.log('[LUMINA] Input module v1.0 loaded.');
+console.log('[LUMINA] Input module v1.1 loaded.');
