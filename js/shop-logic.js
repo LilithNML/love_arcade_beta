@@ -7,9 +7,12 @@
  * NOVEDADES v9.1:
  *  - loadCatalog(): función encapsulada con manejo de errores y reintento.
  *    Si fetch falla, muestra #shop-error-state con botón #btn-retry-shop.
- *  - El listener de .theme-btn fue eliminado de shop-logic.js. El único registro
- *    de este listener vive en app.js vía setTheme(), que ahora también escribe
- *    la clase `theme-{key}` en <body>. Esto elimina el doble-registro.
+ *  - El listener de .theme-btn fue eliminado de shop-logic.js (corrección
+ *    aplicada en la limpieza SPA). El único registro vive en app.js vía
+ *    setTheme(), que actualiza store, CSS vars, clase en <body> y el estado
+ *    visual de todos los .theme-btn desde un único lugar.
+ *  - El listener de #btn-moon-blessing vive exclusivamente aquí; el duplicado
+ *    en app.js fue eliminado (corrección SPA) para evitar el cobro doble.
  *
  * DEPENDENCIAS (deben estar cargadas ANTES en el DOM):
  *  - js/app.js          → window.GameCenter, window.ECONOMY, window.debounce
@@ -1032,15 +1035,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Theme buttons — fuente de verdad única ────────────────────────────────
-    // app.js eliminó su propio listener en v9.1 para evitar doble-registro.
-    // setTheme() en app.js actualiza store, CSS vars, clase en <body> y el
-    // estado activo de todos los .theme-btn en un solo lugar.
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (window.GameCenter) window.GameCenter.setTheme(btn.dataset.theme);
-        });
-    });
+    // NOTA: El listener de .theme-btn fue eliminado de shop-logic.js (SPA Migration).
+    // El tema es una configuración global; su único handler vive en app.js,
+    // donde setTheme() actualiza el store, los CSS vars, la clase theme-{key}
+    // en <body> y el estado visual de todos los .theme-btn desde un único lugar.
 
     if (window.lucide) lucide.createIcons();
 });
