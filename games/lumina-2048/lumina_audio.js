@@ -6,6 +6,15 @@
  * No usa archivos .mp3 estáticos.
  * Escala pentatónica para garantizar armonía en todos los tonos.
  * Reverb espacial sintético en la pantalla de victoria.
+ *
+ * CHANGELOG v1.1
+ * ──────────────
+ * [FIX]  Audio Latency en Android: el AudioContext ahora se reanuda
+ *        explícitamente en el primer touchstart (antes solo en touchend).
+ *        Esto elimina el lag de la Web Audio API en dispositivos Android donde
+ *        el contexto queda en estado 'suspended' entre gestos.
+ * [NEW]  lumina_resumeAudio(): función pública que permite reanudar el
+ *        AudioContext desde otros módulos (p.ej. lumina_input.js en cada touch).
  */
 
 'use strict';
@@ -23,8 +32,7 @@ const lumina_PENTA = [
 // ─── Inicialización ───────────────────────────────────────────────────────────
 
 function lumina_initAudio() {
-    // Web Audio solo puede iniciarse tras un gesto del usuario (política del navegador)
-    const resume = () => {
+    const createOrResume = () => {
         if (!lumina_audioCtx) {
             try {
                 lumina_audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -33,13 +41,28 @@ function lumina_initAudio() {
                 lumina_audioEnabled = false;
             }
         } else if (lumina_audioCtx.state === 'suspended') {
-            lumina_audioCtx.resume();
+            lumina_audioCtx.resume().catch(() => {});
         }
     };
-    document.addEventListener('keydown',  resume, { once: true });
-    document.addEventListener('touchend', resume, { once: true });
-    document.addEventListener('pointerdown', resume, { once: true });
-    console.log('[LUMINA] Audio module v1.0 loaded (esperando interacción del usuario).');
+
+    // CORRECCIÓN v1.1: touchstart en lugar de touchend para Android.
+    // El AudioContext debe reanudarse en el momento del toque, no al soltarlo,
+    // para evitar el lag de latencia que afecta especialmente a Android.
+    document.addEventListener('keydown',     createOrResume, { once: true });
+    document.addEventListener('touchstart',  createOrResume, { once: true }); // ← Android fix
+    document.addEventListener('pointerdown', createOrResume, { once: true });
+
+    console.log('[LUMINA] Audio module v1.1 loaded (esperando interacción del usuario).');
+}
+
+/**
+ * Reanuda explícitamente el AudioContext si está en estado 'suspended'.
+ * Llamar desde lumina_input.js en cada touchstart para garantizar latencia mínima.
+ */
+function lumina_resumeAudio() {
+    if (lumina_audioCtx && lumina_audioCtx.state === 'suspended') {
+        lumina_audioCtx.resume().catch(() => {});
+    }
 }
 
 function lumina_audioReady() {
@@ -87,14 +110,13 @@ function lumina_playMoveSound() {
 
 /**
  * Tono expansivo: sub-bass + campana en escala pentatónica.
- * Cuanto mayor el valor de la ficha, más alto y brillante el tono.
  * @param {number} value - Valor de la ficha resultante de la fusión
  */
 function lumina_playMergeSound(value) {
     if (!lumina_audioReady()) return;
     try {
         const now   = lumina_audioCtx.currentTime;
-        const level = Math.max(0, Math.log2(value) - 1);      // 2→0, 4→1, 8→2 …
+        const level = Math.max(0, Math.log2(value) - 1);
         const idx   = level % lumina_PENTA.length;
         const oct   = Math.floor(level / lumina_PENTA.length) + 1;
         const freq  = lumina_PENTA[idx] * oct;
@@ -132,7 +154,6 @@ function lumina_playMergeSound(value) {
 function lumina_playComboSound() {
     if (!lumina_audioReady()) return;
     try {
-        // Arpeggio ascendente de 4 notas pentatónicas
         [0, 2, 4, 7].forEach((step, i) => {
             const t = lumina_audioCtx.currentTime + i * 0.075;
             const g = lumina_audioCtx.createGain();
@@ -149,12 +170,10 @@ function lumina_playComboSound() {
 
 /**
  * Arpeggio triunfal con reverb espacial generado por convolución sintética.
- * El reverb es un impulso de ruido decreciente (~3 s).
  */
 function lumina_playWinSound() {
     if (!lumina_audioReady()) return;
     try {
-        // Crear impulso de reverb
         const convolver = lumina_audioCtx.createConvolver();
         const sampleRate = lumina_audioCtx.sampleRate;
         const impLen = sampleRate * 2.5;
@@ -171,7 +190,6 @@ function lumina_playWinSound() {
         convolver.connect(masterGain);
         masterGain.connect(lumina_audioCtx.destination);
 
-        // Arpeggio (5 notas)
         const notes = [0, 2, 4, 7, 9];
         notes.forEach((step, i) => {
             const t = lumina_audioCtx.currentTime + i * 0.18;
@@ -187,4 +205,4 @@ function lumina_playWinSound() {
     } catch (_) {}
 }
 
-console.log('[LUMINA] Audio module v1.0 loaded.');
+console.log('[LUMINA] Audio module v1.1 loaded.');
