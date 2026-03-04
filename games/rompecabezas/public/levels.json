@@ -313,5 +313,284 @@
     "rewardCoins": 270,
     "description": "El muro de cristal",
     "timeLimit": 350
+  },
+  {
+    "id": "lvl_36",
+    "image": "./assets/Nivel36.webp",
+    "thumbnail": "./assets/thumbnails/Nivel36_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "El desafío definitivo",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_37",
+    "image": "./assets/Nivel37.webp",
+    "thumbnail": "./assets/thumbnails/Nivel37_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Zona de guerra",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_38",
+    "image": "./assets/Nivel38.webp",
+    "thumbnail": "./assets/thumbnails/Nivel38_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Sin margen de error",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_39",
+    "image": "./assets/Nivel39.webp",
+    "thumbnail": "./assets/thumbnails/Nivel39_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Tensión máxima",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_40",
+    "image": "./assets/Nivel40.webp",
+    "thumbnail": "./assets/thumbnails/Nivel40_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Punto de inflexión",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_41",
+    "image": "./assets/Nivel41.webp",
+    "thumbnail": "./assets/thumbnails/Nivel41_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Mente de acero",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_42",
+    "image": "./assets/Nivel42.webp",
+    "thumbnail": "./assets/thumbnails/Nivel42_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Noche sin luna",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_43",
+    "image": "./assets/Nivel43.webp",
+    "thumbnail": "./assets/thumbnails/Nivel43_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Caos ordenado",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_44",
+    "image": "./assets/Nivel44.webp",
+    "thumbnail": "./assets/thumbnails/Nivel44_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "El último bastión",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_45",
+    "image": "./assets/Nivel45.webp",
+    "thumbnail": "./assets/thumbnails/Nivel45_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Visión de conjunto",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_46",
+    "image": "./assets/Nivel46.webp",
+    "thumbnail": "./assets/thumbnails/Nivel46_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Trampa mortal",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_47",
+    "image": "./assets/Nivel47.webp",
+    "thumbnail": "./assets/thumbnails/Nivel47_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Reflejos de luz",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_48",
+    "image": "./assets/Nivel48.webp",
+    "thumbnail": "./assets/thumbnails/Nivel48_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Patrón invisible",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_49",
+    "image": "./assets/Nivel49.webp",
+    "thumbnail": "./assets/thumbnails/Nivel49_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "La prueba suprema",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_50",
+    "image": "./assets/Nivel50.webp",
+    "thumbnail": "./assets/thumbnails/Nivel50_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Hito legendario",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_51",
+    "image": "./assets/Nivel51.webp",
+    "thumbnail": "./assets/thumbnails/Nivel51_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Más allá del límite",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_52",
+    "image": "./assets/Nivel52.webp",
+    "thumbnail": "./assets/thumbnails/Nivel52_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Abismo visual",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_53",
+    "image": "./assets/Nivel53.webp",
+    "thumbnail": "./assets/thumbnails/Nivel53_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Tormenta interior",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_54",
+    "image": "./assets/Nivel54.webp",
+    "thumbnail": "./assets/thumbnails/Nivel54_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Sin retorno",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_55",
+    "image": "./assets/Nivel55.webp",
+    "thumbnail": "./assets/thumbnails/Nivel55_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Maestría absoluta",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_56",
+    "image": "./assets/Nivel56.webp",
+    "thumbnail": "./assets/thumbnails/Nivel56_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Fragmentos en llamas",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_57",
+    "image": "./assets/Nivel57.webp",
+    "thumbnail": "./assets/thumbnails/Nivel57_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "El velo rasgado",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_58",
+    "image": "./assets/Nivel58.webp",
+    "thumbnail": "./assets/thumbnails/Nivel58_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Profundidad extrema",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_59",
+    "image": "./assets/Nivel59.webp",
+    "thumbnail": "./assets/thumbnails/Nivel59_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Horizonte perdido",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_60",
+    "image": "./assets/Nivel60.webp",
+    "thumbnail": "./assets/thumbnails/Nivel60_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Sesenta y en pie",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_61",
+    "image": "./assets/Nivel61.webp",
+    "thumbnail": "./assets/thumbnails/Nivel61_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Código roto",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_62",
+    "image": "./assets/Nivel62.webp",
+    "thumbnail": "./assets/thumbnails/Nivel62_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "El gran espejo",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_63",
+    "image": "./assets/Nivel63.webp",
+    "thumbnail": "./assets/thumbnails/Nivel63_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Umbral de sombras",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_64",
+    "image": "./assets/Nivel64.webp",
+    "thumbnail": "./assets/thumbnails/Nivel64_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Leyenda viviente",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_65",
+    "image": "./assets/Nivel65.webp",
+    "thumbnail": "./assets/thumbnails/Nivel65_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Penúltimo pulso",
+    "timeLimit": 350
+  },
+  {
+    "id": "lvl_66",
+    "image": "./assets/Nivel66.webp",
+    "thumbnail": "./assets/thumbnails/Nivel66_thumb.webp",
+    "pieces": 25,
+    "rewardCoins": 270,
+    "description": "Gloria eterna",
+    "timeLimit": 350
   }
 ]
