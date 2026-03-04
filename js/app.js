@@ -158,40 +158,137 @@ window.debounce = debounce; // Disponible globalmente para shop.html
 // TIEMPO DE RED — Fuente de verdad externa para el bono diario
 // =====================================================
 
+/** Máxima discrepancia tolerable entre reloj local y de red: 5 minutos. */
+const CLOCK_SKEW_LIMIT = 5 * 60 * 1000;
+
+/** Número de reintentos por fuente antes de pasar a la siguiente. */
+const TIME_API_MAX_RETRIES = 3;
+
+/** Retardo entre reintentos (ms). */
+const TIME_API_RETRY_DELAY = 1000;
+
 /**
- * Consulta una API pública de tiempo para obtener una marca temporal verificada.
- * Si la red no está disponible, retorna Date.now() con verified = false.
- * Si la discrepancia entre el reloj de red y el local supera CLOCK_SKEW_LIMIT,
- * retorna desynced = true y el botón de reclamo quedará bloqueado.
- *
- * @returns {Promise<{ time: number, verified: boolean, desynced: boolean }>}
+ * Clave exclusiva de localStorage para el Time Drift Check.
+ * Separada del store principal para no contaminar checksums de sincronización.
  */
-const CLOCK_SKEW_LIMIT = 5 * 60 * 1000; // 5 minutos en ms
+const TIME_DRIFT_KEY = 'love_arcade_time_drift';
 
-async function getNetworkTime() {
-    const localTime = Date.now();
+/** Persiste el offset red↔local de la última sesión verificada. */
+function saveTimeDrift(offset) {
+    try { localStorage.setItem(TIME_DRIFT_KEY, String(offset)); } catch (_) {}
+}
+
+/** Recupera el último offset almacenado, o null si no existe. */
+function getStoredTimeDrift() {
     try {
-        const controller = new AbortController();
-        const timeoutId  = setTimeout(() => controller.abort(), 5000); // 5 s timeout
-        const res = await fetch('https://worldtimeapi.org/api/ip', {
-            cache:  'no-store',
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        const val = localStorage.getItem(TIME_DRIFT_KEY);
+        return val !== null ? Number(val) : null;
+    } catch (_) { return null; }
+}
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data        = await res.json();
-        const networkTime = new Date(data.datetime).getTime();
-        const skew        = Math.abs(networkTime - Date.now());
+/**
+ * Consulta APIs de tiempo externas con reintentos automáticos para obtener
+ * una marca temporal verificada. Implementa el patrón "Time Drift Check":
+ * cuando todas las APIs fallan, usa el offset previo almacenado para estimar
+ * el tiempo de red sin depender de conectividad en ese instante.
+ *
+ * Fuentes en orden de prioridad:
+ *   1. timeapi.io      — menor tasa de bloqueo, CORS permisivo
+ *   2. worldtimeapi.org — fallback secundario
+ *
+ * Cada fuente se reintenta hasta TIME_API_MAX_RETRIES veces con
+ * TIME_API_RETRY_DELAY ms de espera entre intentos.
+ *
+ * @returns {Promise<{
+ *   time:              number,   — timestamp (ms) a usar como "ahora"
+ *   verified:          boolean,  — true si proviene de la red o del drift check
+ *   desynced:          boolean,  — true si la discrepancia supera CLOCK_SKEW_LIMIT
+ *   online:            boolean,  — navigator.onLine en el momento de la llamada
+ *   toleranceFallback: boolean   — true si se usó el Time Drift Check
+ * }>}
+ */
+async function getNetworkTime() {
+    const localNow = Date.now();
+    const online   = navigator.onLine;
 
-        if (skew > CLOCK_SKEW_LIMIT) {
-            return { time: networkTime, verified: true, desynced: true };
+    // ── Definición de fuentes ──────────────────────────────────────────────
+    const TIME_SOURCES = [
+        {
+            name: 'timeapi.io',
+            fetch: async () => {
+                const ctrl = new AbortController();
+                const tid  = setTimeout(() => ctrl.abort(), 5000);
+                try {
+                    const res = await fetch('https://timeapi.io/api/time/current/ip', {
+                        cache: 'no-store', signal: ctrl.signal
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    // Campo "dateTime" en timeapi.io; "datetime" en worldtimeapi.org
+                    return new Date(data.dateTime ?? data.datetime).getTime();
+                } finally {
+                    clearTimeout(tid);
+                }
+            }
+        },
+        {
+            name: 'worldtimeapi.org',
+            fetch: async () => {
+                const ctrl = new AbortController();
+                const tid  = setTimeout(() => ctrl.abort(), 5000);
+                try {
+                    const res = await fetch('https://worldtimeapi.org/api/ip', {
+                        cache: 'no-store', signal: ctrl.signal
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    return new Date(data.datetime).getTime();
+                } finally {
+                    clearTimeout(tid);
+                }
+            }
         }
-        return { time: networkTime, verified: true, desynced: false };
-    } catch (_) {
-        // Red no disponible o timeout — usar reloj local, marcar como no verificado
-        return { time: localTime, verified: false, desynced: false };
+    ];
+
+    // ── Intentar cada fuente con reintentos silenciosos ────────────────────
+    for (const source of TIME_SOURCES) {
+        for (let attempt = 0; attempt < TIME_API_MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                await new Promise(r => setTimeout(r, TIME_API_RETRY_DELAY));
+            }
+            try {
+                const networkTime = await source.fetch();
+                const skew        = Math.abs(networkTime - Date.now());
+
+                // Persistir offset para el Time Drift Check futuro
+                saveTimeDrift(networkTime - Date.now());
+
+                if (skew > CLOCK_SKEW_LIMIT) {
+                    return { time: networkTime, verified: true, desynced: true,  online, toleranceFallback: false };
+                }
+                return     { time: networkTime, verified: true, desynced: false, online, toleranceFallback: false };
+            } catch (_) {
+                // Reintento silencioso — no loguear para no contaminar la consola
+            }
+        }
     }
+
+    // ── Todas las APIs fallaron — Time Drift Check ─────────────────────────
+    // Si existe un offset previo y es plausible (|offset| < CLOCK_SKEW_LIMIT),
+    // el reloj local no fue manipulado entre sesiones → se puede confiar en él.
+    const storedDrift = getStoredTimeDrift();
+    if (storedDrift !== null && Math.abs(storedDrift) <= CLOCK_SKEW_LIMIT) {
+        return {
+            time:              localNow + storedDrift,
+            verified:          true,
+            desynced:          false,
+            online,
+            toleranceFallback: true
+        };
+    }
+
+    // ── Fallback final: reloj local sin verificar ──────────────────────────
+    return { time: localNow, verified: false, desynced: false, online, toleranceFallback: false };
 }
 
 // =====================================================
@@ -461,7 +558,7 @@ window.GameCenter = {
      *                    moonBonus?: number, streak?: number, verified: boolean, message: string}>}
      */
     claimDaily: async () => {
-        const { time: now, verified, desynced } = await getNetworkTime();
+        const { time: now, verified, desynced, online, toleranceFallback } = await getNetworkTime();
         const { lastClaim, streak } = store.daily;
 
         // ── 1. Salto negativo (manipulación de reloj detectada a posteriori) ──
@@ -509,11 +606,15 @@ window.GameCenter = {
             CONFIG.dailyStreakCap
         );
 
-        // ── 5. Bendición Lunar (bloqueada si el tiempo no está verificado) ──
+        // ── 5. Bendición Lunar ──────────────────────────────────────────────────
         const moonActive = store.buffs.moonBlessingExpiry > now;
-        // Si la API no está disponible (verified = false), no se otorga el bonus lunar
-        // para evitar que se abuse en modo offline.
-        const moonBonus  = (moonActive && verified) ? 90 : 0;
+        // El bonus lunar se otorga si:
+        //   (a) El tiempo fue verificado por la API              → verified = true
+        //   (b) El tiempo fue estimado por Time Drift Check      → toleranceFallback = true
+        //   (c) La API falló pero el dispositivo TIENE internet  → online = true
+        // Solo se bloquea en modo offline genuino sin drift previo válido,
+        // que es la única vía legítima de abuso (desconectar red para eludir la API).
+        const moonBonus = (moonActive && (verified || online)) ? 90 : 0;
         const totalReward = baseReward + moonBonus;
 
         // ── 6. Aplicar y persistir ──
@@ -525,21 +626,26 @@ window.GameCenter = {
             totalReward,
             `Bono diario · racha ${newStreak}` +
             (moonBonus ? ' + Bendición Lunar' : '') +
-            (!verified ? ' (tiempo sin verificar)' : '')
+            (toleranceFallback ? ' (drift check)' : !verified ? ' (tiempo sin verificar)' : '')
         );
 
         saveState();
         updateMoonBlessingUI();
 
-        const unverifiedNote = !verified ? ' (red no disponible)' : '';
+        const verifiedNote = toleranceFallback
+            ? ' (estimación local verificada)'
+            : !verified
+                ? ' (red no disponible)'
+                : '';
         return {
-            success:    true,
-            reward:     totalReward,
+            success:           true,
+            reward:            totalReward,
             baseReward,
             moonBonus,
-            streak:     newStreak,
+            streak:            newStreak,
             verified,
-            message:    `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}${unverifiedNote}`
+            toleranceFallback,
+            message:           `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}${verifiedNote}`
         };
     },
 
