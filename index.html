@@ -953,6 +953,15 @@
         updateStreakBar();
         updateCountdownDisplay();
 
+        // revealUI() se llama AQUÍ — después de que app.js ya corrió
+        // (updateDailyButton, updateMoonBlessingUI, applyAvatar) Y después de
+        // que updateStreakBar() y updateCountdownDisplay() terminaron.
+        // En el siguiente RAF el .player-hud se revela con TODO correcto:
+        // · Botón desactivado/activado sin flash de transition:all
+        // · Countdown en posición final sin layout-shift
+        // · Barras de racha con los días activos correctos
+        window.revealUI?.();
+
         // ── Event listeners — solo se registran en DOMContentLoaded ─────────
         document.addEventListener('DOMContentLoaded', () => {
             const dailyBtn = document.getElementById('btn-daily');
