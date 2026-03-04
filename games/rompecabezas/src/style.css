@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Rubik:wght@400;600&display=swap');
 
+/* Force dark color scheme at the UA level — prevents the browser from
+   injecting a white background or light scrollbar before our styles load. */
+html {
+    color-scheme: dark;
+}
+
 /* =========================================
    1. VARIABLES — Tactical HUD palette
    ========================================= */
