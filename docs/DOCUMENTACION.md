@@ -74,14 +74,14 @@ Love Arcade es una **plataforma de recompensas sin backend** construida con HTML
 
 | Área | Cambio |
 |---|---|
-| **Tiempo de red** | `getNetworkTime()` consulta `timeapi.io` (primaria) y `worldtimeapi.org` (fallback) con 3 reintentos por fuente. Si ambas fallan, aplica Time Drift Check. Retorna `verified`, `online` y `toleranceFallback`. |
+| **Tiempo de red** | `_syncTimeBackground()` consulta `timeapi.io` y `worldtimeapi.org` en paralelo (background). `_readTimeCache()` lee el caché de forma síncrona en el momento del reclamo — sin red, sin espera. |
 | **Reloj desincronizado** | Si la discrepancia entre red y reloj local supera 5 minutos, el reclamo se bloquea con el mensaje "Reloj desincronizado". |
 | **Lógica de día** | Sustituido el contador de 24 h exactas por **días calendario**. El bono está disponible a las 00:00:00 del día siguiente al último reclamo. |
 | **Fórmula de racha** | `diffDays === 1` → streak+1 · `diffDays > 1` → reset a 1 · `diffDays === 0` → ya reclamado. Calculado con `setHours(0,0,0,0)` para comparar medianoche contra medianoche. |
 | **Race condition** | El botón `#btn-daily` se pone a `disabled = true` de forma **síncrona** antes de cualquier `await`, evitando múltiples reclamos por doble clic. |
 | **Feedback visual** | El texto del botón cambia a `"Procesando..."` mientras la Promise está pendiente. Se restaura por `updateDailyButton()` al finalizar. |
 | **Saltos negativos** | Si `currentTime < lastClaimTime` (manipulación de reloj), se bloquea el reclamo y se muestra un mensaje informativo. La racha no se reinicia. |
-| **Tolerancia de red** | Si `getNetworkTime()` retorna `verified: false` pero `online: true`, el reclamo base **y** la Bendición Lunar se conceden. El bonus lunar solo se bloquea en offline genuino sin drift previo válido. |
+| **Tolerancia de red** | `claimDaily()` no depende de la red en tiempo de ejecución. La Bendición Lunar se concede siempre que el buff esté activo. Solo se bloquea si `desynced: true` en el caché (reloj adelantado detectado en el último sync). |
 
 ---
 
@@ -548,58 +548,70 @@ La función `updateMoonBlessingUI()` actualiza el `<span class="moon-blessing-ba
 
 ### Cambios en v8.1 (Daily Claim Security)
 
-#### `getNetworkTime()` — actualizada en v9.5
+#### Sistema de tiempo — rediseño en v9.6 (Background Sync)
+
+La verificación de tiempo fue **completamente desacoplada del momento del reclamo**. En lugar de hacer una petición de red cuando el usuario pulsa el botón, el sistema mantiene un caché local que se actualiza silenciosamente en segundo plano.
+
+##### `_syncTimeBackground()` — sincronización en background
 
 ```javascript
-async function getNetworkTime()
-// Returns: { time: number, verified: boolean, desynced: boolean, online: boolean, toleranceFallback: boolean }
+async function _syncTimeBackground()  // sin valor de retorno
 ```
 
-Consulta múltiples APIs con reintentos automáticos. Fuentes en orden de prioridad:
+Consulta ambas APIs **en paralelo** (`Promise.any`) y escribe el resultado en `localStorage` (`love_arcade_time_cache`). Se lanza automáticamente en tres momentos:
 
-1. **`timeapi.io`** — menor tasa de bloqueo, CORS permisivo (primaria).
-2. **`worldtimeapi.org`** — fallback secundario.
+| Trigger | Cuándo ocurre |
+|---|---|
+| `DOMContentLoaded` + 800 ms | Al cargar la página, sin competir con el primer paint |
+| `visibilitychange → visible` | Cuando el usuario vuelve a la pestaña |
+| `setInterval` 30 min | Refresco periódico si la app permanece abierta |
 
-Cada fuente se reintenta hasta **3 veces** con **1 segundo de pausa** entre intentos antes de pasar a la siguiente.
+El resultado nunca interrumpe la UI — si todas las fuentes fallan, el caché existente se conserva.
+
+##### `_readTimeCache()` — lectura síncrona del caché
+
+```javascript
+function _readTimeCache()
+// Returns: { time: number, verified: boolean, desynced: boolean, cacheAge: number }
+```
+
+Lectura puramente local, sin red. Usada por `claimDaily()`.
 
 | Campo | Descripción |
 |---|---|
-| `time` | Timestamp en ms a usar como "ahora" |
-| `verified` | `true` si el tiempo proviene de la red o del Time Drift Check |
-| `desynced` | `true` si la discrepancia red↔local supera `CLOCK_SKEW_LIMIT` (5 min) |
-| `online` | Valor de `navigator.onLine` en el momento de la llamada |
-| `toleranceFallback` | `true` si se usó el offset previo (Time Drift Check) en lugar de la red |
-
-**Time Drift Check:** Cada llamada exitosa persiste el offset `networkTime − localTime` en `localStorage` (clave `love_arcade_time_drift`). Si todas las APIs fallan pero el offset almacenado es plausible (`|offset| ≤ CLOCK_SKEW_LIMIT`), se usa `localTime + storedOffset` como estimación verificada. Esto permite que usuarios con internet inestable reciban su bono sin perder la Bendición Lunar.
+| `time` | Estimación del timestamp de red: `Date.now() + drift` |
+| `verified` | `true` si el caché existe y tiene menos de `TIME_CACHE_TTL` (4 h) |
+| `desynced` | `true` si el último sync detectó que el reloj local estaba adelantado > 5 min |
+| `cacheAge` | Antigüedad del caché en ms |
 
 Constantes asociadas:
 - `CLOCK_SKEW_LIMIT = 5 * 60 * 1000` ms
-- `TIME_API_MAX_RETRIES = 3`
-- `TIME_API_RETRY_DELAY = 1000` ms
+- `TIME_API_TIMEOUT = 4000` ms (por petición individual)
+- `TIME_CACHE_TTL = 4 * 60 * 60 * 1000` ms (4 horas)
 
-#### `claimDaily()` — actualizado en v9.5
+#### `claimDaily()` — síncrono desde v9.6
 
-Retorna una `Promise` e integra cinco capas de validación en orden:
-
-1. **Salto negativo** (`now < lastClaim`): bloquea sin tocar la racha.
-2. **Reloj desincronizado** (`desynced === true`): bloquea con advertencia.
-3. **Día calendario** (diff via `setHours(0,0,0,0)`): reemplaza el contador de 24 h exactas.
-4. **Bonus Lunar** — criterio ampliado (v9.5): se otorga si `verified || online`. Solo se bloquea en modo genuinamente offline sin drift previo válido.
-5. **Nota de auditoría** en el historial: `(drift check)` si se usó tolerancia, `(tiempo sin verificar)` si fue offline total.
+Ya **no es `async`** ni hace ninguna petición de red. Lee `_readTimeCache()` y devuelve el resultado de forma instantánea.
 
 ```javascript
-// Signature
-async claimDaily(): Promise<{
+// Signature (v9.6)
+claimDaily(): {
     success: boolean,
     reward?: number,
     baseReward?: number,
     moonBonus?: number,
     streak?: number,
     verified: boolean,
-    toleranceFallback: boolean,
     message: string
-}>
+}
 ```
+
+Capas de validación (en orden):
+
+1. **Salto negativo** (`now < lastClaim`): bloquea sin tocar la racha.
+2. **Reloj adelantado** (`desynced === true` del caché): bloquea con advertencia.
+3. **Día calendario** (diff via `setHours(0,0,0,0)`).
+4. **Bendición Lunar**: se concede siempre que el buff esté activo — la protección contra abuso queda cubierta por el `desynced` del sync anterior.
 
 #### `canClaimDaily()` — lógica de día calendario
 
@@ -1194,22 +1206,15 @@ Sin cambios funcionales en v8.0. La representación visual migra de emoji a icon
 | Vigencia | 7 días reales desde la activación |
 | Indicador UI | Icono `<i data-lucide="moon">` animado junto al saldo |
 
-### Comportamiento v9.5: tolerancia de red
+### Comportamiento v9.6: Bendición Lunar sin dependencia de red
 
-El bonus de Bendición Lunar se evalúa con la siguiente lógica ampliada:
+Desde v9.6, el bonus de Bendición Lunar **siempre se concede** mientras el buff esté activo, sin condiciones de red:
 
 ```javascript
-moonBonus = (moonActive && (verified || online)) ? 90 : 0
+moonBonus = moonActive ? 90 : 0
 ```
 
-| Escenario | `verified` | `online` | Resultado |
-|---|---|---|---|
-| API OK | `true` | — | ✅ Bonus concedido |
-| API falla · Time Drift Check OK | `true` | — | ✅ Bonus concedido |
-| API falla · con internet · sin drift | `false` | `true` | ✅ Bonus concedido |
-| Sin internet · sin drift previo | `false` | `false` | ❌ Bonus bloqueado |
-
-El historial registra la operación con `(drift check)` o `(tiempo sin verificar)` para auditoría.
+La protección contra abuso queda cubierta por el `desynced` del sync en background: si el usuario adelanta el reloj para hacer pasar un día, el sync detectará la discrepancia y bloqueará el reclamo completo (no solo el bonus lunar). Sin conexión genuina, el usuario tampoco puede comprar la Bendición Lunar (requiere 100 monedas que se obtienen jugando), por lo que el riesgo neto es despreciable.
 
 ---
 
@@ -1342,29 +1347,34 @@ El store mantiene un máximo de 150 entradas. La pestaña Ajustes muestra las 50
 
 ## 18. Flujos de Usuario
 
-### Flujo de Bono Diario (v9.5)
+### Flujo de Bono Diario (v9.6 — Background Sync)
 
 ```
-Usuario hace clic en #btn-daily
+[Al cargar la página / volver a la pestaña / cada 30 min]
     │
-    ▼ [SÍNCRONO — antes de cualquier await]
-btn.disabled = true  ·  texto → "Procesando..."
+    ▼ [SILENCIOSO — no bloquea la UI]
+_syncTimeBackground()
+    ├── Promise.any([timeapi.io, worldtimeapi.org])  timeout: 4 s
+    ├── Éxito  → _writeTimeCache({ drift, desynced })
+    └── Error  → caché anterior se conserva intacto
+
+
+[Usuario hace clic en #btn-daily]
     │
-    ▼
-getNetworkTime()
-    ├── Intento 1: timeapi.io  (hasta 3 reintentos × 1 s)
-    ├── Intento 2: worldtimeapi.org  (hasta 3 reintentos × 1 s)
-    ├── Drift Check: localTime + storedOffset  (si |offset| ≤ 5 min)
-    └── Fallback final: Date.now()  (verified: false)
+    ▼ [INSTANTÁNEO — sin red]
+_readTimeCache()  →  { time, verified, desynced }  (localStorage)
     │
     ▼ [Validaciones en orden]
 1. now < lastClaim?
-   └── SÍ → "Se detectó una inconsistencia horaria…"  [racha intacta, sin reclamo]
-2. desynced === true?
-   └── SÍ → "Reloj desincronizado…"  [bloqueo total]
+   └── SÍ → "Se detectó una inconsistencia horaria…"  [racha intacta]
+2. desynced === true?  (detectado en el sync anterior)
+   └── SÍ → "Reloj desincronizado…"  [bloqueo]
 3. diffDays === 0? (mismo día calendario)
    └── SÍ → "¡Ya reclamaste tu bono hoy!"  [bloqueo]
-4. moonBonus = (moonActive && (verified || online)) ? 90 : 0
+4. moonBonus = moonActive ? 90 : 0
+    │
+    ▼
+Recompensa entregada instantáneamente · UI actualizada
 ```
     ▼ [diffDays >= 1 → reclamo válido]
 diffDays === 1 → streak + 1
@@ -1488,9 +1498,10 @@ const filteredTags = item.tags;
 | **Manipulación del saldo** | ⚠️ Posible | Un usuario puede editar `localStorage` directamente. Aceptable por diseño en plataforma de confianza. |
 | **Importación de archivos** | ✅ Validado | FileReader solo lee el contenido; sync-worker.js verifica el checksum SHA-256 antes de aplicar. |
 | **LocalStorage key** | ✅ Intocable | `'gamecenter_v6_promos'` no debe modificarse jamás para no perder el progreso de usuarios existentes. |
-| **Bono diario — reloj local** | ✅ Mitigado | `getNetworkTime()` contrasta el reloj local con dos APIs (timeapi.io → worldtimeapi.org). Discrepancia > 5 min bloquea el reclamo. |
-| **Bono diario — modo offline** | ✅ Mejorado v9.5 | Si las APIs fallan, se aplica el Time Drift Check (offset previo). Si hay internet (`navigator.onLine`), la Bendición Lunar se concede igualmente. Solo se bloquea en offline genuino sin drift válido. |
-| **Rate limiting / CORS API tiempo** | ✅ Resuelto v9.5 | Sistema multi-fuente con 3 reintentos por fuente. timeapi.io como primaria elimina los errores 429 de worldtimeapi.org. |
+| **Bono diario — reloj local** | ✅ Mitigado | `_syncTimeBackground()` contrasta el reloj con dos APIs en paralelo. Si detecta > 5 min de diferencia, escribe `desynced: true` en el caché; `claimDaily()` bloquea el reclamo en el siguiente intento. |
+| **Bono diario — modo offline** | ✅ Mejorado v9.6 | Sin conexión, `claimDaily()` usa el caché existente (TTL 4 h). Si el caché expiró y no hay red, el reclamo se permite con `verified: false` (comportamiento graceful). |
+| **Rate limiting / CORS API tiempo** | ✅ Resuelto v9.6 | El sync corre en background sin bloquear la UI. Errores de red son silenciosos; el caché previo actúa como buffer. timeapi.io como primaria elimina los 429 de worldtimeapi.org. |
+| **Latencia en el reclamo** | ✅ Eliminada v9.6 | `claimDaily()` es 100% síncrono. El usuario recibe la recompensa instantáneamente sin ninguna espera de red. |
 | **Salto negativo de reloj** | ✅ Detectado | Si `now < lastClaimTime`, el reclamo se bloquea con mensaje informativo. La racha no se reinicia. |
 | **Double-tap / race condition** | ✅ Prevenido | El botón `#btn-daily` se desactiva síncronamente antes de cualquier `await`, imposibilitando múltiples reclamos simultáneos. |
 
@@ -1532,17 +1543,17 @@ const filteredTags = item.tags;
 | **stateKey** | La clave de `localStorage`: `'gamecenter_v6_promos'`. No debe modificarse jamás. |
 | **FileReader** | API nativa del navegador para leer archivos locales de forma asíncrona y no bloqueante. Usada en la importación de partidas. |
 | **Blob** | Objeto de datos binarios utilizado para generar el archivo `.txt` de exportación sin necesidad de un servidor. |
-| **getNetworkTime** | Función async (v8.1, actualizada v9.5) que consulta múltiples APIs (timeapi.io, worldtimeapi.org) con reintentos para obtener un timestamp verificado externamente. |
-| **verified** | Campo del objeto retornado por `getNetworkTime`. `true` si el tiempo proviene de la red o del Time Drift Check; `false` si es fallback local puro. |
-| **desynced** | Campo del objeto retornado por `getNetworkTime`. `true` si la diferencia entre reloj local y red supera 5 minutos. |
-| **online** | Campo del objeto retornado por `getNetworkTime`. Refleja `navigator.onLine` — se usa como validación secundaria para la Bendición Lunar. |
-| **toleranceFallback** | Campo del objeto retornado por `getNetworkTime`. `true` si se usó el Time Drift Check en lugar de una API real. |
-| **Time Drift Check** | Mecanismo de tolerancia (v9.5). Almacena el offset red↔local de la última sesión verificada en `love_arcade_time_drift`. Si las APIs fallan pero el offset es plausible, se usa como estimación confiable. |
+| **_syncTimeBackground** | Función async (v9.6) que consulta timeapi.io y worldtimeapi.org en paralelo y escribe el resultado en el caché de tiempo. Se ejecuta en background sin bloquear la UI. |
+| **_readTimeCache** | Función síncrona (v9.6) que lee el caché de tiempo del localStorage y devuelve la estimación de tiempo de red. Usada por `claimDaily()`. |
+| **TIME_CACHE_KEY** | Clave de localStorage (`love_arcade_time_cache`) donde se almacena el caché de tiempo. Separada del store principal. |
+| **TIME_CACHE_TTL** | TTL del caché de tiempo: 4 horas. Mientras el caché sea más reciente, `claimDaily()` lo usa directamente. |
+| **verified** | Campo de `_readTimeCache()`. `true` si el caché existe y tiene menos de 4 horas. |
+| **desynced** | Campo de `_readTimeCache()`. `true` si el último sync detectó que el reloj local superaba `CLOCK_SKEW_LIMIT`. |
 | **Día Natural** | Modelo de reset de bono diario (v8.1) basado en días calendario (medianoche). Reemplaza el contador de 24 h exactas. |
 | **Race condition** | Condición de carrera donde múltiples clics rápidos disparan varias llamadas a `claimDaily()`. Prevenida en v8.1 desactivando el botón síncronamente. |
 | **CLOCK_SKEW_LIMIT** | Constante (5 min en ms). Umbral máximo de discrepancia tolerable entre reloj local y de red. |
 
 ---
 
-*Love Arcade · Documentación técnica v9.5 · Network Resilience & Moon Blessing Stability*
+*Love Arcade · Documentación técnica v9.6 · Background Time Sync & Instant Daily Claim*
 *Arquitectura: vanilla JS + localStorage · Sin backend · Compatible con GitHub Pages*
