@@ -161,11 +161,8 @@ window.debounce = debounce; // Disponible globalmente para shop.html
 /** Máxima discrepancia tolerable entre reloj local y de red: 5 minutos. */
 const CLOCK_SKEW_LIMIT = 5 * 60 * 1000;
 
-/** Número de reintentos por fuente antes de pasar a la siguiente. */
-const TIME_API_MAX_RETRIES = 3;
-
-/** Retardo entre reintentos (ms). */
-const TIME_API_RETRY_DELAY = 1000;
+/** Timeout por petición individual a APIs de tiempo (ms). */
+const TIME_API_TIMEOUT = 3000;
 
 /**
  * Clave exclusiva de localStorage para el Time Drift Check.
@@ -187,95 +184,67 @@ function getStoredTimeDrift() {
 }
 
 /**
- * Consulta APIs de tiempo externas con reintentos automáticos para obtener
- * una marca temporal verificada. Implementa el patrón "Time Drift Check":
- * cuando todas las APIs fallan, usa el offset previo almacenado para estimar
- * el tiempo de red sin depender de conectividad en ese instante.
+ * Lanza una petición a una URL de tiempo con timeout propio.
+ * @param {string}   url
+ * @param {function} extract  Extrae el timestamp del objeto JSON parseado.
+ * @returns {Promise<number>} Timestamp en ms.
+ */
+function fetchTimeSource(url, extract) {
+    return new Promise((resolve, reject) => {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => { ctrl.abort(); reject(new Error('timeout')); }, TIME_API_TIMEOUT);
+        fetch(url, { cache: 'no-store', signal: ctrl.signal })
+            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(data => { clearTimeout(tid); resolve(extract(data)); })
+            .catch(err  => { clearTimeout(tid); reject(err); });
+    });
+}
+
+/**
+ * Consulta varias APIs de tiempo en PARALELO (Promise.any) para minimizar
+ * la latencia de respuesta. Implementa el patrón "Time Drift Check" como
+ * fallback cuando todas las fuentes externas fallan.
  *
- * Fuentes en orden de prioridad:
- *   1. timeapi.io      — menor tasa de bloqueo, CORS permisivo
- *   2. worldtimeapi.org — fallback secundario
- *
- * Cada fuente se reintenta hasta TIME_API_MAX_RETRIES veces con
- * TIME_API_RETRY_DELAY ms de espera entre intentos.
+ * Tiempo máximo de espera: TIME_API_TIMEOUT ms (3 s) — lo que tarde la API
+ * más lenta de las que responda, nunca las sumas de todas.
  *
  * @returns {Promise<{
- *   time:              number,   — timestamp (ms) a usar como "ahora"
- *   verified:          boolean,  — true si proviene de la red o del drift check
- *   desynced:          boolean,  — true si la discrepancia supera CLOCK_SKEW_LIMIT
- *   online:            boolean,  — navigator.onLine en el momento de la llamada
- *   toleranceFallback: boolean   — true si se usó el Time Drift Check
+ *   time:              number,
+ *   verified:          boolean,
+ *   desynced:          boolean,
+ *   online:            boolean,
+ *   toleranceFallback: boolean
  * }>}
  */
 async function getNetworkTime() {
     const localNow = Date.now();
     const online   = navigator.onLine;
 
-    // ── Definición de fuentes ──────────────────────────────────────────────
-    const TIME_SOURCES = [
-        {
-            name: 'timeapi.io',
-            fetch: async () => {
-                const ctrl = new AbortController();
-                const tid  = setTimeout(() => ctrl.abort(), 5000);
-                try {
-                    const res = await fetch('https://timeapi.io/api/time/current/ip', {
-                        cache: 'no-store', signal: ctrl.signal
-                    });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    const data = await res.json();
-                    // Campo "dateTime" en timeapi.io; "datetime" en worldtimeapi.org
-                    return new Date(data.dateTime ?? data.datetime).getTime();
-                } finally {
-                    clearTimeout(tid);
-                }
-            }
-        },
-        {
-            name: 'worldtimeapi.org',
-            fetch: async () => {
-                const ctrl = new AbortController();
-                const tid  = setTimeout(() => ctrl.abort(), 5000);
-                try {
-                    const res = await fetch('https://worldtimeapi.org/api/ip', {
-                        cache: 'no-store', signal: ctrl.signal
-                    });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    const data = await res.json();
-                    return new Date(data.datetime).getTime();
-                } finally {
-                    clearTimeout(tid);
-                }
-            }
+    // ── Lanzar todas las fuentes en PARALELO ─────────────────────────────
+    try {
+        const networkTime = await Promise.any([
+            fetchTimeSource(
+                'https://timeapi.io/api/time/current/ip',
+                d => new Date(d.dateTime ?? d.datetime).getTime()
+            ),
+            fetchTimeSource(
+                'https://worldtimeapi.org/api/ip',
+                d => new Date(d.datetime).getTime()
+            )
+        ]);
+
+        const skew = Math.abs(networkTime - Date.now());
+        saveTimeDrift(networkTime - Date.now());
+
+        if (skew > CLOCK_SKEW_LIMIT) {
+            return { time: networkTime, verified: true, desynced: true,  online, toleranceFallback: false };
         }
-    ];
-
-    // ── Intentar cada fuente con reintentos silenciosos ────────────────────
-    for (const source of TIME_SOURCES) {
-        for (let attempt = 0; attempt < TIME_API_MAX_RETRIES; attempt++) {
-            if (attempt > 0) {
-                await new Promise(r => setTimeout(r, TIME_API_RETRY_DELAY));
-            }
-            try {
-                const networkTime = await source.fetch();
-                const skew        = Math.abs(networkTime - Date.now());
-
-                // Persistir offset para el Time Drift Check futuro
-                saveTimeDrift(networkTime - Date.now());
-
-                if (skew > CLOCK_SKEW_LIMIT) {
-                    return { time: networkTime, verified: true, desynced: true,  online, toleranceFallback: false };
-                }
-                return     { time: networkTime, verified: true, desynced: false, online, toleranceFallback: false };
-            } catch (_) {
-                // Reintento silencioso — no loguear para no contaminar la consola
-            }
-        }
+        return         { time: networkTime, verified: true, desynced: false, online, toleranceFallback: false };
+    } catch (_) {
+        // AggregateError: todas las fuentes fallaron
     }
 
-    // ── Todas las APIs fallaron — Time Drift Check ─────────────────────────
-    // Si existe un offset previo y es plausible (|offset| < CLOCK_SKEW_LIMIT),
-    // el reloj local no fue manipulado entre sesiones → se puede confiar en él.
+    // ── Time Drift Check ─────────────────────────────────────────────────
     const storedDrift = getStoredTimeDrift();
     if (storedDrift !== null && Math.abs(storedDrift) <= CLOCK_SKEW_LIMIT) {
         return {
@@ -287,7 +256,7 @@ async function getNetworkTime() {
         };
     }
 
-    // ── Fallback final: reloj local sin verificar ──────────────────────────
+    // ── Fallback final ────────────────────────────────────────────────────
     return { time: localNow, verified: false, desynced: false, online, toleranceFallback: false };
 }
 
@@ -632,11 +601,8 @@ window.GameCenter = {
         saveState();
         updateMoonBlessingUI();
 
-        const verifiedNote = toleranceFallback
-            ? ' (estimación local verificada)'
-            : !verified
-                ? ' (red no disponible)'
-                : '';
+        // El mensaje al usuario nunca menciona problemas de red si el reclamo
+        // fue exitoso — el detalle técnico solo va al historial interno.
         return {
             success:           true,
             reward:            totalReward,
@@ -645,7 +611,7 @@ window.GameCenter = {
             streak:            newStreak,
             verified,
             toleranceFallback,
-            message:           `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}${verifiedNote}`
+            message:           `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}`
         };
     },
 
