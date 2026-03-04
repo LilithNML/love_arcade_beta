@@ -1037,8 +1037,19 @@ function revealUI() {
         document.querySelectorAll('.hud-avatar-wrap').forEach(el => {
             el.classList.add('is-ready');
         });
+        // player-hud: se revela completo una vez que botón diario, countdown
+        // y barras de racha están en su estado correcto en el DOM oculto.
+        // Esto evita:
+        //  - El fade del botón disabled (transition:all disparada por CSS)
+        //  - El layout-shift del countdown (display:none → block mueve .hud-streak)
+        document.querySelectorAll('.player-hud').forEach(el => {
+            el.classList.add('is-ready');
+        });
     });
 }
+// Expuesta globalmente para que el inline script de index.html pueda llamarla
+// DESPUÉS de que updateStreakBar() y updateCountdownDisplay() hayan corrido.
+window.revealUI = revealUI;
 
 // =====================================================
 // INIT SÍNCRONO — v9.3 Zero-Flicker Initiative
@@ -1077,9 +1088,10 @@ updateMoonBlessingUI();
 // 4. AVATAR — aplica la imagen guardada síncronamente (si existe).
 applyAvatar();
 
-// 5. REVEAL — añade .is-ready + .coin-badge--visible en el siguiente frame,
-//    DESPUÉS de que los valores correctos ya estén pintados.
-revealUI();
+// NOTA: revealUI() se llama desde el inline script de index.html, DESPUÉS de
+// que updateStreakBar() y updateCountdownDisplay() también hayan corrido.
+// Esto garantiza que .player-hud se revela con TODOS sus estados correctos
+// (botón, countdown, barras de racha y avatar) en un solo RAF.
 
 // =====================================================
 // EVENT LISTENERS — DOMContentLoaded
