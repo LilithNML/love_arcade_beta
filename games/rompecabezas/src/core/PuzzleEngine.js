@@ -1,82 +1,125 @@
 /**
- * PuzzleEngine.js v14.0 - Precision Tech Visual Overhaul
+ * PuzzleEngine.js v15.0 - Tactical HUD & Precision Geometry
  *
- * Cambios respecto a v13.4:
- * - shadowBlur = 0 siempre (elimina sombras difusas, mejora GPU móvil).
- * - Fondo del tablero: rejilla de referencia espacial (líneas 1px #1E293B).
- * - Pieza seleccionada: escala 1.05x + trazo blanco 2px (sin sombra).
- * - Efecto Snap: destello perimetral en #10B981 de 150ms al encajar.
- * - Se mantiene toda la lógica de gameplay de v13.4 sin cambios.
+ * Nuevas funcionalidades respecto a v14.0:
+ *
+ * FONDO REACTIVO:
+ * - gridCanvas (offscreen) para líneas de cuadrícula estáticas.
+ *   No carga el loop del puzzle — se dibuja una sola vez por resize.
+ * - Puntos de anclaje (micro-dots) en intersecciones con parpadeo aleatorio.
+ * - Efecto Parallax: la rejilla se desplaza un 5% opuesto al puntero/giro.
+ *   Driven by pointermove + DeviceOrientation. Lerp suavizado (0.08).
+ *
+ * SNAP & EFECTOS:
+ * - Edge Pulse: al encajar una pieza, un anillo se expande desde el centro
+ *   hasta los bordes de la pantalla (radio máx = diagonal) en 700ms.
+ * - Flash perimetral esmeralda (150ms) se mantiene del v14.
+ *
+ * HÁPTICA (patrones específicos):
+ * - 10ms al levantar una pieza (touchstart / pickup).
+ * - [30, 20, 10] doble pulse al encajar (onSnap callback).
+ * - Heavy pulse al completar el nivel (onWin callback en main.js).
+ *
+ * RENDIMIENTO:
+ * - shadowBlur = 0 siempre.
+ * - Loop se detiene si no hay nada activo (edgePulses/snapFlashes añadidos
+ *   a la condición de parada).
+ * - Idle blink: cada 5s activa el loop durante 60 frames para animar dots.
  */
 
 export class PuzzleEngine {
     constructor(canvasElement, config, callbacks) {
         this.canvas = canvasElement;
-        // alpha: false mejora rendimiento (el compositor ignora lo de atrás)
         this.ctx = this.canvas.getContext('2d', { alpha: false });
-        
+
         this.img = config.image;
         this.gridSize = Math.sqrt(config.pieces);
         this.callbacks = callbacks || {};
-        
-        // --- BUFFERS (Rendimiento) ---
+
+        // --- BUFFERS ---
         this.staticCanvas = document.createElement('canvas');
         this.staticCtx = this.staticCanvas.getContext('2d', { alpha: true });
-        
+
         this.sourceCanvas = document.createElement('canvas');
         this.sourceCtx = this.sourceCanvas.getContext('2d', { alpha: false });
 
+        // [v15] Offscreen grid canvas (static lines, rebuilt only on resize)
+        this.gridCanvas = document.createElement('canvas');
+        this.gridCtx = this.gridCanvas.getContext('2d');
+        this.gridCanvasW = 0;
+        this.gridCanvasH = 0;
+        this.gridPad = 0;
+
         this.needsStaticUpdate = true;
 
-        // Estado
+        // State
         this.pieces = [];
-        this.lockedPieces = []; 
-        this.loosePieces = [];  
-        
-        this.particles = []; 
-        // [Precision Tech] Destellos de encaje (snap flash #10B981, 150ms)
-        this.snapFlashes = [];
+        this.lockedPieces = [];
+        this.loosePieces = [];
+        this.particles = [];
+
+        // [v15] Visual effects
+        this.snapFlashes = [];   // perimeter glow on snap (150ms)
+        this.edgePulses  = [];   // radial pulse to screen edges (700ms)
+
+        // [v15] Parallax state
+        this.parallaxX = 0;
+        this.parallaxY = 0;
+        this.targetParallaxX = 0;
+        this.targetParallaxY = 0;
+
+        // [v15] Micro-dot blink data (generated once on init)
+        this.blinkDots = [];
 
         this.selectedPiece = null;
         this.isDragging = false;
         this.showPreview = false;
-        
+
         this.dragOffsetX = 0;
         this.dragOffsetY = 0;
-        
-        this.verticalEdges = []; 
-        this.horizontalEdges = []; 
-        
-        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-        
-        // --- LOOP CONTROL (Battery Saver) ---
-        this.isLoopRunning = false;
 
-        // [Precision Tech] shadowBlur = 0 siempre. 
-        // Las sombras difusas se eliminan por completo para máximo rendimiento GPU.
-        this.shadowBlur = 0;
+        this.verticalEdges   = [];
+        this.horizontalEdges = [];
+
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        this.isLoopRunning = false;
+        this._idleWakeCount = 0; // frames to keep loop alive for idle blink
+
+        // [v14/v15] shadowBlur = 0 always
+        this.shadowBlur    = 0;
         this.particleLimit = this.gridSize >= 8 ? 20 : 50;
 
         // Binds
-        this.handleStart = this.handleStart.bind(this);
-        this.handleMove = this.handleMove.bind(this);
-        this.handleEnd = this.handleEnd.bind(this);
-        this.handleResize = this.handleResize.bind(this);
-        
+        this.handleStart    = this.handleStart.bind(this);
+        this.handleMove     = this.handleMove.bind(this);
+        this.handleEnd      = this.handleEnd.bind(this);
+        this.handleResize   = this.handleResize.bind(this);
+        this._onOrientation = this._onOrientation.bind(this);
+
         this.init();
     }
 
     init() {
-        this.resizeCanvas(); 
+        this.resizeCanvas();
+        this.buildGridCanvas();
+        this.generateBlinkDots();
         this.generateSharedTopology();
-        this.createPieces(); 
-        this.shufflePieces(); 
+        this.createPieces();
+        this.shufflePieces();
         this.addEventListeners();
-        
         this.wakeUp();
+
+        // Idle blink: wake loop every 5s for ~1s of dot animation
+        this._idleTimer = setInterval(() => {
+            if (!this.isLoopRunning) {
+                this._idleWakeCount = 70;
+                this.wakeUp();
+            }
+        }, 5000);
     }
 
-    /* --- GESTIÓN DE LOOP INTELIGENTE --- */
+    /* ---- LOOP ---- */
     wakeUp() {
         if (!this.isLoopRunning) {
             this.isLoopRunning = true;
@@ -85,166 +128,242 @@ export class PuzzleEngine {
     }
 
     animate() {
-        // El loop se detiene cuando no hay nada que animar.
-        // snapFlashes se añade como condición para mantener activo el destello de encaje.
-        if (!this.isDragging && 
-            this.particles.length === 0 &&
+        if (this._idleWakeCount > 0) this._idleWakeCount--;
+
+        const canStop =
+            !this.isDragging &&
+            this.particles.length   === 0 &&
             this.snapFlashes.length === 0 &&
-            !this.needsStaticUpdate && 
-            !this.showPreview) {
-            
+            this.edgePulses.length  === 0 &&
+            this._idleWakeCount     <= 0  &&
+            !this.needsStaticUpdate &&
+            !this.showPreview;
+
+        if (canStop) {
             this.isLoopRunning = false;
-            return; // STOP LOOP
+            return;
         }
 
         this.render();
         requestAnimationFrame(() => this.animate());
     }
 
-    /* --- SETUP & RESIZE --- */
+    /* ---- RESIZE ---- */
     handleResize() {
         this.resizeCanvas();
-        this.createPiecesPathsOnly(); 
-        this.shufflePieces(true); 
-        this.needsStaticUpdate = true; 
-        this.wakeUp(); 
+        this.buildGridCanvas();
+        this.generateBlinkDots();
+        this.createPiecesPathsOnly();
+        this.shufflePieces(true);
+        this.needsStaticUpdate = true;
+        this.wakeUp();
     }
 
     resizeCanvas() {
-        const parent = this.canvas.parentElement;
-        const w = parent.clientWidth;
-        const h = parent.clientHeight;
+        const parent   = this.canvas.parentElement;
+        const w        = parent.clientWidth;
+        const h        = parent.clientHeight;
         const imgRatio = this.img.width / this.img.height;
 
-        let cssW = w;
-        let cssH = w / imgRatio;
+        let cssW = w, cssH = w / imgRatio;
+        if (cssH > h) { cssH = h; cssW = cssH * imgRatio; }
 
-        if (cssH > h) {
-            cssH = h;
-            cssW = cssH * imgRatio;
-        }
-
-        const workAreaScale = 0.65; 
+        const workAreaScale = 0.65;
         cssW *= workAreaScale;
         cssH *= workAreaScale;
 
-        // 1. Configurar Main Canvas
-        this.canvas.width = w * this.dpr;
+        this.canvas.width  = w * this.dpr;
         this.canvas.height = h * this.dpr;
-        this.canvas.style.width = "100%";
-        this.canvas.style.height = "100%";
-        
+        this.canvas.style.width  = '100%';
+        this.canvas.style.height = '100%';
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(this.dpr, this.dpr);
 
-        // 2. Configurar Static Canvas
-        this.staticCanvas.width = this.canvas.width; 
+        this.staticCanvas.width  = this.canvas.width;
         this.staticCanvas.height = this.canvas.height;
-        
-        this.staticCtx.setTransform(1, 0, 0, 1, 0, 0); 
+        this.staticCtx.setTransform(1, 0, 0, 1, 0, 0);
         this.staticCtx.scale(this.dpr, this.dpr);
 
-        // Métricas Lógicas
-        this.boardWidth = cssW;
+        this.boardWidth  = cssW;
         this.boardHeight = cssH;
-        this.boardX = Math.round((w - cssW) / 2);
-        this.boardY = Math.round((h - cssH) / 2);
+        this.boardX      = Math.round((w - cssW) / 2);
+        this.boardY      = Math.round((h - cssH) / 2);
 
-        this.pieceWidth = this.boardWidth / this.gridSize;
+        this.pieceWidth  = this.boardWidth  / this.gridSize;
         this.pieceHeight = this.boardHeight / this.gridSize;
-        this.tabSize = Math.min(this.pieceWidth, this.pieceHeight) * 0.25;
-        this.logicalWidth = w;
+        this.tabSize     = Math.min(this.pieceWidth, this.pieceHeight) * 0.25;
+        this.logicalWidth  = w;
         this.logicalHeight = h;
 
-        // 3. Configurar Source Canvas
-        this.sourceCanvas.width = Math.ceil(this.boardWidth * this.dpr);
+        this.sourceCanvas.width  = Math.ceil(this.boardWidth  * this.dpr);
         this.sourceCanvas.height = Math.ceil(this.boardHeight * this.dpr);
-        
         this.sourceCtx.clearRect(0, 0, this.sourceCanvas.width, this.sourceCanvas.height);
         this.sourceCtx.drawImage(this.img, 0, 0, this.sourceCanvas.width, this.sourceCanvas.height);
-        
+
         this.needsStaticUpdate = true;
     }
 
-    /* --- UX: ZONA DE SEGURIDAD --- */
-    isInRestrictedArea(x, y) {
-        const safeMarginRight = 90; 
-        const safeMarginBottom = 160; 
-        return (x > this.logicalWidth - safeMarginRight) && 
-               (y > this.logicalHeight - safeMarginBottom);
-    }
+    /* ---- OFFSCREEN GRID CANVAS (spec: drawn independently) ---- */
+    buildGridCanvas() {
+        const ext          = 0.12; // 12% padding each side absorbs parallax
+        const lw           = this.logicalWidth;
+        const lh           = this.logicalHeight;
+        this.gridPad       = Math.max(lw, lh) * ext;
+        this.gridCanvasW   = Math.ceil(lw + this.gridPad * 2);
+        this.gridCanvasH   = Math.ceil(lh + this.gridPad * 2);
 
-    clampPosition(p) {
-        let x = Math.max(0, Math.min(p.currentX, this.logicalWidth - this.pieceWidth));
-        let y = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
+        this.gridCanvas.width  = this.gridCanvasW * this.dpr;
+        this.gridCanvas.height = this.gridCanvasH * this.dpr;
 
-        const distToCorrect = Math.hypot(x - p.correctX, y - p.correctY);
-        const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
+        const ctx = this.gridCtx;
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        ctx.clearRect(0, 0, this.gridCanvasW, this.gridCanvasH);
 
-        if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth/2, y + this.pieceHeight/2)) {
-            y = this.logicalHeight - 170 - this.pieceHeight;
+        const cell = 40; // fixed background grid cell size (px)
+
+        // Subtle grid lines
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.055)';
+        ctx.lineWidth   = 1;
+
+        for (let x = 0; x < this.gridCanvasW; x += cell) {
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, 0);
+            ctx.lineTo(x + 0.5, this.gridCanvasH);
+            ctx.stroke();
         }
-
-        p.currentX = x;
-        p.currentY = y;
+        for (let y = 0; y < this.gridCanvasH; y += cell) {
+            ctx.beginPath();
+            ctx.moveTo(0, y + 0.5);
+            ctx.lineTo(this.gridCanvasW, y + 0.5);
+            ctx.stroke();
+        }
     }
 
-    /* --- RENDER --- */
+    /* ---- MICRO-DOTS (random subset of grid intersections, blink in render) ---- */
+    generateBlinkDots() {
+        this.blinkDots = [];
+        const cell = 40;
+        const pad  = this.gridPad;
+
+        for (let x = 0; x <= this.gridCanvasW; x += cell) {
+            for (let y = 0; y <= this.gridCanvasH; y += cell) {
+                if (Math.random() < 0.22) {
+                    this.blinkDots.push({
+                        x,          // coordinate inside gridCanvas space
+                        y,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.25 + Math.random() * 1.1
+                    });
+                }
+            }
+        }
+    }
+
+    /* ---- PARALLAX UPDATE (called on pointer/orientation events) ---- */
+    _updateParallaxTarget(px, py) {
+        // Pointer or orientation offset → opposite direction, max 5% of screen
+        const cx = this.logicalWidth  / 2;
+        const cy = this.logicalHeight / 2;
+        this.targetParallaxX = -((px - cx) / cx) * this.logicalWidth  * 0.05;
+        this.targetParallaxY = -((py - cy) / cy) * this.logicalHeight * 0.05;
+        if (!this.isLoopRunning) this.wakeUp();
+    }
+
+    _onOrientation(e) {
+        // gamma: left/right (-90…90), beta: front/back (-180…180)
+        const px = this.logicalWidth  * (0.5 + (e.gamma || 0) / 90  * 0.5);
+        const py = this.logicalHeight * (0.5 + (e.beta  || 0) / 180 * 0.5);
+        this._updateParallaxTarget(px, py);
+    }
+
+    /* ---- RENDER ---- */
     render() {
         if (this.needsStaticUpdate) {
             this.updateStaticLayer();
             this.needsStaticUpdate = false;
         }
 
+        // Lerp parallax toward target (GPU-smooth, only transform)
+        this.parallaxX += (this.targetParallaxX - this.parallaxX) * 0.08;
+        this.parallaxY += (this.targetParallaxY - this.parallaxY) * 0.08;
+
         this.ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
-        
-        // 1. Fondo Estático (tablero + piezas bloqueadas)
+
+        // 1. Background grid with parallax
+        this._renderGridLayer();
+
+        // 2. Static layer (board + locked pieces)
         this.ctx.drawImage(this.staticCanvas, 0, 0, this.logicalWidth, this.logicalHeight);
 
-        // 2. Vista Previa
+        // 3. Preview
         if (this.showPreview) {
             this.ctx.save();
-            this.ctx.globalAlpha = 0.3;
+            this.ctx.globalAlpha = 0.28;
             this.ctx.drawImage(
-                this.sourceCanvas, 0, 0,
-                this.sourceCanvas.width, this.sourceCanvas.height,
-                this.boardX, this.boardY,
-                this.boardWidth, this.boardHeight
+                this.sourceCanvas, 0, 0, this.sourceCanvas.width, this.sourceCanvas.height,
+                this.boardX, this.boardY, this.boardWidth, this.boardHeight
             );
             this.ctx.restore();
         }
 
-        // 3. Piezas Sueltas (excepto la seleccionada)
+        // 4. Loose pieces (not selected)
         for (let i = 0; i < this.loosePieces.length; i++) {
             const p = this.loosePieces[i];
             if (p !== this.selectedPiece) this.renderPieceToContext(this.ctx, p, false);
         }
 
-        // 4. Pieza Seleccionada & SNAP ASSIST (Ghost)
+        // 5. Ghost + selected piece
         if (this.selectedPiece) {
-            const p = this.selectedPiece;
+            const p    = this.selectedPiece;
             const dist = Math.hypot(p.currentX - p.correctX, p.currentY - p.correctY);
-            const snapThreshold = this.pieceWidth * 0.4; 
-
-            if (dist < snapThreshold) {
+            if (dist < this.pieceWidth * 0.4) {
                 this.ctx.save();
                 this.ctx.translate(p.correctX, p.correctY);
-                this.ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
-                this.ctx.fill(p.path); 
-                this.ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-                this.ctx.lineWidth = 1.5;
+                this.ctx.fillStyle   = 'rgba(255,255,255,0.2)';
+                this.ctx.fill(p.path);
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                this.ctx.lineWidth   = 1.5;
                 this.ctx.stroke(p.path);
                 this.ctx.restore();
             }
-
             this.renderPieceToContext(this.ctx, this.selectedPiece, true);
         }
 
-        // 5. Partículas
+        // 6. Particles
         this.updateParticles();
 
-        // 6. [Precision Tech] Destellos de snap (borde esmeralda, 150ms)
-        this.updateSnapFlashes();
+        // 7. [v15] Snap perimeter flash (150ms, esmeralda)
+        this._updateSnapFlashes();
+
+        // 8. [v15] Edge pulse (700ms, radial to screen corners)
+        this._updateEdgePulses();
+    }
+
+    /* ---- GRID LAYER with parallax + blinking micro-dots ---- */
+    _renderGridLayer() {
+        const dx = -this.gridPad + this.parallaxX;
+        const dy = -this.gridPad + this.parallaxY;
+
+        // Composite offscreen grid canvas with parallax offset
+        this.ctx.drawImage(
+            this.gridCanvas,
+            0, 0, this.gridCanvasW * this.dpr, this.gridCanvasH * this.dpr,
+            dx, dy, this.gridCanvasW, this.gridCanvasH
+        );
+
+        // Blinking micro-dots at grid intersections
+        const now = performance.now() / 1000;
+        const pad = this.gridPad;
+
+        for (let i = 0; i < this.blinkDots.length; i++) {
+            const d     = this.blinkDots[i];
+            const alpha = 0.12 + 0.10 * Math.sin(now * d.speed + d.phase);
+            const sx    = Math.round(d.x + dx);
+            const sy    = Math.round(d.y + dy);
+            if (sx < 0 || sx > this.logicalWidth || sy < 0 || sy > this.logicalHeight) continue;
+            this.ctx.fillStyle = `rgba(59,130,246,${alpha.toFixed(2)})`;
+            this.ctx.fillRect(sx - 1, sy - 1, 2, 2);
+        }
     }
 
     updateStaticLayer() {
@@ -256,39 +375,30 @@ export class PuzzleEngine {
         const bw = Math.round(this.boardWidth);
         const bh = Math.round(this.boardHeight);
 
-        // [Precision Tech] Fondo del tablero: sólido oscuro
-        ctx.fillStyle = "#0D1520";
+        // Board background (dark solid)
+        ctx.fillStyle = '#0A1118';
         ctx.fillRect(bx, by, bw, bh);
 
-        // [Precision Tech] Rejilla de referencia espacial (1px, #1E293B)
-        // Proporciona referencia visual de posición sin profundidad por capas.
+        // Board inner grid (piece boundaries reference)
         ctx.save();
-        ctx.strokeStyle = "#1E293B";
-        ctx.lineWidth = 1;
-        // Líneas verticales
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth   = 1;
         for (let col = 0; col <= this.gridSize; col++) {
-            const x = Math.round(this.boardX + col * this.pieceWidth);
-            ctx.beginPath();
-            ctx.moveTo(x, by);
-            ctx.lineTo(x, by + bh);
-            ctx.stroke();
+            const x = Math.round(bx + col * this.pieceWidth);
+            ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, by + bh); ctx.stroke();
         }
-        // Líneas horizontales
         for (let row = 0; row <= this.gridSize; row++) {
-            const y = Math.round(this.boardY + row * this.pieceHeight);
-            ctx.beginPath();
-            ctx.moveTo(bx, y);
-            ctx.lineTo(bx + bw, y);
-            ctx.stroke();
+            const y = Math.round(by + row * this.pieceHeight);
+            ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx + bw, y); ctx.stroke();
         }
         ctx.restore();
 
-        // Borde exterior del tablero: azul eléctrico, 1px
-        ctx.strokeStyle = "#3B82F6";
-        ctx.lineWidth = 1;
+        // Board border — accent blue, 1px
+        ctx.strokeStyle = '#3B82F6';
+        ctx.lineWidth   = 1;
         ctx.strokeRect(bx, by, bw, bh);
 
-        // Piezas bloqueadas en capa estática
+        // Locked pieces
         for (let i = 0; i < this.lockedPieces.length; i++) {
             this.renderPieceToContext(ctx, this.lockedPieces[i], false, true);
         }
@@ -296,13 +406,11 @@ export class PuzzleEngine {
 
     renderPieceToContext(ctx, p, isSelected, isStaticRender = false) {
         ctx.save();
-        
         const drawX = Math.round(p.currentX);
         const drawY = Math.round(p.currentY);
         ctx.translate(drawX, drawY);
 
-        // [Precision Tech] Sin sombras difusas (shadowBlur = 0 siempre).
-        // La pieza seleccionada se levanta con escala 1.05x.
+        // [v15] Scale 1.05x when lifted; no shadow (shadowBlur = 0 always)
         if (!isStaticRender && !p.isLocked && isSelected) {
             ctx.translate(this.pieceWidth / 2, this.pieceHeight / 2);
             ctx.scale(1.05, 1.05);
@@ -311,49 +419,44 @@ export class PuzzleEngine {
 
         ctx.clip(p.path);
 
-        const margin = Math.min(
-            Math.max(this.pieceWidth, this.pieceHeight),
-            this.tabSize * 3
-        );
-        
-        let overlapFix = isStaticRender ? 0.6 : 0; 
-        const scaleToSource = this.dpr; 
+        const margin = Math.min(Math.max(this.pieceWidth, this.pieceHeight), this.tabSize * 3);
+        const overlapFix    = isStaticRender ? 0.6 : 0;
+        const scaleToSource = this.dpr;
 
-        const srcPieceW_SC = (this.sourceCanvas.width / this.gridSize);
-        const srcPieceH_SC = (this.sourceCanvas.height / this.gridSize);
+        const srcPieceW_SC  = this.sourceCanvas.width  / this.gridSize;
+        const srcPieceH_SC  = this.sourceCanvas.height / this.gridSize;
         const srcOriginX_SC = p.gridX * srcPieceW_SC;
         const srcOriginY_SC = p.gridY * srcPieceH_SC;
-        
-        const srcX = srcOriginX_SC - (margin * scaleToSource);
-        const srcY = srcOriginY_SC - (margin * scaleToSource);
-        const srcW = srcPieceW_SC + (margin * 2 * scaleToSource);
-        const srcH = srcPieceH_SC + (margin * 2 * scaleToSource);
 
-        const dstX = -margin - overlapFix;
-        const dstY = -margin - overlapFix;
-        const dstW = this.pieceWidth + (margin * 2) + (overlapFix * 2);
-        const dstH = this.pieceHeight + (margin * 2) + (overlapFix * 2);
-
-        ctx.drawImage(this.sourceCanvas, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
+        ctx.drawImage(
+            this.sourceCanvas,
+            srcOriginX_SC - (margin * scaleToSource),
+            srcOriginY_SC - (margin * scaleToSource),
+            srcPieceW_SC  + (margin * 2 * scaleToSource),
+            srcPieceH_SC  + (margin * 2 * scaleToSource),
+            -margin - overlapFix,
+            -margin - overlapFix,
+            this.pieceWidth  + (margin * 2) + (overlapFix * 2),
+            this.pieceHeight + (margin * 2) + (overlapFix * 2)
+        );
         ctx.restore();
 
-        // Trazos de borde (sin sombras)
+        // Piece edge stroke
         if (!isStaticRender && !p.isLocked) {
             ctx.save();
             ctx.translate(drawX, drawY);
 
             if (isSelected) {
-                // [Precision Tech] Pieza levantada: escala 1.05 + trazo blanco 2px
+                // [v15] White 2px stroke while dragging (precision outline)
                 ctx.translate(this.pieceWidth / 2, this.pieceHeight / 2);
                 ctx.scale(1.05, 1.05);
                 ctx.translate(-this.pieceWidth / 2, -this.pieceHeight / 2);
-                ctx.strokeStyle = "#FFFFFF";
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth   = 2;
                 ctx.stroke(p.path);
             } else {
-                // Pieza suelta normal: trazo sutil
-                ctx.strokeStyle = "rgba(255,255,255,0.22)";
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth   = 1;
                 ctx.stroke(p.path);
             }
 
@@ -361,52 +464,69 @@ export class PuzzleEngine {
         }
     }
 
-    /**
-     * [Precision Tech] Actualiza y renderiza los destellos de snap.
-     * Cada destello dura 150ms y emite un trazo perimetral en #10B981
-     * que se desvanece desde opacidad 1 → 0.
-     */
-    updateSnapFlashes() {
+    /* ---- [v15] SNAP PERIMETER FLASH (150ms esmeralda) ---- */
+    _updateSnapFlashes() {
         if (this.snapFlashes.length === 0) return;
         const now = performance.now();
-
         for (let i = this.snapFlashes.length - 1; i >= 0; i--) {
-            const flash = this.snapFlashes[i];
-
-            // Inicializar tiempo de inicio en el primer frame
-            if (!flash.startTime) flash.startTime = now;
-
-            const elapsed = now - flash.startTime;
-            const t = elapsed / 150; // Normalizado 0→1 en 150ms
-
-            if (t >= 1) {
-                this.snapFlashes.splice(i, 1);
-                continue;
-            }
-
-            const alpha  = 1 - t;
-            const width  = 4 - t * 2; // 4px → 2px mientras se desvanece
-            const p      = flash.piece;
-
+            const f = this.snapFlashes[i];
+            if (!f.startTime) f.startTime = now;
+            const t = (now - f.startTime) / 150;
+            if (t >= 1) { this.snapFlashes.splice(i, 1); continue; }
+            const p = f.piece;
             this.ctx.save();
             this.ctx.translate(Math.round(p.currentX), Math.round(p.currentY));
-            this.ctx.strokeStyle = `rgba(16, 185, 129, ${alpha})`;
-            this.ctx.lineWidth = width;
+            this.ctx.strokeStyle = `rgba(16,185,129,${1 - t})`;
+            this.ctx.lineWidth   = 4 - t * 2;
             this.ctx.stroke(p.path);
             this.ctx.restore();
         }
     }
 
+    /* ---- [v15] EDGE PULSE (snapped piece → screen edges, 700ms) ---- */
+    _spawnEdgePulse(x, y) {
+        const maxR = Math.hypot(this.logicalWidth, this.logicalHeight);
+        // Two concentric rings with slight delay for depth
+        this.edgePulses.push({ x, y, maxR, startTime: null, delay: 0,   color: '16,185,129' });
+        this.edgePulses.push({ x, y, maxR, startTime: null, delay: 80,  color: '59,130,246' });
+    }
+
+    _updateEdgePulses() {
+        if (this.edgePulses.length === 0) return;
+        const now = performance.now();
+        for (let i = this.edgePulses.length - 1; i >= 0; i--) {
+            const ep = this.edgePulses[i];
+            if (!ep.startTime) ep.startTime = now;
+            const elapsed = now - ep.startTime - ep.delay;
+            if (elapsed < 0) continue;
+            const t = elapsed / 700;
+            if (t >= 1) { this.edgePulses.splice(i, 1); continue; }
+            // Ease-out quad: fast start, gentle finish
+            const eased = 1 - Math.pow(1 - t, 2);
+            const r     = ep.maxR * eased;
+            const a     = (1 - t) * 0.35;
+            const lw    = Math.max(0.5, 2.5 - t * 2);
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(ep.x, ep.y, r, 0, Math.PI * 2);
+            this.ctx.strokeStyle = `rgba(${ep.color},${a.toFixed(2)})`;
+            this.ctx.lineWidth   = lw;
+            this.ctx.stroke();
+            this.ctx.restore();
+        }
+    }
+
+    /* ---- PIECE MANAGEMENT ---- */
     updatePieceCaches() {
         this.lockedPieces = this.pieces.filter(p => p.isLocked);
-        this.loosePieces = this.pieces.filter(p => !p.isLocked);
+        this.loosePieces  = this.pieces.filter(p => !p.isLocked);
     }
 
     createPieces() {
         this.pieces = [];
         for (let y = 0; y < this.gridSize; y++) {
             for (let x = 0; x < this.gridSize; x++) {
-                const shape = this.shapes[y][x];
+                const shape  = this.shapes[y][x];
                 const jitter = {
                     top:    this.horizontalEdges[y][x],
                     bottom: this.horizontalEdges[y + 1][x],
@@ -416,8 +536,8 @@ export class PuzzleEngine {
                 const path = this.createPath(this.pieceWidth, this.pieceHeight, shape, jitter);
                 this.pieces.push({
                     id: `${x}-${y}`, gridX: x, gridY: y,
-                    correctX: this.boardX + (x * this.pieceWidth),
-                    correctY: this.boardY + (y * this.pieceHeight),
+                    correctX: this.boardX + x * this.pieceWidth,
+                    correctY: this.boardY + y * this.pieceHeight,
                     currentX: 0, currentY: 0, isLocked: false,
                     shape, jitter, path
                 });
@@ -427,20 +547,15 @@ export class PuzzleEngine {
     }
 
     createPiecesPathsOnly() {
-        for (let p of this.pieces) {
-            p.path = this.createPath(this.pieceWidth, this.pieceHeight, p.shape, p.jitter);
-            p.correctX = this.boardX + (p.gridX * this.pieceWidth);
-            p.correctY = this.boardY + (p.gridY * this.pieceHeight);
-            if (p.isLocked) {
-                p.currentX = p.correctX;
-                p.currentY = p.correctY;
-            }
+        for (const p of this.pieces) {
+            p.path     = this.createPath(this.pieceWidth, this.pieceHeight, p.shape, p.jitter);
+            p.correctX = this.boardX + p.gridX * this.pieceWidth;
+            p.correctY = this.boardY + p.gridY * this.pieceHeight;
+            if (p.isLocked) { p.currentX = p.correctX; p.currentY = p.correctY; }
         }
     }
 
-    /**
-     * SHUFFLE (v13.3) — Zonas Caóticas + Collision Avoidance
-     */
+    /* ---- SHUFFLE — Zonas Caóticas + Collision Avoidance (v13.3) ---- */
     shufflePieces(repositionOnly = false) {
         this.updatePieceCaches();
         const loose = this.loosePieces;
@@ -456,81 +571,59 @@ export class PuzzleEngine {
         const bottomSafe = 160;
 
         const zones = [
-            { 
-                x: 10, 
-                y: topSafe, 
-                w: Math.max(0, this.boardX - 20), 
-                h: this.logicalHeight - topSafe - bottomSafe 
-            },
-            { 
-                x: this.boardX + this.boardWidth + 10, 
-                y: topSafe, 
-                w: Math.max(0, this.logicalWidth - (this.boardX + this.boardWidth) - 20), 
-                h: this.logicalHeight - topSafe - bottomSafe 
-            },
-            { 
-                x: 10, 
-                y: this.boardY + this.boardHeight + 10, 
-                w: this.logicalWidth - 20, 
-                h: Math.max(0, this.logicalHeight - (this.boardY + this.boardHeight) - bottomSafe) 
-            }
+            { x: 10, y: topSafe, w: Math.max(0, this.boardX - 20), h: this.logicalHeight - topSafe - bottomSafe },
+            { x: this.boardX + this.boardWidth + 10, y: topSafe, w: Math.max(0, this.logicalWidth - (this.boardX + this.boardWidth) - 20), h: this.logicalHeight - topSafe - bottomSafe },
+            { x: 10, y: this.boardY + this.boardHeight + 10, w: this.logicalWidth - 20, h: Math.max(0, this.logicalHeight - (this.boardY + this.boardHeight) - bottomSafe) }
         ];
 
         const validZones = zones.filter(z => z.w > this.pieceWidth && z.h > this.pieceHeight);
-        
         if (validZones.length === 0) {
-            validZones.push({
-                x: 10, y: topSafe, 
-                w: this.logicalWidth - 20, 
-                h: this.logicalHeight - topSafe - bottomSafe
-            });
+            validZones.push({ x: 10, y: topSafe, w: this.logicalWidth - 20, h: this.logicalHeight - topSafe - bottomSafe });
         }
 
-        const placedPositions = [];
-
+        const placed = [];
         for (const p of loose) {
             if (!repositionOnly) p.isLocked = false;
             if (p.isLocked) continue;
 
-            let placedOK = false;
-            let tries    = 0;
-            const maxTries = 50; 
-
-            while (!placedOK && tries < maxTries) {
+            let ok = false, tries = 0;
+            while (!ok && tries < 50) {
                 tries++;
                 const z  = validZones[Math.floor(Math.random() * validZones.length)];
                 const cx = z.x + Math.random() * (z.w - this.pieceWidth);
                 const cy = z.y + Math.random() * (z.h - this.pieceHeight);
-
-                let collision = false;
-                for (const pos of placedPositions) {
-                    const dist = Math.hypot(pos.x - cx, pos.y - cy);
-                    if (dist < this.pieceWidth * 0.7) { collision = true; break; }
-                }
-
-                if (!collision) {
-                    p.currentX = cx;
-                    p.currentY = cy;
-                    placedPositions.push({ x: cx, y: cy });
-                    placedOK = true;
-                }
+                const collision = placed.some(pos => Math.hypot(pos.x - cx, pos.y - cy) < this.pieceWidth * 0.7);
+                if (!collision) { p.currentX = cx; p.currentY = cy; placed.push({ x: cx, y: cy }); ok = true; }
             }
-
-            if (!placedOK) {
-                p.currentX = Math.random() * (this.logicalWidth - this.pieceWidth);
-                p.currentY = Math.random() * (this.logicalHeight - this.pieceHeight);
-            }
-
+            if (!ok) { p.currentX = Math.random() * (this.logicalWidth - this.pieceWidth); p.currentY = Math.random() * (this.logicalHeight - this.pieceHeight); }
             this.clampPosition(p);
         }
-        
+
         this.updatePieceCaches();
         this.needsStaticUpdate = true;
         this.wakeUp();
     }
 
+    /* ---- CLAMPING ---- */
+    isInRestrictedArea(x, y) {
+        return (x > this.logicalWidth - 90) && (y > this.logicalHeight - 160);
+    }
+
+    clampPosition(p) {
+        let x = Math.max(0, Math.min(p.currentX, this.logicalWidth  - this.pieceWidth));
+        let y = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
+        const distToCorrect  = Math.hypot(x - p.correctX, y - p.correctY);
+        const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
+        if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth / 2, y + this.pieceHeight / 2)) {
+            y = this.logicalHeight - 170 - this.pieceHeight;
+        }
+        p.currentX = x;
+        p.currentY = y;
+    }
+
+    /* ---- TOPOLOGY ---- */
     generateSharedTopology() {
-        const jitterStrength = this.gridSize > 6 ? 0.08 : 0.15;
+        const js = this.gridSize > 6 ? 0.08 : 0.15;
         this.shapes = [];
         for (let y = 0; y < this.gridSize; y++) {
             const row = [];
@@ -544,27 +637,23 @@ export class PuzzleEngine {
             }
             this.shapes.push(row);
         }
-        this.verticalEdges = []; 
+        this.verticalEdges = [];
         for (let y = 0; y < this.gridSize; y++) {
             const row = [];
-            for (let x = 0; x <= this.gridSize; x++) {
-                row.push((x === 0 || x === this.gridSize) ? 0 : (Math.random() - 0.5) * jitterStrength);
-            }
+            for (let x = 0; x <= this.gridSize; x++) row.push((x === 0 || x === this.gridSize) ? 0 : (Math.random() - 0.5) * js);
             this.verticalEdges.push(row);
         }
         this.horizontalEdges = [];
         for (let y = 0; y <= this.gridSize; y++) {
             const row = [];
-            for (let x = 0; x < this.gridSize; x++) {
-                row.push((y === 0 || y === this.gridSize) ? 0 : (Math.random() - 0.5) * jitterStrength);
-            }
+            for (let x = 0; x < this.gridSize; x++) row.push((y === 0 || y === this.gridSize) ? 0 : (Math.random() - 0.5) * js);
             this.horizontalEdges.push(row);
         }
     }
 
     createPath(w, h, shape, jitter) {
         const path = new Path2D();
-        const t = this.tabSize; 
+        const t    = this.tabSize;
         path.moveTo(0, 0);
         shape.top    !== 0 ? this.lineToTab(path, 0, 0, w, 0, shape.top    * t, jitter.top    * t) : path.lineTo(w, 0);
         shape.right  !== 0 ? this.lineToTab(path, w, 0, w, h, shape.right  * t, jitter.right  * t) : path.lineTo(w, h);
@@ -573,30 +662,23 @@ export class PuzzleEngine {
         path.closePath();
         return path;
     }
-    
+
     lineToTab(path, x1, y1, x2, y2, amp, shift) {
-        const w = x2 - x1; const h = y2 - y1;
+        const w = x2 - x1, h = y2 - y1;
         const cx = x1 + w * 0.5 + (w === 0 ? shift : 0);
         const cy = y1 + h * 0.5 + (h === 0 ? shift : 0);
-        const perpX = -h / Math.abs(h || 1); const perpY = w / Math.abs(w || 1);
-        const xA = x1 + w * 0.35; const yA = y1 + h * 0.35;
-        const xB = x1 + w * 0.65; const yB = y1 + h * 0.65;
+        const perpX = -h / Math.abs(h || 1), perpY = w / Math.abs(w || 1);
+        const xA = x1 + w * 0.35, yA = y1 + h * 0.35;
+        const xB = x1 + w * 0.65, yB = y1 + h * 0.65;
         path.lineTo(xA, yA);
-        path.bezierCurveTo(
-            xA + (perpX * amp * 0.2), yA + (perpY * amp * 0.2),
-            cx - (w * 0.1) + (perpX * amp), cy - (h * 0.1) + (perpY * amp),
-            cx + (perpX * amp), cy + (perpY * amp)
-        );
-        path.bezierCurveTo(
-            cx + (w * 0.1) + (perpX * amp), cy + (h * 0.1) + (perpY * amp),
-            xB + (perpX * amp * 0.2), yB + (perpY * amp * 0.2),
-            xB, yB
-        );
+        path.bezierCurveTo(xA + perpX*amp*0.2, yA + perpY*amp*0.2, cx - w*0.1 + perpX*amp, cy - h*0.1 + perpY*amp, cx + perpX*amp, cy + perpY*amp);
+        path.bezierCurveTo(cx + w*0.1 + perpX*amp, cy + h*0.1 + perpY*amp, xB + perpX*amp*0.2, yB + perpY*amp*0.2, xB, yB);
         path.lineTo(x2, y2);
     }
 
+    /* ---- INPUT HANDLING ---- */
     getPointerPos(e) {
-        const rect = this.canvas.getBoundingClientRect();
+        const rect    = this.canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         return { x: clientX - rect.left, y: clientY - rect.top };
@@ -605,21 +687,21 @@ export class PuzzleEngine {
     handleStart(e) {
         e.preventDefault();
         const { x, y } = this.getPointerPos(e);
-        
+        this._updateParallaxTarget(x, y);
+
         for (let i = this.loosePieces.length - 1; i >= 0; i--) {
-            const p = this.loosePieces[i]; 
-            const m = this.tabSize * 2.0; 
-            if (x >= p.currentX - m && x <= p.currentX + this.pieceWidth  + m && 
+            const p = this.loosePieces[i];
+            const m = this.tabSize * 2.0;
+            if (x >= p.currentX - m && x <= p.currentX + this.pieceWidth  + m &&
                 y >= p.currentY - m && y <= p.currentY + this.pieceHeight + m) {
-                
-                this.selectedPiece = p; 
-                this.isDragging = true;
-                this.dragOffsetX = x - p.currentX; 
-                this.dragOffsetY = y - p.currentY;
-                
+                this.selectedPiece = p;
+                this.isDragging    = true;
+                this.dragOffsetX   = x - p.currentX;
+                this.dragOffsetY   = y - p.currentY;
                 this.wakeUp();
                 this.callbacks.onSound && this.callbacks.onSound('click');
-                
+                // [v15] 10ms haptic on pickup
+                if (navigator.vibrate) navigator.vibrate(10);
                 this.loosePieces.splice(i, 1);
                 this.loosePieces.push(p);
                 return;
@@ -629,82 +711,80 @@ export class PuzzleEngine {
 
     handleMove(e) {
         if (!this.isDragging || !this.selectedPiece) return;
-        e.preventDefault(); 
+        e.preventDefault();
         const { x, y } = this.getPointerPos(e);
-        
         this.selectedPiece.currentX = x - this.dragOffsetX;
         this.selectedPiece.currentY = y - this.dragOffsetY;
-        
         this.clampPosition(this.selectedPiece);
+        // Update parallax target as piece moves
+        this._updateParallaxTarget(x, y);
     }
 
     handleEnd(e) {
         if (!this.isDragging || !this.selectedPiece) return;
-        
+
         const dist = Math.hypot(
             this.selectedPiece.currentX - this.selectedPiece.correctX,
             this.selectedPiece.currentY - this.selectedPiece.correctY
         );
-        
+
         if (dist < this.pieceWidth * 0.3) {
             this.selectedPiece.currentX = this.selectedPiece.correctX;
             this.selectedPiece.currentY = this.selectedPiece.correctY;
             this.selectedPiece.isLocked = true;
-            this.needsStaticUpdate = true; 
+            this.needsStaticUpdate = true;
             this.updatePieceCaches();
-            
-            // [Precision Tech] Destello esmeralda en el borde de la pieza encajada
+
+            // [v15] Snap effects
             this.snapFlashes.push({ piece: this.selectedPiece, startTime: null });
-            this.wakeUp(); // Asegurar que el loop está activo para el flash
+            this._spawnEdgePulse(
+                this.selectedPiece.currentX + this.pieceWidth  / 2,
+                this.selectedPiece.currentY + this.pieceHeight / 2
+            );
+            this.wakeUp();
 
             this.callbacks.onSound && this.callbacks.onSound('snap');
-            this.callbacks.onSnap  && this.callbacks.onSnap();
-            
+            // [v15] Double haptic [30, 20, 10] via callback (main.js)
+            this.callbacks.onSnap && this.callbacks.onSnap();
+
             this.spawnParticles(
                 this.selectedPiece.currentX + this.pieceWidth  / 2,
                 this.selectedPiece.currentY + this.pieceHeight / 2,
                 'ripple'
             );
-            
+
             if (this.callbacks.onStateChange) this.callbacks.onStateChange();
             this.checkVictory();
         } else {
             if (this.callbacks.onStateChange) this.callbacks.onStateChange();
         }
-        
-        this.isDragging = false;
+
+        this.isDragging    = false;
         this.selectedPiece = null;
     }
-    
-    checkVictory() { 
-        if (this.loosePieces.length === 0) { 
-            if (this.gridSize < 8) {
-                this.spawnParticles(this.logicalWidth / 2, this.logicalHeight / 2, 'confetti'); 
-            }
-            if (this.callbacks.onSound) this.callbacks.onSound('win'); 
-            if (this.callbacks.onWin) setTimeout(this.callbacks.onWin, 1500); 
-            this.canvas.removeEventListener('mousedown', this.handleStart); 
-            this.canvas.removeEventListener('touchstart', this.handleStart); 
-        } 
+
+    checkVictory() {
+        if (this.loosePieces.length === 0) {
+            if (this.gridSize < 8) this.spawnParticles(this.logicalWidth / 2, this.logicalHeight / 2, 'confetti');
+            if (this.callbacks.onSound) this.callbacks.onSound('win');
+            // Victory: spawn a final massive edge pulse from screen center
+            this._spawnEdgePulse(this.logicalWidth / 2, this.logicalHeight / 2);
+            if (this.callbacks.onWin) setTimeout(this.callbacks.onWin, 1500);
+            this.canvas.removeEventListener('mousedown', this.handleStart);
+            this.canvas.removeEventListener('touchstart', this.handleStart);
+        }
     }
 
+    /* ---- PARTICLES ---- */
     spawnParticles(x, y, type) {
         if (type === 'ripple') {
             this.particles.push({ type: 'ripple', x, y, radius: 10, alpha: 1.0, color: '#ffffff', lineWidth: 4, speed: 3 });
             this.particles.push({ type: 'ripple', x, y, radius: 5,  alpha: 1.0, color: '#fbbf24', lineWidth: 2, speed: 1.5 });
         } else {
             if (this.particles.length > this.particleLimit) return;
-            const count  = 30;
             const colors = ['#f43f5e', '#3b82f6', '#10b981', '#fbbf24', '#fff'];
-            for (let i = 0; i < count; i++) {
-                this.particles.push({
-                    type: 'confetti', x, y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1.0,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    size: Math.random() * 4 + 2
-                });
+            for (let i = 0; i < 30; i++) {
+                this.particles.push({ type: 'confetti', x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0, color: colors[i % colors.length], size: Math.random()*4+2 });
             }
         }
     }
@@ -712,77 +792,53 @@ export class PuzzleEngine {
     updateParticles() {
         if (this.particles.length === 0) return;
         for (let i = this.particles.length - 1; i >= 0; i--) {
-            let p = this.particles[i];
+            const p = this.particles[i];
             if (p.type === 'ripple') {
-                p.radius    += p.speed;
-                p.alpha     -= 0.04;
-                p.lineWidth *= 0.95;
-                if (p.alpha <= 0) {
-                    this.particles.splice(i, 1);
-                } else {
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                    this.ctx.strokeStyle   = p.color;
-                    this.ctx.lineWidth     = p.lineWidth;
-                    this.ctx.globalAlpha   = p.alpha;
-                    this.ctx.stroke();
-                    this.ctx.restore();
-                }
+                p.radius += p.speed; p.alpha -= 0.04; p.lineWidth *= 0.95;
+                if (p.alpha <= 0) { this.particles.splice(i, 1); continue; }
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                this.ctx.strokeStyle = p.color; this.ctx.lineWidth = p.lineWidth; this.ctx.globalAlpha = p.alpha;
+                this.ctx.stroke();
+                this.ctx.restore();
             } else {
-                p.x   += p.vx;
-                p.y   += p.vy;
-                p.vy  += 0.2;
-                p.life -= 0.03;
-                if (p.life <= 0) {
-                    this.particles.splice(i, 1);
-                } else {
-                    this.ctx.globalAlpha = p.life;
-                    this.ctx.fillStyle   = p.color;
-                    this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                }
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.03;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+                this.ctx.globalAlpha = p.life;
+                this.ctx.fillStyle = p.color;
+                this.ctx.fillRect(p.x, p.y, p.size, p.size);
             }
         }
         this.ctx.globalAlpha = 1;
     }
 
-    exportState() {
-        return this.pieces.map(p => ({ id: p.id, cx: p.currentX, cy: p.currentY, locked: p.isLocked }));
-    }
-    
-    importState(s) { 
-        if (!s) return; 
-        s.forEach(sp => {
-            const p = this.pieces.find(x => x.id === sp.id);
-            if (p) { p.currentX = sp.cx; p.currentY = sp.cy; p.isLocked = sp.locked; }
-        }); 
-        this.updatePieceCaches();
-        this.needsStaticUpdate = true;
-        this.wakeUp();
-    }
-    
-    togglePreview(a) {
-        this.showPreview = a;
-        this.wakeUp();
-    }
-    
-    autoPlacePiece() { 
-        if (this.loosePieces.length === 0) return false; 
-        const p = this.loosePieces[Math.floor(Math.random() * this.loosePieces.length)];
-        this.spawnParticles(p.correctX + this.pieceWidth / 2, p.correctY + this.pieceHeight / 2, 'ripple');
-        p.currentX  = p.correctX;
-        p.currentY  = p.correctY;
-        p.isLocked  = true;
-        // [Precision Tech] Flash de snap también para el imán
-        this.snapFlashes.push({ piece: p, startTime: null });
-        this.updatePieceCaches();
-        this.needsStaticUpdate = true;
-        if (this.callbacks.onSound) this.callbacks.onSound('snap'); 
-        this.checkVictory();
-        this.wakeUp();
-        return true; 
+    /* ---- STATE ---- */
+    exportState() { return this.pieces.map(p => ({ id: p.id, cx: p.currentX, cy: p.currentY, locked: p.isLocked })); }
+
+    importState(s) {
+        if (!s) return;
+        s.forEach(sp => { const p = this.pieces.find(x => x.id === sp.id); if (p) { p.currentX = sp.cx; p.currentY = sp.cy; p.isLocked = sp.locked; } });
+        this.updatePieceCaches(); this.needsStaticUpdate = true; this.wakeUp();
     }
 
+    togglePreview(a) { this.showPreview = a; this.wakeUp(); }
+
+    autoPlacePiece() {
+        if (this.loosePieces.length === 0) return false;
+        const p = this.loosePieces[Math.floor(Math.random() * this.loosePieces.length)];
+        this.spawnParticles(p.correctX + this.pieceWidth / 2, p.correctY + this.pieceHeight / 2, 'ripple');
+        p.currentX = p.correctX; p.currentY = p.correctY; p.isLocked = true;
+        // Flash + edge pulse for magnet too
+        this.snapFlashes.push({ piece: p, startTime: null });
+        this._spawnEdgePulse(p.correctX + this.pieceWidth / 2, p.correctY + this.pieceHeight / 2);
+        this.updatePieceCaches(); this.needsStaticUpdate = true;
+        if (this.callbacks.onSound) this.callbacks.onSound('snap');
+        this.checkVictory(); this.wakeUp();
+        return true;
+    }
+
+    /* ---- EVENT LISTENERS ---- */
     addEventListeners() {
         this.canvas.addEventListener('mousedown', this.handleStart);
         window.addEventListener('mousemove', this.handleMove);
@@ -790,21 +846,28 @@ export class PuzzleEngine {
         this.canvas.addEventListener('touchstart', this.handleStart, { passive: false });
         window.addEventListener('touchmove', this.handleMove, { passive: false });
         window.addEventListener('touchend', this.handleEnd);
-        
+
+        // [v15] Device orientation parallax (iOS 13+ needs permission; try silently)
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', this._onOrientation, { passive: true });
+        }
+
         if (!this._resizeObserver && typeof ResizeObserver !== 'undefined') {
             this._resizeObserver = new ResizeObserver(() => this.handleResize());
             this._resizeObserver.observe(this.canvas.parentElement);
         }
     }
-    
+
     destroy() {
-        this.isLoopRunning = false; 
+        this.isLoopRunning = false;
+        clearInterval(this._idleTimer);
         this.canvas.removeEventListener('mousedown', this.handleStart);
         window.removeEventListener('mousemove', this.handleMove);
         window.removeEventListener('mouseup', this.handleEnd);
         this.canvas.removeEventListener('touchstart', this.handleStart);
         window.removeEventListener('touchmove', this.handleMove);
         window.removeEventListener('touchend', this.handleEnd);
+        window.removeEventListener('deviceorientation', this._onOrientation);
         if (this._resizeObserver) this._resizeObserver.disconnect();
     }
 }
