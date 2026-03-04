@@ -1,8 +1,12 @@
 /**
- * PuzzleEngine.js v13.4 - Haptics & Visual Assist
- * * FEATURE: Snap Assist Visual (Ghost) al acercar la pieza a su destino.
- * * FEATURE: Callback 'onSnap' para vibración háptica.
- * * CORE: Mantiene lógica de Zonas Caóticas y optimizaciones previas.
+ * PuzzleEngine.js v14.0 - Precision Tech Visual Overhaul
+ *
+ * Cambios respecto a v13.4:
+ * - shadowBlur = 0 siempre (elimina sombras difusas, mejora GPU móvil).
+ * - Fondo del tablero: rejilla de referencia espacial (líneas 1px #1E293B).
+ * - Pieza seleccionada: escala 1.05x + trazo blanco 2px (sin sombra).
+ * - Efecto Snap: destello perimetral en #10B981 de 150ms al encajar.
+ * - Se mantiene toda la lógica de gameplay de v13.4 sin cambios.
  */
 
 export class PuzzleEngine {
@@ -30,6 +34,9 @@ export class PuzzleEngine {
         this.loosePieces = [];  
         
         this.particles = []; 
+        // [Precision Tech] Destellos de encaje (snap flash #10B981, 150ms)
+        this.snapFlashes = [];
+
         this.selectedPiece = null;
         this.isDragging = false;
         this.showPreview = false;
@@ -45,8 +52,9 @@ export class PuzzleEngine {
         // --- LOOP CONTROL (Battery Saver) ---
         this.isLoopRunning = false;
 
-        // Configuración visual dinámica
-        this.shadowBlur = this.gridSize >= 8 ? 0 : 5; 
+        // [Precision Tech] shadowBlur = 0 siempre. 
+        // Las sombras difusas se eliminan por completo para máximo rendimiento GPU.
+        this.shadowBlur = 0;
         this.particleLimit = this.gridSize >= 8 ? 20 : 50;
 
         // Binds
@@ -77,8 +85,11 @@ export class PuzzleEngine {
     }
 
     animate() {
+        // El loop se detiene cuando no hay nada que animar.
+        // snapFlashes se añade como condición para mantener activo el destello de encaje.
         if (!this.isDragging && 
-            this.particles.length === 0 && 
+            this.particles.length === 0 &&
+            this.snapFlashes.length === 0 &&
             !this.needsStaticUpdate && 
             !this.showPreview) {
             
@@ -157,7 +168,6 @@ export class PuzzleEngine {
 
     /* --- UX: ZONA DE SEGURIDAD --- */
     isInRestrictedArea(x, y) {
-        // Evitar botones flotantes inferiores
         const safeMarginRight = 90; 
         const safeMarginBottom = 160; 
         return (x > this.logicalWidth - safeMarginRight) && 
@@ -165,25 +175,19 @@ export class PuzzleEngine {
     }
 
     clampPosition(p) {
-    let x = Math.max(0, Math.min(p.currentX, this.logicalWidth - this.pieceWidth));
-    let y = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
+        let x = Math.max(0, Math.min(p.currentX, this.logicalWidth - this.pieceWidth));
+        let y = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
 
-    // 1. Calculamos la distancia de la pieza a su lugar correcto
-    const distToCorrect = Math.hypot(x - p.correctX, y - p.correctY);
-    
-    // 2. Definimos un umbral de "intención de encajar" (por ejemplo, el ancho de una pieza)
-    // Si la pieza está cerca de su destino, permitimos que entre al área restringida.
-    const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
+        const distToCorrect = Math.hypot(x - p.correctX, y - p.correctY);
+        const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
 
-    if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth/2, y + this.pieceHeight/2)) {
-        // Solo aplicar la repulsión si la pieza NO está intentando encajar
-        y = this.logicalHeight - 170 - this.pieceHeight;
+        if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth/2, y + this.pieceHeight/2)) {
+            y = this.logicalHeight - 170 - this.pieceHeight;
+        }
+
+        p.currentX = x;
+        p.currentY = y;
     }
-
-    p.currentX = x;
-    p.currentY = y;
-}
-
 
     /* --- RENDER --- */
     render() {
@@ -194,66 +198,98 @@ export class PuzzleEngine {
 
         this.ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
         
-        // 1. Fondo Estático
+        // 1. Fondo Estático (tablero + piezas bloqueadas)
         this.ctx.drawImage(this.staticCanvas, 0, 0, this.logicalWidth, this.logicalHeight);
 
         // 2. Vista Previa
         if (this.showPreview) {
             this.ctx.save();
             this.ctx.globalAlpha = 0.3;
-            this.ctx.drawImage(this.sourceCanvas, 0, 0, this.sourceCanvas.width, this.sourceCanvas.height, this.boardX, this.boardY, this.boardWidth, this.boardHeight);
+            this.ctx.drawImage(
+                this.sourceCanvas, 0, 0,
+                this.sourceCanvas.width, this.sourceCanvas.height,
+                this.boardX, this.boardY,
+                this.boardWidth, this.boardHeight
+            );
             this.ctx.restore();
         }
 
-        // 3. Piezas Sueltas
-        for(let i=0; i<this.loosePieces.length; i++) {
+        // 3. Piezas Sueltas (excepto la seleccionada)
+        for (let i = 0; i < this.loosePieces.length; i++) {
             const p = this.loosePieces[i];
-            if(p !== this.selectedPiece) this.renderPieceToContext(this.ctx, p, false);
+            if (p !== this.selectedPiece) this.renderPieceToContext(this.ctx, p, false);
         }
 
-        // 4. Pieza Seleccionada & SNAP ASSIST
+        // 4. Pieza Seleccionada & SNAP ASSIST (Ghost)
         if (this.selectedPiece) {
-            // --- NUEVO: SNAP ASSIST VISUAL (GHOST) ---
             const p = this.selectedPiece;
             const dist = Math.hypot(p.currentX - p.correctX, p.currentY - p.correctY);
-            // Umbral visual (0.4) un poco mayor al lógico (0.3) para dar feedback anticipado
             const snapThreshold = this.pieceWidth * 0.4; 
 
             if (dist < snapThreshold) {
                 this.ctx.save();
-                this.ctx.translate(p.correctX, p.correctY); // Dibujar en la posición correcta
-                
-                // Estilo del Ghost
-                this.ctx.fillStyle = "rgba(255, 255, 255, 0.3)"; 
+                this.ctx.translate(p.correctX, p.correctY);
+                this.ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
                 this.ctx.fill(p.path); 
-                this.ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
-                this.ctx.lineWidth = 2;
+                this.ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+                this.ctx.lineWidth = 1.5;
                 this.ctx.stroke(p.path);
-                
                 this.ctx.restore();
             }
-            // ----------------------------------------
 
             this.renderPieceToContext(this.ctx, this.selectedPiece, true);
         }
 
         // 5. Partículas
         this.updateParticles();
+
+        // 6. [Precision Tech] Destellos de snap (borde esmeralda, 150ms)
+        this.updateSnapFlashes();
     }
 
     updateStaticLayer() {
         const ctx = this.staticCtx;
         ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
 
-        // Tapete del tablero
-        ctx.fillStyle = "rgba(255, 255, 255, 0.06)"; 
-        ctx.fillRect(Math.round(this.boardX), Math.round(this.boardY), Math.round(this.boardWidth), Math.round(this.boardHeight));
-        
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(Math.round(this.boardX), Math.round(this.boardY), Math.round(this.boardWidth), Math.round(this.boardHeight));
+        const bx = Math.round(this.boardX);
+        const by = Math.round(this.boardY);
+        const bw = Math.round(this.boardWidth);
+        const bh = Math.round(this.boardHeight);
 
-        for(let i=0; i<this.lockedPieces.length; i++) {
+        // [Precision Tech] Fondo del tablero: sólido oscuro
+        ctx.fillStyle = "#0D1520";
+        ctx.fillRect(bx, by, bw, bh);
+
+        // [Precision Tech] Rejilla de referencia espacial (1px, #1E293B)
+        // Proporciona referencia visual de posición sin profundidad por capas.
+        ctx.save();
+        ctx.strokeStyle = "#1E293B";
+        ctx.lineWidth = 1;
+        // Líneas verticales
+        for (let col = 0; col <= this.gridSize; col++) {
+            const x = Math.round(this.boardX + col * this.pieceWidth);
+            ctx.beginPath();
+            ctx.moveTo(x, by);
+            ctx.lineTo(x, by + bh);
+            ctx.stroke();
+        }
+        // Líneas horizontales
+        for (let row = 0; row <= this.gridSize; row++) {
+            const y = Math.round(this.boardY + row * this.pieceHeight);
+            ctx.beginPath();
+            ctx.moveTo(bx, y);
+            ctx.lineTo(bx + bw, y);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Borde exterior del tablero: azul eléctrico, 1px
+        ctx.strokeStyle = "#3B82F6";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, by, bw, bh);
+
+        // Piezas bloqueadas en capa estática
+        for (let i = 0; i < this.lockedPieces.length; i++) {
             this.renderPieceToContext(ctx, this.lockedPieces[i], false, true);
         }
     }
@@ -265,22 +301,19 @@ export class PuzzleEngine {
         const drawY = Math.round(p.currentY);
         ctx.translate(drawX, drawY);
 
-        if (!isStaticRender && !p.isLocked && this.shadowBlur > 0) {
-            ctx.shadowColor = "rgba(0,0,0,0.4)";
-            ctx.shadowBlur = isSelected ? 15 : this.shadowBlur;
-            ctx.shadowOffsetY = isSelected ? 8 : 2;
-            if (isSelected) {
-                ctx.translate(this.pieceWidth/2, this.pieceHeight/2);
-                ctx.scale(1.1, 1.1);
-                ctx.translate(-this.pieceWidth/2, -this.pieceHeight/2);
-            }
+        // [Precision Tech] Sin sombras difusas (shadowBlur = 0 siempre).
+        // La pieza seleccionada se levanta con escala 1.05x.
+        if (!isStaticRender && !p.isLocked && isSelected) {
+            ctx.translate(this.pieceWidth / 2, this.pieceHeight / 2);
+            ctx.scale(1.05, 1.05);
+            ctx.translate(-this.pieceWidth / 2, -this.pieceHeight / 2);
         }
 
         ctx.clip(p.path);
 
         const margin = Math.min(
             Math.max(this.pieceWidth, this.pieceHeight),
-            this.tabSize * 3 
+            this.tabSize * 3
         );
         
         let overlapFix = isStaticRender ? 0.6 : 0; 
@@ -304,17 +337,63 @@ export class PuzzleEngine {
         ctx.drawImage(this.sourceCanvas, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
         ctx.restore();
 
+        // Trazos de borde (sin sombras)
         if (!isStaticRender && !p.isLocked) {
             ctx.save();
             ctx.translate(drawX, drawY);
+
             if (isSelected) {
-                ctx.translate(this.pieceWidth/2, this.pieceHeight/2);
-                ctx.scale(1.1, 1.1);
-                ctx.translate(-this.pieceWidth/2, -this.pieceHeight/2);
+                // [Precision Tech] Pieza levantada: escala 1.05 + trazo blanco 2px
+                ctx.translate(this.pieceWidth / 2, this.pieceHeight / 2);
+                ctx.scale(1.05, 1.05);
+                ctx.translate(-this.pieceWidth / 2, -this.pieceHeight / 2);
+                ctx.strokeStyle = "#FFFFFF";
+                ctx.lineWidth = 2;
+                ctx.stroke(p.path);
+            } else {
+                // Pieza suelta normal: trazo sutil
+                ctx.strokeStyle = "rgba(255,255,255,0.22)";
+                ctx.lineWidth = 1;
+                ctx.stroke(p.path);
             }
-            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1; ctx.stroke(p.path);
-            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 1; ctx.stroke(p.path);
+
             ctx.restore();
+        }
+    }
+
+    /**
+     * [Precision Tech] Actualiza y renderiza los destellos de snap.
+     * Cada destello dura 150ms y emite un trazo perimetral en #10B981
+     * que se desvanece desde opacidad 1 → 0.
+     */
+    updateSnapFlashes() {
+        if (this.snapFlashes.length === 0) return;
+        const now = performance.now();
+
+        for (let i = this.snapFlashes.length - 1; i >= 0; i--) {
+            const flash = this.snapFlashes[i];
+
+            // Inicializar tiempo de inicio en el primer frame
+            if (!flash.startTime) flash.startTime = now;
+
+            const elapsed = now - flash.startTime;
+            const t = elapsed / 150; // Normalizado 0→1 en 150ms
+
+            if (t >= 1) {
+                this.snapFlashes.splice(i, 1);
+                continue;
+            }
+
+            const alpha  = 1 - t;
+            const width  = 4 - t * 2; // 4px → 2px mientras se desvanece
+            const p      = flash.piece;
+
+            this.ctx.save();
+            this.ctx.translate(Math.round(p.currentX), Math.round(p.currentY));
+            this.ctx.strokeStyle = `rgba(16, 185, 129, ${alpha})`;
+            this.ctx.lineWidth = width;
+            this.ctx.stroke(p.path);
+            this.ctx.restore();
         }
     }
 
@@ -329,10 +408,10 @@ export class PuzzleEngine {
             for (let x = 0; x < this.gridSize; x++) {
                 const shape = this.shapes[y][x];
                 const jitter = {
-                    top: this.horizontalEdges[y][x],
-                    bottom: this.horizontalEdges[y+1][x],
-                    left: this.verticalEdges[y][x],
-                    right: this.verticalEdges[y][x+1]
+                    top:    this.horizontalEdges[y][x],
+                    bottom: this.horizontalEdges[y + 1][x],
+                    left:   this.verticalEdges[y][x],
+                    right:  this.verticalEdges[y][x + 1]
                 };
                 const path = this.createPath(this.pieceWidth, this.pieceHeight, shape, jitter);
                 this.pieces.push({
@@ -352,7 +431,7 @@ export class PuzzleEngine {
             p.path = this.createPath(this.pieceWidth, this.pieceHeight, p.shape, p.jitter);
             p.correctX = this.boardX + (p.gridX * this.pieceWidth);
             p.correctY = this.boardY + (p.gridY * this.pieceHeight);
-            if(p.isLocked) {
+            if (p.isLocked) {
                 p.currentX = p.correctX;
                 p.currentY = p.correctY;
             }
@@ -360,8 +439,7 @@ export class PuzzleEngine {
     }
 
     /**
-     * SHUFFLE REVISADO (v13.3)
-     * Implementa "Zonas Caóticas" y "Collision Avoidance"
+     * SHUFFLE (v13.3) — Zonas Caóticas + Collision Avoidance
      */
     shufflePieces(repositionOnly = false) {
         this.updatePieceCaches();
@@ -374,7 +452,7 @@ export class PuzzleEngine {
             }
         }
 
-        const topSafe = 80;
+        const topSafe    = 80;
         const bottomSafe = 160;
 
         const zones = [
@@ -415,22 +493,19 @@ export class PuzzleEngine {
             if (p.isLocked) continue;
 
             let placedOK = false;
-            let tries = 0;
+            let tries    = 0;
             const maxTries = 50; 
 
             while (!placedOK && tries < maxTries) {
                 tries++;
-                const z = validZones[Math.floor(Math.random() * validZones.length)];
+                const z  = validZones[Math.floor(Math.random() * validZones.length)];
                 const cx = z.x + Math.random() * (z.w - this.pieceWidth);
                 const cy = z.y + Math.random() * (z.h - this.pieceHeight);
 
                 let collision = false;
                 for (const pos of placedPositions) {
                     const dist = Math.hypot(pos.x - cx, pos.y - cy);
-                    if (dist < this.pieceWidth * 0.7) {
-                        collision = true;
-                        break;
-                    }
+                    if (dist < this.pieceWidth * 0.7) { collision = true; break; }
                 }
 
                 if (!collision) {
@@ -470,13 +545,19 @@ export class PuzzleEngine {
             this.shapes.push(row);
         }
         this.verticalEdges = []; 
-        for(let y = 0; y < this.gridSize; y++) {
-            const row = []; for(let x = 0; x <= this.gridSize; x++) row.push((x===0||x===this.gridSize)?0:(Math.random()-0.5)*jitterStrength);
+        for (let y = 0; y < this.gridSize; y++) {
+            const row = [];
+            for (let x = 0; x <= this.gridSize; x++) {
+                row.push((x === 0 || x === this.gridSize) ? 0 : (Math.random() - 0.5) * jitterStrength);
+            }
             this.verticalEdges.push(row);
         }
         this.horizontalEdges = [];
-        for(let y = 0; y <= this.gridSize; y++) {
-            const row = []; for(let x = 0; x < this.gridSize; x++) row.push((y===0||y===this.gridSize)?0:(Math.random()-0.5)*jitterStrength);
+        for (let y = 0; y <= this.gridSize; y++) {
+            const row = [];
+            for (let x = 0; x < this.gridSize; x++) {
+                row.push((y === 0 || y === this.gridSize) ? 0 : (Math.random() - 0.5) * jitterStrength);
+            }
             this.horizontalEdges.push(row);
         }
     }
@@ -485,24 +566,32 @@ export class PuzzleEngine {
         const path = new Path2D();
         const t = this.tabSize; 
         path.moveTo(0, 0);
-        shape.top !== 0 ? this.lineToTab(path, 0, 0, w, 0, shape.top * t, jitter.top * t) : path.lineTo(w, 0);
-        shape.right !== 0 ? this.lineToTab(path, w, 0, w, h, shape.right * t, jitter.right * t) : path.lineTo(w, h);
+        shape.top    !== 0 ? this.lineToTab(path, 0, 0, w, 0, shape.top    * t, jitter.top    * t) : path.lineTo(w, 0);
+        shape.right  !== 0 ? this.lineToTab(path, w, 0, w, h, shape.right  * t, jitter.right  * t) : path.lineTo(w, h);
         shape.bottom !== 0 ? this.lineToTab(path, w, h, 0, h, shape.bottom * t, jitter.bottom * t) : path.lineTo(0, h);
-        shape.left !== 0 ? this.lineToTab(path, 0, h, 0, 0, shape.left * t, jitter.left * t) : path.lineTo(0, 0);
+        shape.left   !== 0 ? this.lineToTab(path, 0, h, 0, 0, shape.left   * t, jitter.left   * t) : path.lineTo(0, 0);
         path.closePath();
         return path;
     }
     
     lineToTab(path, x1, y1, x2, y2, amp, shift) {
         const w = x2 - x1; const h = y2 - y1;
-        const cx = x1 + w * 0.5 + (w===0 ? shift : 0);
-        const cy = y1 + h * 0.5 + (h===0 ? shift : 0);
+        const cx = x1 + w * 0.5 + (w === 0 ? shift : 0);
+        const cy = y1 + h * 0.5 + (h === 0 ? shift : 0);
         const perpX = -h / Math.abs(h || 1); const perpY = w / Math.abs(w || 1);
         const xA = x1 + w * 0.35; const yA = y1 + h * 0.35;
         const xB = x1 + w * 0.65; const yB = y1 + h * 0.65;
         path.lineTo(xA, yA);
-        path.bezierCurveTo(xA + (perpX * amp * 0.2), yA + (perpY * amp * 0.2), cx - (w * 0.1) + (perpX * amp), cy - (h * 0.1) + (perpY * amp), cx + (perpX * amp), cy + (perpY * amp));
-        path.bezierCurveTo(cx + (w * 0.1) + (perpX * amp), cy + (h * 0.1) + (perpY * amp), xB + (perpX * amp * 0.2), yB + (perpY * amp * 0.2), xB, yB);
+        path.bezierCurveTo(
+            xA + (perpX * amp * 0.2), yA + (perpY * amp * 0.2),
+            cx - (w * 0.1) + (perpX * amp), cy - (h * 0.1) + (perpY * amp),
+            cx + (perpX * amp), cy + (perpY * amp)
+        );
+        path.bezierCurveTo(
+            cx + (w * 0.1) + (perpX * amp), cy + (h * 0.1) + (perpY * amp),
+            xB + (perpX * amp * 0.2), yB + (perpY * amp * 0.2),
+            xB, yB
+        );
         path.lineTo(x2, y2);
     }
 
@@ -514,12 +603,13 @@ export class PuzzleEngine {
     }
 
     handleStart(e) {
-        e.preventDefault(); const { x, y } = this.getPointerPos(e);
+        e.preventDefault();
+        const { x, y } = this.getPointerPos(e);
         
         for (let i = this.loosePieces.length - 1; i >= 0; i--) {
             const p = this.loosePieces[i]; 
             const m = this.tabSize * 2.0; 
-            if (x >= p.currentX - m && x <= p.currentX + this.pieceWidth + m && 
+            if (x >= p.currentX - m && x <= p.currentX + this.pieceWidth  + m && 
                 y >= p.currentY - m && y <= p.currentY + this.pieceHeight + m) {
                 
                 this.selectedPiece = p; 
@@ -528,7 +618,6 @@ export class PuzzleEngine {
                 this.dragOffsetY = y - p.currentY;
                 
                 this.wakeUp();
-                
                 this.callbacks.onSound && this.callbacks.onSound('click');
                 
                 this.loosePieces.splice(i, 1);
@@ -552,7 +641,10 @@ export class PuzzleEngine {
     handleEnd(e) {
         if (!this.isDragging || !this.selectedPiece) return;
         
-        const dist = Math.hypot(this.selectedPiece.currentX - this.selectedPiece.correctX, this.selectedPiece.currentY - this.selectedPiece.correctY);
+        const dist = Math.hypot(
+            this.selectedPiece.currentX - this.selectedPiece.correctX,
+            this.selectedPiece.currentY - this.selectedPiece.correctY
+        );
         
         if (dist < this.pieceWidth * 0.3) {
             this.selectedPiece.currentX = this.selectedPiece.correctX;
@@ -561,17 +653,23 @@ export class PuzzleEngine {
             this.needsStaticUpdate = true; 
             this.updatePieceCaches();
             
+            // [Precision Tech] Destello esmeralda en el borde de la pieza encajada
+            this.snapFlashes.push({ piece: this.selectedPiece, startTime: null });
+            this.wakeUp(); // Asegurar que el loop está activo para el flash
+
             this.callbacks.onSound && this.callbacks.onSound('snap');
-            // --- NUEVO: TRIGGER DE VIBRACIÓN ---
-            this.callbacks.onSnap && this.callbacks.onSnap(); 
-            // -----------------------------------
+            this.callbacks.onSnap  && this.callbacks.onSnap();
             
-            this.spawnParticles(this.selectedPiece.currentX + this.pieceWidth/2, this.selectedPiece.currentY + this.pieceHeight/2, 'ripple');
+            this.spawnParticles(
+                this.selectedPiece.currentX + this.pieceWidth  / 2,
+                this.selectedPiece.currentY + this.pieceHeight / 2,
+                'ripple'
+            );
             
-            if(this.callbacks.onStateChange) this.callbacks.onStateChange();
+            if (this.callbacks.onStateChange) this.callbacks.onStateChange();
             this.checkVictory();
         } else {
-            if(this.callbacks.onStateChange) this.callbacks.onStateChange();
+            if (this.callbacks.onStateChange) this.callbacks.onStateChange();
         }
         
         this.isDragging = false;
@@ -581,10 +679,10 @@ export class PuzzleEngine {
     checkVictory() { 
         if (this.loosePieces.length === 0) { 
             if (this.gridSize < 8) {
-                this.spawnParticles(this.logicalWidth/2, this.logicalHeight/2, 'confetti'); 
+                this.spawnParticles(this.logicalWidth / 2, this.logicalHeight / 2, 'confetti'); 
             }
-            if(this.callbacks.onSound) this.callbacks.onSound('win'); 
-            if(this.callbacks.onWin) setTimeout(this.callbacks.onWin, 1500); 
+            if (this.callbacks.onSound) this.callbacks.onSound('win'); 
+            if (this.callbacks.onWin) setTimeout(this.callbacks.onWin, 1500); 
             this.canvas.removeEventListener('mousedown', this.handleStart); 
             this.canvas.removeEventListener('touchstart', this.handleStart); 
         } 
@@ -592,74 +690,121 @@ export class PuzzleEngine {
 
     spawnParticles(x, y, type) {
         if (type === 'ripple') {
-            this.particles.push({ type: 'ripple', x: x, y: y, radius: 10, alpha: 1.0, color: '#ffffff', lineWidth: 4, speed: 3 });
-            this.particles.push({ type: 'ripple', x: x, y: y, radius: 5, alpha: 1.0, color: '#fbbf24', lineWidth: 2, speed: 1.5 });
+            this.particles.push({ type: 'ripple', x, y, radius: 10, alpha: 1.0, color: '#ffffff', lineWidth: 4, speed: 3 });
+            this.particles.push({ type: 'ripple', x, y, radius: 5,  alpha: 1.0, color: '#fbbf24', lineWidth: 2, speed: 1.5 });
         } else {
             if (this.particles.length > this.particleLimit) return;
-            const count = 30; const colors = ['#f43f5e', '#3b82f6', '#10b981', '#fbbf24', '#fff'];
-            for(let i=0; i<count; i++) this.particles.push({ type: 'confetti', x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0, color: colors[Math.floor(Math.random()*colors.length)], size: Math.random()*4+2 });
+            const count  = 30;
+            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#fbbf24', '#fff'];
+            for (let i = 0; i < count; i++) {
+                this.particles.push({
+                    type: 'confetti', x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 4 + 2
+                });
+            }
         }
     }
 
     updateParticles() {
-        if(this.particles.length===0) return;
-        for(let i=this.particles.length-1; i>=0; i--) {
+        if (this.particles.length === 0) return;
+        for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             if (p.type === 'ripple') {
-                p.radius += p.speed; p.alpha -= 0.04; p.lineWidth *= 0.95;
-                if(p.alpha <= 0) this.particles.splice(i, 1);
-                else { this.ctx.save(); this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); this.ctx.strokeStyle = p.color; this.ctx.lineWidth = p.lineWidth; this.ctx.globalAlpha = p.alpha; this.ctx.stroke(); this.ctx.restore(); }
+                p.radius    += p.speed;
+                p.alpha     -= 0.04;
+                p.lineWidth *= 0.95;
+                if (p.alpha <= 0) {
+                    this.particles.splice(i, 1);
+                } else {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.strokeStyle   = p.color;
+                    this.ctx.lineWidth     = p.lineWidth;
+                    this.ctx.globalAlpha   = p.alpha;
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                }
             } else {
-                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.03;
-                if(p.life<=0) this.particles.splice(i, 1);
-                else { this.ctx.globalAlpha = p.life; this.ctx.fillStyle = p.color; this.ctx.fillRect(p.x, p.y, p.size, p.size); }
+                p.x   += p.vx;
+                p.y   += p.vy;
+                p.vy  += 0.2;
+                p.life -= 0.03;
+                if (p.life <= 0) {
+                    this.particles.splice(i, 1);
+                } else {
+                    this.ctx.globalAlpha = p.life;
+                    this.ctx.fillStyle   = p.color;
+                    this.ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
             }
         }
         this.ctx.globalAlpha = 1;
     }
 
-    exportState() { return this.pieces.map(p => ({ id: p.id, cx: p.currentX, cy: p.currentY, locked: p.isLocked })); }
-    
-    importState(s) { 
-        if(!s) return; 
-        s.forEach(sp => { const p = this.pieces.find(x=>x.id===sp.id); if(p){ p.currentX=sp.cx; p.currentY=sp.cy; p.isLocked=sp.locked; } }); 
-        this.updatePieceCaches(); this.needsStaticUpdate=true; this.wakeUp();
+    exportState() {
+        return this.pieces.map(p => ({ id: p.id, cx: p.currentX, cy: p.currentY, locked: p.isLocked }));
     }
     
-    togglePreview(a) { this.showPreview=a; this.wakeUp(); }
+    importState(s) { 
+        if (!s) return; 
+        s.forEach(sp => {
+            const p = this.pieces.find(x => x.id === sp.id);
+            if (p) { p.currentX = sp.cx; p.currentY = sp.cy; p.isLocked = sp.locked; }
+        }); 
+        this.updatePieceCaches();
+        this.needsStaticUpdate = true;
+        this.wakeUp();
+    }
+    
+    togglePreview(a) {
+        this.showPreview = a;
+        this.wakeUp();
+    }
     
     autoPlacePiece() { 
-        if(this.loosePieces.length===0) return false; 
-        const p = this.loosePieces[Math.floor(Math.random()*this.loosePieces.length)]; 
-        this.spawnParticles(p.correctX+this.pieceWidth/2, p.correctY+this.pieceHeight/2, 'ripple'); 
-        p.currentX=p.correctX; p.currentY=p.correctY; p.isLocked=true; 
-        this.updatePieceCaches(); this.needsStaticUpdate=true;
-        if(this.callbacks.onSound) this.callbacks.onSound('snap'); 
-        this.checkVictory(); this.wakeUp(); return true; 
+        if (this.loosePieces.length === 0) return false; 
+        const p = this.loosePieces[Math.floor(Math.random() * this.loosePieces.length)];
+        this.spawnParticles(p.correctX + this.pieceWidth / 2, p.correctY + this.pieceHeight / 2, 'ripple');
+        p.currentX  = p.correctX;
+        p.currentY  = p.correctY;
+        p.isLocked  = true;
+        // [Precision Tech] Flash de snap también para el imán
+        this.snapFlashes.push({ piece: p, startTime: null });
+        this.updatePieceCaches();
+        this.needsStaticUpdate = true;
+        if (this.callbacks.onSound) this.callbacks.onSound('snap'); 
+        this.checkVictory();
+        this.wakeUp();
+        return true; 
     }
 
     addEventListeners() {
-        this.canvas.addEventListener('mousedown', this.handleStart); 
-        window.addEventListener('mousemove', this.handleMove); 
+        this.canvas.addEventListener('mousedown', this.handleStart);
+        window.addEventListener('mousemove', this.handleMove);
         window.addEventListener('mouseup', this.handleEnd);
-        this.canvas.addEventListener('touchstart', this.handleStart, {passive:false}); 
-        window.addEventListener('touchmove', this.handleMove, {passive:false}); 
+        this.canvas.addEventListener('touchstart', this.handleStart, { passive: false });
+        window.addEventListener('touchmove', this.handleMove, { passive: false });
         window.addEventListener('touchend', this.handleEnd);
         
-        if(!this._resizeObserver && typeof ResizeObserver!=='undefined') { 
-            this._resizeObserver=new ResizeObserver(()=>this.handleResize()); 
-            this._resizeObserver.observe(this.canvas.parentElement); 
+        if (!this._resizeObserver && typeof ResizeObserver !== 'undefined') {
+            this._resizeObserver = new ResizeObserver(() => this.handleResize());
+            this._resizeObserver.observe(this.canvas.parentElement);
         }
     }
     
     destroy() {
         this.isLoopRunning = false; 
-        this.canvas.removeEventListener('mousedown', this.handleStart); 
-        window.removeEventListener('mousemove', this.handleMove); 
+        this.canvas.removeEventListener('mousedown', this.handleStart);
+        window.removeEventListener('mousemove', this.handleMove);
         window.removeEventListener('mouseup', this.handleEnd);
-        this.canvas.removeEventListener('touchstart', this.handleStart); 
-        window.removeEventListener('touchmove', this.handleMove); 
+        this.canvas.removeEventListener('touchstart', this.handleStart);
+        window.removeEventListener('touchmove', this.handleMove);
         window.removeEventListener('touchend', this.handleEnd);
-        if(this._resizeObserver) this._resizeObserver.disconnect();
+        if (this._resizeObserver) this._resizeObserver.disconnect();
     }
 }
