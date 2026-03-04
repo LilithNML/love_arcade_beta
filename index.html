@@ -1160,7 +1160,11 @@
         document.getElementById('btn-edit-identity')
             ?.addEventListener('click', () => openIdentityModal('edit'));
 
-        // ── Event listeners — solo se registran en DOMContentLoaded ─────────
+        // ── Post-claim UI refresh ────────────────────────────────────────────
+        // El handler principal de #btn-daily (reclamo, validación, mensaje)
+        // vive en app.js. Este listener solo refresca la UI del HUD
+        // (countdown y racha) con un pequeño delay para que el store ya esté
+        // actualizado cuando se lean los valores.
         document.addEventListener('DOMContentLoaded', () => {
             const dailyBtn = document.getElementById('btn-daily');
             if (dailyBtn) {
@@ -1168,9 +1172,6 @@
                     setTimeout(() => {
                         updateCountdownDisplay();
                         updateStreakBar();
-                        document.querySelectorAll('.coin-display').forEach(el => {
-                            if (window.GameCenter) el.textContent = window.GameCenter.getBalance();
-                        });
                     }, 80);
                 });
             }
