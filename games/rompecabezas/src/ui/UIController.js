@@ -2,12 +2,10 @@
  * UIController.js
  * Encargado de la manipulación del DOM, transiciones de pantalla y renderizado de listas.
  *
- * Actualizado v3.0 — Tactical HUD & Precision Geometry:
- * - showScreen() fuerza replay de animaciones de stagger al cambiar pantalla.
- * - renderLevelsGrid() aplica animation-delay escalonado en cada tarjeta.
- * - initGlobalInteractions() registra delegación de eventos para la animación
- *   de "release bounce" (0.96 → 1.02 → 1.0) usando Web Animations API,
- *   sin animar width/height/margin/padding (sólo transform).
+ * Actualizado v4.0 — Tactical Soul:
+ * - initGlobalInteractions(): release bounce corregido a 0.96 → 1.04 → 1.0 (era 1.02).
+ * - renderLevelsGrid(): stagger delay actualizado a 0.04s × índice (era 0.03s).
+ * - Sin otros cambios de lógica — todas las correcciones son de motion design.
  */
 
 import { Storage } from '../systems/Storage.js';
@@ -22,22 +20,23 @@ export const UI = {
     },
 
     /**
-     * Inicializa las interacciones táctiles/mouse globales.
-     * Debe llamarse una vez al arrancar la app.
+     * Initialises global touch/mouse interactions.
+     * Call once at app startup.
+     *
+     * Release bounce: 0.96 (press) → 1.04 (overshoot) → 1.0 (settle) in 200 ms.
+     * Driven entirely by the Web Animations API (only transform — GPU composited).
      */
     initGlobalInteractions() {
-        // Release bounce: 0.96 (pressed) → 1.02 (overshoot) → 1.0 (settle)
-        // Driven entirely by Web Animations API (only transform — GPU accelerated).
         const selector = '.btn, .btn-icon, .btn-circle';
 
         const onRelease = (e) => {
             const el = e.target.closest(selector);
             if (!el) return;
-            // Web Animations API: runs off-thread on composited layers
+
             el.animate(
                 [
                     { transform: 'scale3d(0.96, 0.96, 1)', easing: 'ease-out' },
-                    { transform: 'scale3d(1.02, 1.02, 1)' },
+                    { transform: 'scale3d(1.04, 1.04, 1)' },  // overshoot: 1.04 (was 1.02)
                     { transform: 'scale3d(1.00, 1.00, 1)' }
                 ],
                 { duration: 200, fill: 'none' }
@@ -49,7 +48,8 @@ export const UI = {
     },
 
     /**
-     * Cambia la pantalla activa con transición y replay de stagger.
+     * Switches the active screen with a slide transition.
+     * Forces a CSS animation replay on nav buttons via reflow.
      */
     showScreen(targetIdOrName) {
         let targetScreen = document.getElementById(targetIdOrName);
@@ -71,19 +71,19 @@ export const UI = {
         targetScreen.style.pointerEvents = 'all';
         window.scrollTo(0, 0);
 
-        // Force-replay stagger animations on nav buttons each time the menu
-        // is shown (works by voiding the animation via reflow).
+        // Force-replay stagger animations on nav buttons each time the
+        // menu is shown (void reflow trick to restart CSS animations).
         const navBtns = targetScreen.querySelectorAll('.main-nav .btn');
         navBtns.forEach(btn => {
             btn.style.animation = 'none';
-            void btn.offsetHeight; // trigger reflow
+            void btn.offsetHeight;
             btn.style.animation = '';
         });
     },
 
     /**
-     * Renderiza la cuadrícula de niveles con animación de stagger escalonado.
-     * Cada tarjeta entra con un delay de 30ms × índice.
+     * Renders the level grid with staggered card entry animation.
+     * Each card enters 0.04 s after the previous (updated from 0.03 s).
      */
     renderLevelsGrid(levelsWithStatus, onLevelSelect) {
         const container = document.getElementById('levels-container');
@@ -102,8 +102,8 @@ export const UI = {
 
             card.className = `level-card skeleton ${statusClass}`;
 
-            // [v15] Stagger delay: each card enters 30ms after the previous
-            card.style.animationDelay = `${index * 0.03}s`;
+            // Stagger: each card enters 0.04 s after the previous
+            card.style.animationDelay = `${index * 0.04}s`;
 
             // --- IMAGE (THUMBNAIL) ---
             const img = new Image();
@@ -154,7 +154,7 @@ export const UI = {
     },
 
     /**
-     * Actualiza el HUD durante el juego.
+     * Updates HUD elements during gameplay.
      */
     updateHUD(levelId, timeStr) {
         const lvlEl  = document.getElementById('hud-level');
@@ -167,7 +167,7 @@ export const UI = {
     },
 
     /**
-     * Muestra el modal de victoria con estrellas animadas.
+     * Shows the victory modal with animated star display.
      */
     showVictoryModal(coins, timeStr, stars, onNext, onMenu) {
         const modal = document.getElementById('modal-victory');
