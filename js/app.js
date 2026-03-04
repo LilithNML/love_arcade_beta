@@ -1,6 +1,19 @@
 /**
- * Game Center Core v9.3 — Zero-Flicker Initiative
+ * Game Center Core v9.4 — Identity Update
  * Compatible con gamecenter_v6_promos — migración silenciosa incluida.
+ *
+ * NOVEDADES v9.4 (Identity Update):
+ *  - store.nickname (string, max 15 chars): nombre personalizado del usuario.
+ *  - store.gender ('o'|'a'|'@'): sufijo del saludo ("Bienvenid@").
+ *  - migrateState(): incluye validación silenciosa de ambos campos nuevos.
+ *  - applyIdentity(): escribe nickname y sufijo en el DOM de forma síncrona
+ *    antes de revealUI(), manteniendo la Zero-Flicker Initiative.
+ *  - GameCenter.setIdentity(nickname, gender): guarda y aplica identidad.
+ *  - GameCenter.getIdentity(): lectura segura de nickname y gender.
+ *  - GameCenter.hasIdentity(): comprueba si el nickname está configurado.
+ *  - Flujo de bienvenida: si nickname está vacío al cargar, el inline script
+ *    de index.html muestra el Identity Modal y llama a revealUI() al confirmar.
+ *    El .player-hud permanece en opacity:0 durante ese tiempo.
  *
  * NOVEDADES v9.3 (Zero-Flicker Initiative):
  *  - Script crítico inline en <head> de index.html: lee el tema del
@@ -14,41 +27,22 @@
  *  - revealUI(): añade .is-ready y .coin-badge--visible en el siguiente RAF,
  *    garantizando que los contenedores de datos críticos sólo se revelan
  *    después de que sus valores reales han sido escritos.
- *  - styles.css: .hud-avatar-wrap comienza con opacity:0 y transiciona a 1
- *    cuando recibe .is-ready, evitando el destello del avatar por defecto.
+ *  - styles.css: .player-hud y .hud-avatar-wrap comienzan con opacity:0 y
+ *    transicionan a 1 cuando reciben .is-ready.
  *
  * NOVEDADES v9.2 (Font FOIT/FOUT, Coin Init & Treasury Grid):
- *  - DOMContentLoaded: escribe el saldo inicial de forma SÍNCRONA y formateada
- *    en los .coin-display ANTES de cualquier animación, eliminando el "salto"
- *    de número crudo → formato "k".
- *  - Tras el pintado inicial, añade .coin-badge--visible (opacity: 0→1 en 150ms)
- *    para que el badge nunca muestre el "0" del HTML ni valores sin formatear.
+ *  - Init silencioso del saldo: escribe el valor formateado síncronamente.
+ *  - .coin-badge--visible: fade-in de 150ms tras la sincronización inicial.
  *
  * NOVEDADES v9.1 (History API, Retry UI & Theme Fix):
- *  - applyTheme(): ahora escribe la clase `theme-{key}` en <body> y elimina
- *    todas las clases de tema previas antes de añadir la nueva.
- *    El atributo data-theme se mantiene para retrocompatibilidad con CSS.
- *  - Listener de .theme-btn eliminado de DOMContentLoaded de app.js para
- *    evitar doble-registro con shop-logic.js. La fuente de verdad es app.js
- *    vía setTheme(); los listeners se registran una sola vez en shop-logic.js.
+ *  - applyTheme(): clase theme-{key} en <body> + data-theme en <html>.
  *
  * NOVEDADES v9.0 (SPA Migration):
- *  - Arquitectura SPA: index.html unificado con #view-home y #view-shop.
- *  - shop.html eliminado; toda su lógica migrada a js/shop-logic.js.
- *  - Nuevo módulo js/spa-router.js intercepta navegación sin recargas.
- *  - getState(): expone lectura segura del store para módulos externos.
- *  - syncUI(): fuerza sincronización completa del saldo sin esperar a saveState().
- *  - Worker path actualizado a 'js/sync-worker.js' (estructura js/).
+ *  - Arquitectura SPA unificada. shop.html eliminado.
+ *  - getState(), syncUI() expuestos para módulos externos.
  *
  * NOVEDADES v8.1 (Daily Claim Security):
- *  - getNetworkTime(): sincronización con worldtimeapi.org; fallback a Date.now() con estado "Unverified"
- *  - Bloqueo si discrepancia reloj local/red > 5 minutos ("Reloj desincronizado")
- *  - Cambio de lógica 24 h → Día Natural (reset a las 00:00:00); elimina "desplazamiento de horario"
- *  - Fórmula de racha basada en días calendario: diff=1 streak++, diff>1 reset, diff=0 ya reclamado
- *  - Prevención de race conditions: btn-daily se desactiva síncronamente antes de cualquier Promise
- *  - Feedback visual "Procesando..." mientras la petición está en vuelo
- *  - Sanitización de saltos negativos: currentTime < lastClaimTime → mensaje informativo, racha intacta
- *  - Recompensas críticas (Bendición Lunar) bloqueadas si el tiempo es "Unverified"
+ *  - getNetworkTime(), lógica de días calendario, anti-race-condition.
  */
 
 // =====================================================
@@ -249,7 +243,10 @@ function migrateState(loadedStore) {
         theme:          'violet',
         wishlist:       [],
         daily:          { lastClaim: 0, streak: 0 },
-        buffs:          { moonBlessingExpiry: 0 }
+        buffs:          { moonBlessingExpiry: 0 },
+        // v9.4 — Identity
+        nickname:       '',    // Máx. 15 chars. Vacío = primer acceso → flujo de bienvenida.
+        gender:         '@'    // 'o' | 'a' | '@' — controla el sufijo del saludo.
     };
 
     const merged = { ...defaults, ...loadedStore };
@@ -269,6 +266,10 @@ function migrateState(loadedStore) {
     if (!Array.isArray(merged.wishlist))        merged.wishlist = [];
     if (!Array.isArray(merged.redeemedHashes))  merged.redeemedHashes = [];
     if (!Array.isArray(merged.history))         merged.history = [];
+
+    // v9.4 — Validación de identidad (migración silenciosa)
+    if (typeof merged.nickname !== 'string')           merged.nickname = '';
+    if (!['o', 'a', '@'].includes(merged.gender))      merged.gender   = '@';
 
     return merged;
 }
@@ -714,19 +715,45 @@ window.GameCenter = {
     },
     getTheme: () => store.theme || 'violet',
 
+    // ── IDENTIDAD — v9.4 ─────────────────────────────────────────────────────
+
+    /**
+     * Guarda el nickname y género elegidos por el usuario y actualiza el DOM.
+     * @param {string} nickname  Nombre a mostrar (max 15 chars, se recorta).
+     * @param {'o'|'a'|'@'} gender  Sufijo del saludo.
+     */
+    setIdentity: (nickname, gender) => {
+        const VALID_GENDERS = ['o', 'a', '@'];
+        store.nickname = String(nickname).trim().slice(0, 15);
+        store.gender   = VALID_GENDERS.includes(gender) ? gender : '@';
+        saveState();
+        applyIdentity();
+    },
+
+    /** @returns {{ nickname: string, gender: 'o'|'a'|'@' }} */
+    getIdentity: () => ({
+        nickname: store.nickname || '',
+        gender:   store.gender   || '@'
+    }),
+
+    /** @returns {boolean} true si el usuario ya eligió un nickname. */
+    hasIdentity: () => Boolean(store.nickname?.trim()),
+
     // ── SPA / MÓDULOS EXTERNOS ────────────────────────────────────────────────
 
     /**
      * Devuelve una lectura segura (sin referencia) del estado público del store.
      * Usado por shop-logic.js (renderStreakCalendar) y spa-router.js.
      * No expone el objeto store completo para evitar mutaciones externas.
-     * @returns {{ coins: number, streak: number, theme: string, moonBlessingExpiry: number }}
+     * @returns {{ coins: number, streak: number, theme: string, moonBlessingExpiry: number, nickname: string, gender: string }}
      */
     getState: () => ({
         coins:               store.coins,
         streak:              store.daily?.streak || 0,
         theme:               store.theme || 'violet',
-        moonBlessingExpiry:  store.buffs?.moonBlessingExpiry || 0
+        moonBlessingExpiry:  store.buffs?.moonBlessingExpiry || 0,
+        nickname:            store.nickname || '',
+        gender:              store.gender   || '@'
     }),
 
     /**
@@ -926,6 +953,18 @@ function applyAvatar() {
     });
 }
 
+/**
+ * Escribe el nickname y el sufijo de género en el DOM del HUD de forma síncrona.
+ * Llamada antes de revealUI() para que el usuario nunca vea el estado por defecto.
+ * Si el store no tiene nickname, no modifica el DOM (el modal se encargará).
+ */
+function applyIdentity() {
+    const suffixEl   = document.getElementById('pref-suffix');
+    const nicknameEl = document.getElementById('display-nickname');
+    if (suffixEl)   suffixEl.textContent   = store.gender   || '@';
+    if (nicknameEl) nicknameEl.textContent = store.nickname || '';
+}
+
 function applyTheme(key) {
     const t    = THEMES[key] || THEMES.violet;
     const root = document.documentElement;
@@ -1087,6 +1126,11 @@ updateMoonBlessingUI();
 
 // 4. AVATAR — aplica la imagen guardada síncronamente (si existe).
 applyAvatar();
+
+// 5. IDENTIDAD — escribe nickname y sufijo de género en el DOM antes del reveal.
+//    Solo actúa si hay nickname guardado; si no, el modal de bienvenida (en el
+//    inline script de index.html) se encarga de llamar a revealUI() al confirmar.
+applyIdentity();
 
 // NOTA: revealUI() se llama desde el inline script de index.html, DESPUÉS de
 // que updateStreakBar() y updateCountdownDisplay() también hayan corrido.
