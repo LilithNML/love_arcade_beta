@@ -5,6 +5,19 @@
  * Módulo 2 / 5: Manipulación del DOM, animaciones CSS y partículas.
  * Usa variables CSS --tile-x / --tile-y para posicionar fichas.
  * Gestiona el canvas de partículas con requestAnimationFrame.
+ *
+ * CHANGELOG v1.1
+ * ──────────────
+ * [FIX]  Z-Index de Partículas: el canvas de partículas ahora tiene z-index
+ *        explícitamente más alto que el contenedor de la grilla para evitar
+ *        que las partículas queden detrás de las fichas nuevas.
+ * [NEW]  lumina_spawnConfetti(): efecto de partículas doradas desde el tope
+ *        de la pantalla, activado cuando el jugador supera su récord personal.
+ * [UPD]  lumina_showGameOver(data) y lumina_showWin(data) ahora aceptan el
+ *        objeto de sesión { coins, maxTile, isNewRecord } y populan el nuevo
+ *        modal de resumen de ingresos.
+ * [NOTE] La transición CSS de fichas fue elevada a 160ms en index.html para
+ *        cumplir el requisito mínimo de 150ms del brief.
  */
 
 'use strict';
@@ -33,18 +46,18 @@ function lumina_getTilePalette(value) {
 }
 
 // ─── Estado del Renderer ──────────────────────────────────────────────────────
-let lumina_boardEl         = null;
-let lumina_scoreEl         = null;
-let lumina_bestScoreEl     = null;
-let lumina_comboBarEl      = null;
+let lumina_boardEl          = null;
+let lumina_scoreEl          = null;
+let lumina_bestScoreEl      = null;
+let lumina_comboBarEl       = null;
 let lumina_comboContainerEl = null;
-let lumina_particleCanvas  = null;
-let lumina_particleCtx     = null;
-let lumina_particles       = [];
-let lumina_particleRAF     = null;
-let lumina_parallaxEl      = null;
-let lumina_parallaxTargetX = 0;
-let lumina_parallaxTargetY = 0;
+let lumina_particleCanvas   = null;
+let lumina_particleCtx      = null;
+let lumina_particles        = [];
+let lumina_particleRAF      = null;
+let lumina_parallaxEl       = null;
+let lumina_parallaxTargetX  = 0;
+let lumina_parallaxTargetY  = 0;
 let lumina_parallaxCurrentX = 0;
 let lumina_parallaxCurrentY = 0;
 
@@ -112,7 +125,7 @@ function lumina_renderGrid() {
 
 function lumina_syncTileEl(tile, row, col) {
     let el = lumina_tileEls.get(tile.id);
-    const pal = lumina_getTilePalette(tile.value);
+    const pal    = lumina_getTilePalette(tile.value);
     const digits = String(tile.value).length;
 
     if (!el) {
@@ -122,7 +135,7 @@ function lumina_syncTileEl(tile, row, col) {
         lumina_tileEls.set(tile.id, el);
     }
 
-    // Posición via CSS custom properties
+    // Posición via CSS custom properties — el browser anima left/top (≥160ms)
     el.style.setProperty('--tile-x', col);
     el.style.setProperty('--tile-y', row);
     el.dataset.digits = digits > 4 ? '5' : digits;
@@ -177,7 +190,6 @@ function lumina_showScorePop(diff) {
 function lumina_updateComboMeter() {
     if (!lumina_comboBarEl) return;
     lumina_comboBarEl.style.width = lumina_comboMeter + '%';
-    // Colores: cian → magenta conforme se llena
     const hue = Math.round(180 - lumina_comboMeter * 1.5);
     lumina_comboBarEl.style.background = `linear-gradient(90deg, hsl(${hue},100%,65%), hsl(${hue - 40},100%,70%))`;
     lumina_comboBarEl.style.boxShadow  = `0 0 10px hsl(${hue},100%,60%)88`;
@@ -186,7 +198,7 @@ function lumina_updateComboMeter() {
 function lumina_triggerComboFlash() {
     if (!lumina_comboContainerEl) return;
     lumina_comboContainerEl.classList.remove('lumina-combo--flash');
-    void lumina_comboContainerEl.offsetWidth; // reflow para re-trigger
+    void lumina_comboContainerEl.offsetWidth;
     lumina_comboContainerEl.classList.add('lumina-combo--flash');
 }
 
@@ -195,9 +207,6 @@ function lumina_triggerComboFlash() {
 /**
  * Emite partículas de luz en la posición de una ficha del tablero.
  * Solo activo para fusiones de 128 en adelante.
- * @param {number} col - columna (0-3)
- * @param {number} row - fila (0-3)
- * @param {number} value - valor de la ficha fusionada
  */
 function lumina_spawnParticles(col, row, value) {
     if (!lumina_particleCanvas || !lumina_boardEl || value < 128) return;
@@ -220,6 +229,35 @@ function lumina_spawnParticles(col, row, value) {
             decay: 0.018 + Math.random() * 0.022,
             size: 2 + Math.random() * 3,
             color: pal.glow,
+        });
+    }
+
+    if (!lumina_particleRAF) lumina_animateParticles();
+}
+
+/**
+ * Efecto de confeti dorado para celebrar un nuevo récord personal.
+ * Emite partículas de colores dorados y violeta desde el tope de la pantalla.
+ */
+function lumina_spawnConfetti() {
+    if (!lumina_particleCanvas) return;
+
+    const w      = lumina_particleCanvas.width;
+    const count  = 100;
+    const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#ec4899', '#a855f7', '#c084fc', '#ffffff'];
+
+    for (let i = 0; i < count; i++) {
+        const speed = 2.5 + Math.random() * 4.5;
+        const angle = (Math.PI * 0.4) + Math.random() * (Math.PI * 0.2); // downward fan
+        lumina_particles.push({
+            x:     Math.random() * w,
+            y:     -8,
+            vx:    (Math.random() - 0.5) * speed * 1.8,
+            vy:    speed * (0.6 + Math.random() * 0.4),
+            life:  1,
+            decay: 0.006 + Math.random() * 0.008,
+            size:  3 + Math.random() * 4.5,
+            color: colors[Math.floor(Math.random() * colors.length)],
         });
     }
 
@@ -283,18 +321,72 @@ function lumina_initParallax() {
 
 // ─── Modales ──────────────────────────────────────────────────────────────────
 
-function lumina_showGameOver() {
+/**
+ * Muestra el modal de Game Over con el resumen completo de la sesión.
+ * @param {{ coins: number, maxTile: number, isNewRecord: boolean }} sessionData
+ */
+function lumina_showGameOver(sessionData) {
     const modal = document.getElementById('lumina-modal-gameover');
-    const el    = document.getElementById('lumina-final-score');
-    if (el)    el.textContent = lumina_score.toLocaleString();
-    if (modal) modal.classList.add('lumina-modal--visible');
+    if (!modal) return;
+
+    // Puntuación final
+    const elScore = document.getElementById('lumina-final-score');
+    if (elScore) elScore.textContent = lumina_score.toLocaleString();
+
+    // Monedas ganadas
+    const elCoins = document.getElementById('lumina-final-coins');
+    if (elCoins && sessionData) elCoins.textContent = (sessionData.coins || 0).toLocaleString();
+
+    // Hito máximo alcanzado
+    const elMilestone = document.getElementById('lumina-final-milestone');
+    if (elMilestone && sessionData) {
+        elMilestone.textContent = `Ficha ${(sessionData.maxTile || 2).toLocaleString()}`;
+    }
+
+    // Badge de nuevo récord + confeti
+    const elRecord = document.getElementById('lumina-go-record-badge');
+    if (elRecord) {
+        elRecord.style.display = sessionData?.isNewRecord ? 'flex' : 'none';
+    }
+    if (sessionData?.isNewRecord) {
+        setTimeout(lumina_spawnConfetti, 200);
+    }
+
+    modal.classList.add('lumina-modal--visible');
 }
 
-function lumina_showWin() {
+/**
+ * Muestra el modal de Victoria con el resumen completo de la sesión.
+ * @param {{ coins: number, maxTile: number, isNewRecord: boolean }} sessionData
+ */
+function lumina_showWin(sessionData) {
     const modal = document.getElementById('lumina-modal-win');
-    const el    = document.getElementById('lumina-win-score');
-    if (el)    el.textContent = lumina_score.toLocaleString();
-    if (modal) modal.classList.add('lumina-modal--visible');
+    if (!modal) return;
+
+    // Puntuación final
+    const elScore = document.getElementById('lumina-win-score');
+    if (elScore) elScore.textContent = lumina_score.toLocaleString();
+
+    // Monedas ganadas
+    const elCoins = document.getElementById('lumina-win-coins');
+    if (elCoins && sessionData) elCoins.textContent = (sessionData.coins || 0).toLocaleString();
+
+    // Hito máximo
+    const elMilestone = document.getElementById('lumina-win-milestone');
+    if (elMilestone && sessionData) {
+        elMilestone.textContent = `Ficha ${(sessionData.maxTile || 2048).toLocaleString()}`;
+    }
+
+    // Badge de nuevo récord + confeti (siempre activo en victoria)
+    const elRecord = document.getElementById('lumina-win-record-badge');
+    if (elRecord) {
+        elRecord.style.display = sessionData?.isNewRecord ? 'flex' : 'none';
+    }
+    // En victoria siempre se lanza confeti
+    setTimeout(lumina_spawnConfetti, 200);
+    if (sessionData?.isNewRecord) setTimeout(lumina_spawnConfetti, 700);
+
+    modal.classList.add('lumina-modal--visible');
 }
 
 function lumina_hideModals() {
@@ -307,4 +399,4 @@ function lumina_clearBoard() {
     lumina_tileEls.clear();
 }
 
-console.log('[LUMINA] Render module v1.0 loaded.');
+console.log('[LUMINA] Render module v1.1 loaded.');
