@@ -944,11 +944,17 @@
             }
         };
 
-        // ── Inicialización en carga ──────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', () => {
-            updateCountdownDisplay();
-            updateStreakBar();
+        // ── Inicialización SÍNCRONA del HUD — Zero-Flicker v9.3 ─────────────
+        // El script inline está al final de <body>: el DOM ya existe y app.js
+        // ya ha corrido, por lo que window.GameCenter está disponible.
+        // Llamar aquí (síncronamente) garantiza que los 7 puntos de racha y
+        // el texto del botón diario tengan sus valores reales ANTES del primer
+        // paint, eliminando el salto de estado visible en el Player HUD.
+        updateStreakBar();
+        updateCountdownDisplay();
 
+        // ── Event listeners — solo se registran en DOMContentLoaded ─────────
+        document.addEventListener('DOMContentLoaded', () => {
             const dailyBtn = document.getElementById('btn-daily');
             if (dailyBtn) {
                 dailyBtn.addEventListener('click', () => {
