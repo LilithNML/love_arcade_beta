@@ -1288,6 +1288,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Selector de temas — fuente de verdad única (migrado desde shop-logic.js) ──
+    // El tema es configuración global (afecta a toda la app, no solo a la Tienda).
+    // shop-logic.js eliminó su propio listener durante la migración SPA; este es
+    // el único registro. setTheme() actualiza el store, los CSS vars, la clase
+    // theme-{key} en <body> y el estado visual de todos los .theme-btn.
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (window.GameCenter) window.GameCenter.setTheme(btn.dataset.theme);
+        });
+    });
+
     // NOTA: El listener de #btn-moon-blessing fue eliminado en v9.x (SPA Migration).
     // La Bendición Lunar es un elemento de la vista Tienda; su handler vive
     // exclusivamente en shop-logic.js para evitar el doble-registro de eventos.
