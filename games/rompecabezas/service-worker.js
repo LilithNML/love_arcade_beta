@@ -3,7 +3,7 @@
  * Encargado del cacheo de recursos para funcionamiento Offline (PWA).
  */
 
-const CACHE_NAME = 'puzzle-v6.1'; // Versión actualizada para limpiar caché viejo
+const CACHE_NAME = 'puzzle-v6.2'; // Versión actualizada para limpiar caché viejo
 
 // 1. GENERACIÓN DINÁMICA DE RUTAS DE NIVELES
 // Evita escribir manualmente 40 líneas de código para imágenes y thumbnails.
