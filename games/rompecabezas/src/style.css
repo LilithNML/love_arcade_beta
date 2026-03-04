@@ -1,26 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Rubik:wght@400;600&display=swap');
 
 /* =========================================
-   1. VARIABLES & TEMA — Precision Tech
+   1. VARIABLES — Tactical HUD palette
    ========================================= */
 :root {
-    --bg-dark:   #05070A;   /* OLED black, ahorra batería */
-    --bg-panel:  #0F172A;   /* Superficie sólida de paneles */
-    --primary:   #F43F5E;   /* Acción principal (rosa neón) */
-    --primary-hover: #E11D48;
-    --accent:    #3B82F6;   /* Info / borde activo (azul eléctrico) */
-    --text-main: #FFFFFF;   /* Blanco puro */
-    --text-muted: #475569;  /* Gris frío (desactivado) */
-    --success:   #10B981;   /* Esmeralda (éxito / snap) */
-    --warning:   #F59E0B;
-    --radius:    4px;        /* Industrial: esquinas mínimas */
-    --header-h:  60px;
+    --bg-dark:    #05070A;
+    --bg-panel:   #0F172A;
+    --primary:    #F43F5E;
+    --accent:     #3B82F6;
+    --text-main:  #FFFFFF;
+    --text-muted: #475569;
+    --success:    #10B981;
+    --warning:    #F59E0B;
+    --header-h:   60px;
+    /* Beveled clip-path polygons — top-left + bottom-right 45° cuts */
+    --bevel-lg: polygon(12px 0%, 100% 0%, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 0% 12px);
+    --bevel-md: polygon(8px  0%, 100% 0%, 100% calc(100% - 8px),  calc(100% - 8px)  100%, 0% 100%, 0% 8px);
+    --bevel-sm: polygon(5px  0%, 100% 0%, 100% calc(100% - 5px),  calc(100% - 5px)  100%, 0% 100%, 0% 5px);
 }
 
 /* =========================================
-   2. RESET & LAYOUT CRÍTICO
+   2. RESET & LAYOUT
    ========================================= */
-* {
+*, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -42,10 +44,9 @@ body {
 }
 
 /* =========================================
-   3. FONDO — Sin blur (Precision: superficies sólidas)
+   3. BACKGROUND
+   No blur. Tactical tint only.
    ========================================= */
-/* La imagen de nivel se usa sólo como tinte de color muy sutil,
-   sin ningún desenfoque. Aporta contexto visual sin glassmorphism. */
 .dynamic-bg {
     position: absolute;
     inset: 0;
@@ -61,25 +62,16 @@ body {
     inset: 0;
     z-index: -1;
     background: repeating-linear-gradient(
-        to bottom,
-        transparent 0px,
-        transparent 3px,
-        rgba(0, 0, 0, 0.18) 4px
+        to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.15) 4px
     );
     pointer-events: none;
 }
 
 /* =========================================
-   4. HEADER & APP SHELL
+   4. APP SHELL
    ========================================= */
-#app {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
+#app { width: 100%; height: 100%; display: flex; flex-direction: column; }
 
-/* Sin backdrop-filter: superficie sólida pura */
 .top-bar {
     height: var(--header-h);
     background: var(--bg-panel);
@@ -90,6 +82,16 @@ body {
     padding: 0 20px;
     z-index: 50;
     flex-shrink: 0;
+    position: relative;
+}
+.top-bar::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 18px; height: 18px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
 }
 
 .brand {
@@ -100,36 +102,30 @@ body {
     font-weight: 700;
     font-size: 1.2rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
 }
 
 .game-tag {
     background: var(--primary);
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     padding: 2px 5px;
-    border-radius: var(--radius);
+    clip-path: var(--bevel-sm);
     color: var(--bg-dark);
-    margin-left: 5px;
-    letter-spacing: 1px;
+    margin-left: 6px;
+    letter-spacing: 2px;
     font-weight: 700;
+    font-family: 'Rajdhani', sans-serif;
 }
 
 .icon {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
+    width: 20px; height: 20px;
+    fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    display: inline-block; vertical-align: middle; flex-shrink: 0;
 }
 
 /* =========================================
-   5. PANTALLAS — Transiciones: solo translateX
-      (Prohibido animar width/height/top/left)
+   5. SCREENS — transitions: translateX only
    ========================================= */
 .screen {
     flex: 1;
@@ -137,25 +133,39 @@ body {
     flex-direction: column;
     width: 100%;
     position: absolute;
-    top: var(--header-h);
-    bottom: 0;
-    left: 0;
+    top: var(--header-h); bottom: 0; left: 0;
     opacity: 0;
     pointer-events: none;
-    transform: translateX(14px);
+    transform: translate3d(16px, 0, 0);
     transition: opacity 0.25s ease, transform 0.25s ease;
     overflow: hidden;
 }
-
 .screen.active {
     opacity: 1;
     pointer-events: all;
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
     z-index: 10;
 }
 
 /* =========================================
-   6. PANTALLA: MENÚ
+   6. MICRO-LABELS — 7-8px tactical data prefixes
+   ========================================= */
+.micro-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 7px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    opacity: 0.6;
+    line-height: 1;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    display: block;
+}
+
+/* =========================================
+   7. SCREEN: MENU
    ========================================= */
 #screen-menu {
     justify-content: center;
@@ -163,45 +173,81 @@ body {
     overflow-y: auto;
 }
 
-/* Sin backdrop-filter. Sombra dura (Hard Shadow) */
+/* Panel with bracket corners — top-left and bottom-right only */
 .menu-content {
     background: var(--bg-panel);
     padding: 36px;
-    border-radius: var(--radius);
-    border: 1px solid #1E293B;
-    box-shadow: 4px 4px 0px #000000;
+    position: relative;
     text-align: center;
     width: 90%;
     max-width: 340px;
     animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(4px 4px 0 #000000);
+}
+.menu-content::before {
+    content: ''; position: absolute;
+    top: -1px; left: -1px;
+    width: 20px; height: 20px;
+    border-top: 2px solid var(--accent);
+    border-left: 2px solid var(--accent);
+    pointer-events: none;
+}
+.menu-content::after {
+    content: ''; position: absolute;
+    bottom: -1px; right: -1px;
+    width: 20px; height: 20px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
 }
 
-/* Titulo sin gradiente: blanco puro, tipografía Rajdhani */
+.game-title-label {
+    display: block;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--accent);
+    opacity: 0.55;
+    margin-bottom: 10px;
+}
+
 .game-title {
     font-family: 'Rajdhani', sans-serif;
     font-size: 2.8rem;
     font-weight: 700;
     line-height: 0.9;
-    margin-bottom: 28px;
+    margin-bottom: 0;
     text-transform: uppercase;
+    letter-spacing: 4px;
     color: var(--text-main);
-    letter-spacing: 2px;
 }
 
 .main-nav {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-top: 24px;
 }
 
-/* =========================================
-   7. PANTALLA: NIVELES (Grid & Scroll)
-   ========================================= */
-#screen-levels {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+/* Stagger: reset to invisible when screen not active */
+#screen-menu:not(.active) .main-nav .btn {
+    opacity: 0;
+    animation: none;
 }
+/* Stagger in when screen becomes active */
+#screen-menu.active .main-nav .btn {
+    animation: hudSlideIn 0.28s ease both;
+}
+#screen-menu.active .main-nav .btn:nth-child(1) { animation-delay: 0.00s; }
+#screen-menu.active .main-nav .btn:nth-child(2) { animation-delay: 0.04s; }
+#screen-menu.active .main-nav .btn:nth-child(3) { animation-delay: 0.08s; }
+#screen-menu.active .main-nav .btn:nth-child(4) { animation-delay: 0.12s; }
+
+/* =========================================
+   8. SCREEN: LEVELS
+   ========================================= */
+#screen-levels { height: 100%; display: flex; flex-direction: column; }
 
 .screen-header {
     display: flex;
@@ -214,19 +260,28 @@ body {
     background: var(--bg-panel);
     border-bottom: 1px solid #1E293B;
     z-index: 5;
+    position: relative;
 }
-
+.screen-header::after {
+    content: ''; position: absolute;
+    bottom: -1px; right: -1px;
+    width: 14px; height: 14px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
+}
 .screen-header h2 {
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    font-size: 1.1rem;
+    letter-spacing: 4px;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 #levels-container {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
     grid-auto-rows: max-content;
     align-content: start;
     gap: 10px;
@@ -240,30 +295,27 @@ body {
     margin: 0 auto;
 }
 
-/* Tarjeta: superficie sólida, radio 4px */
+/* Level card — beveled clip-path */
 .level-card {
     position: relative;
     aspect-ratio: 1 / 1;
-    min-height: 115px;
+    min-height: 112px;
     background: var(--bg-panel);
-    border: 1px solid #1E293B;
-    border-radius: var(--radius);
+    clip-path: var(--bevel-sm);
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: transform 0.12s, border-color 0.12s;
+    /* Stagger animation-delay applied via JS */
+    animation: cardSlideIn 0.3s ease both;
+    filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.85));
     overflow: hidden;
+    transition: filter 0.12s;
 }
-
-/* Feedback táctil: escala 0.95 instantánea */
-.level-card:active { transform: scale(0.95); }
-
-.level-card:hover { border-color: #3B82F6; }
+.level-card:active { transform: scale3d(0.95, 0.95, 1); }
 
 .level-card img {
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     object-fit: cover;
     display: block;
     opacity: 0;
@@ -272,36 +324,28 @@ body {
 .level-card img.loaded { opacity: 1; }
 
 .level-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.1));
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; justify-content: center; align-items: center;
+    background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.08));
     color: white;
-    font-size: 1.4rem;
-    font-weight: bold;
+    font-size: 1.3rem; font-weight: bold;
     pointer-events: none;
 }
 
 .stars-display { letter-spacing: 2px; }
 
 .level-card.locked {
-    filter: grayscale(100%) brightness(0.45);
+    filter: grayscale(100%) brightness(0.4) drop-shadow(2px 2px 0 rgba(0,0,0,0.85));
     cursor: not-allowed;
 }
-.level-card.completed {
-    border-color: var(--success);
-}
+.level-card.locked:active { transform: none; }
 
-.level-card::after, .level-card::before {
-    content: none !important;
-    display: none !important;
+.level-card.completed {
+    filter: drop-shadow(2px 2px 0 rgba(16,185,129,0.55));
 }
 
 /* =========================================
-   8. PANTALLA: JUEGO — HUD & CANVAS
+   9. SCREEN: GAME — HUD
    ========================================= */
 .hud {
     padding: 0 20px;
@@ -313,25 +357,46 @@ body {
     border-bottom: 1px solid #1E293B;
     flex-shrink: 0;
     z-index: 20;
+    position: relative;
+}
+.hud::after {
+    content: ''; position: absolute;
+    bottom: -1px; right: -1px;
+    width: 12px; height: 12px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
 }
 
 .hud-stats {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 1.1rem;
-    font-weight: bold;
     display: flex;
-    gap: 20px;
-    color: var(--text-muted);
-    letter-spacing: 1px;
+    gap: 24px;
+    align-items: flex-end;
 }
-.hud-stats span { color: var(--text-main); }
 
-/* Monoespaciada para evitar que el texto "salte" al cambiar el tiempo */
+/* Vertical stack: micro-label on top, value below */
+.hud-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.hud-stat .value {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-main);
+    line-height: 1;
+}
+
 .timer-display {
     font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: 1rem;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 1px;
+    font-size: 0.95rem;
+    letter-spacing: 1.5px;
+    color: var(--text-main);
 }
 
 .canvas-wrapper {
@@ -346,340 +411,241 @@ body {
     background: var(--bg-dark);
 }
 
-canvas {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
+canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 .game-controls {
     position: absolute;
-    bottom: 28px;
-    right: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    bottom: 28px; right: 18px;
+    display: flex; flex-direction: column; gap: 12px;
     z-index: 60;
 }
 
-/* Botones circulares → ahora cuadrados (radio 4px) */
-.btn-circle {
-    width: 52px;
-    height: 52px;
-    min-height: 48px;
-    border-radius: var(--radius);
-    border: 1px solid var(--accent);
-    background: var(--bg-panel);
-    color: var(--text-main);
-    box-shadow: 2px 2px 0px #000000;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: auto;
-    touch-action: manipulation;
-    transition: transform 0.1s, background 0.1s, color 0.1s;
-}
-.btn-circle:active {
-    transform: scale(0.95);
-    background: var(--accent);
-    color: var(--bg-dark);
-}
-.btn-circle.gold {
-    border-color: var(--warning);
-    color: var(--warning);
-}
-.btn-circle.gold:active {
-    background: var(--warning);
-    color: var(--bg-dark);
-}
-
 /* =========================================
-   9. COMPONENTES: BOTONES
-      Normal:  fondo sólido #0F172A + borde de acento
-      Activo:  fondo = acento, texto = #05070A
+   10. BUTTONS — clip-path beveled, no border-radius
+   State: Normal = bg-panel + inset border
+   State: Active = accent bg + dark text (instant)
+   Release animation driven by JS Web Animations API
    ========================================= */
 .btn {
-    border: 1px solid transparent;
+    border: none; outline: none;
     padding: 0 18px;
-    height: 48px;
-    min-height: 48px;
-    border-radius: var(--radius);
+    height: 48px; min-height: 48px;
+    clip-path: var(--bevel-lg);
     font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    font-weight: 700; font-size: 1rem;
+    text-transform: uppercase; letter-spacing: 3px;
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    transition: background 0.1s, color 0.1s;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
     text-decoration: none;
     touch-action: manipulation;
+    position: relative;
+    transition: background 0.08s, color 0.08s;
+    filter: drop-shadow(2px 2px 0 #000000);
 }
-.btn:active { transform: scale(0.95); }
+.btn:active { transform: scale3d(0.96, 0.96, 1); }
 
 .btn-primary {
     background: var(--bg-panel);
     color: var(--primary);
-    border-color: var(--primary);
+    box-shadow: inset 0 0 0 1px var(--primary);
 }
-.btn-primary:active {
-    background: var(--primary);
-    color: var(--bg-dark);
-}
+.btn-primary:active { background: var(--primary); color: var(--bg-dark); box-shadow: none; }
 
 .btn-secondary {
     background: var(--bg-panel);
     color: var(--accent);
-    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
 }
-.btn-secondary:active {
-    background: var(--accent);
-    color: var(--bg-dark);
-}
+.btn-secondary:active { background: var(--accent); color: var(--bg-dark); box-shadow: none; }
 
 .btn-danger {
-    background: transparent;
-    color: #EF4444;
-    border-color: rgba(239, 68, 68, 0.45);
+    background: transparent; color: #EF4444;
+    box-shadow: inset 0 0 0 1px rgba(239,68,68,0.45);
     margin-top: 8px;
 }
-.btn-danger:active {
-    background: #EF4444;
-    color: var(--bg-dark);
-}
+.btn-danger:active { background: #EF4444; color: var(--bg-dark); box-shadow: none; }
 
-/* Botón icono (HUD, headers) — mínimo 40px */
 .btn-icon {
-    width: 40px;
-    height: 40px;
-    min-height: 40px;
-    border-radius: var(--radius);
-    border: 1px solid #1E293B;
-    background: transparent;
-    color: var(--text-main);
+    width: 40px; height: 40px; min-height: 40px;
+    clip-path: var(--bevel-md);
+    border: none;
+    background: var(--bg-panel); color: var(--text-main);
+    box-shadow: inset 0 0 0 1px #1E293B;
     cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: flex; justify-content: center; align-items: center;
     touch-action: manipulation;
-    transition: background 0.1s, border-color 0.1s;
+    filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.8));
+    transition: background 0.08s;
 }
-.btn-icon:active {
-    transform: scale(0.95);
-    background: var(--accent);
-    border-color: var(--accent);
+.btn-icon:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
+
+/* Control buttons (Preview / Magnet) — now tactical polygons */
+.btn-circle {
+    width: 52px; height: 52px; min-height: 48px;
+    clip-path: var(--bevel-md);
+    border: none;
+    background: var(--bg-panel); color: var(--text-main);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+    pointer-events: auto; touch-action: manipulation;
+    filter: drop-shadow(2px 2px 0 #000000);
+    transition: background 0.08s;
 }
+.btn-circle:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
+.btn-circle.gold { box-shadow: inset 0 0 0 1px var(--warning); color: var(--warning); }
+.btn-circle.gold:active { background: var(--warning); color: var(--bg-dark); }
 
 /* =========================================
-   10. MODALES — Sin blur. Borde 2px azul.
-       Sombra dura 4px desplazada.
+   11. MODALS — bracket corners, hard shadow
    ========================================= */
 .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    /* No backdrop-filter. Opacidad alta para ocluir sin glassmorphism */
-    background: rgba(0, 0, 0, 0.92);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    opacity: 1;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100; opacity: 1;
     transition: opacity 0.2s;
 }
-.modal-backdrop.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
+.modal-backdrop.hidden { opacity: 0; pointer-events: none; }
 
 .modal-content {
     background: var(--bg-panel);
-    padding: 28px;
-    border-radius: var(--radius);
-    border: 2px solid var(--accent);         /* Marco azul eléctrico */
-    box-shadow: 4px 4px 0px #000000;          /* Hard Shadow */
-    text-align: center;
-    width: 90%;
-    max-width: 340px;
+    padding: 28px; position: relative;
+    text-align: center; width: 90%; max-width: 340px;
     animation: popIn 0.22s ease;
+    filter: drop-shadow(4px 4px 0 #000000);
 }
-
+.modal-content::before {
+    content: ''; position: absolute;
+    top: -1px; left: -1px; width: 18px; height: 18px;
+    border-top: 2px solid var(--accent); border-left: 2px solid var(--accent);
+    pointer-events: none;
+}
+.modal-content::after {
+    content: ''; position: absolute;
+    bottom: -1px; right: -1px; width: 18px; height: 18px;
+    border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent);
+    pointer-events: none;
+}
 .modal-content h3 {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 1.3rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    font-size: 1.2rem; text-transform: uppercase; letter-spacing: 4px;
     margin-bottom: 6px;
 }
 
 /* =========================================
-   11. AJUSTES
+   12. SETTINGS
    ========================================= */
-.settings-list {
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
+.settings-list { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
 .setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     background: var(--bg-panel);
-    border: 1px solid #1E293B;
-    padding: 14px 16px;
-    border-radius: var(--radius);
-    min-height: 48px;
-    color: var(--text-main);
-    font-size: 0.95rem;
+    padding: 14px 16px; min-height: 48px;
+    color: var(--text-main); font-size: 0.9rem;
+    position: relative;
+    clip-path: var(--bevel-lg);
+    box-shadow: inset 0 0 0 1px #1E293B;
 }
 
 /* =========================================
-   12. LOADING — Barra lineal de 2px
-       Recorre el borde superior de la pantalla.
-       Reemplaza el spinner circular.
+   13. LOADING — 2px bar at top edge
    ========================================= */
 .loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: var(--bg-dark);
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    overflow: hidden;
+    position: absolute; inset: 0;
+    background: var(--bg-dark); z-index: 30;
+    display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch;
 }
 .loading-overlay.hidden { display: none; }
 
-/* Riel de la barra: 2px de alto en el borde superior */
 .progress-bar-track {
-    width: 100%;
-    height: 2px;
+    width: 100%; height: 2px;
     background: #1E293B;
-    flex-shrink: 0;
-    position: relative;
-    overflow: hidden;
+    flex-shrink: 0; position: relative; overflow: hidden;
 }
-
-/* Relleno animado que recorre el ancho */
 .progress-bar-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
+    position: absolute; top: 0; left: 0; height: 100%;
     background: var(--primary);
     animation: progressScan 1.4s ease-in-out infinite;
 }
-
-/* Label centrado en la pantalla de carga */
 .loading-overlay p {
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     color: var(--text-muted);
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
+    font-size: 0.75rem; letter-spacing: 4px; text-transform: uppercase;
 }
 
 /* =========================================
-   13. SKELETON
+   14. SKELETON
    ========================================= */
-.skeleton {
-    background: #0A1018;
-    position: relative;
-    overflow: hidden;
-}
+.skeleton { background: #0A1018; position: relative; overflow: hidden; }
 .skeleton::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
+    content: ''; position: absolute; inset: 0;
+    transform: translate3d(-100%, 0, 0);
     background-image: linear-gradient(
-        90deg,
-        transparent 0,
-        rgba(255, 255, 255, 0.04) 20%,
-        rgba(255, 255, 255, 0.07) 60%,
-        transparent
+        90deg, transparent 0, rgba(255,255,255,0.04) 20%, rgba(255,255,255,0.07) 60%, transparent
     );
     animation: shimmer 2.2s infinite;
 }
 
 /* =========================================
-   14. DISPLAY DE MONEDAS
+   15. COINS DISPLAY
    ========================================= */
 .coins-display {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--warning);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 1rem;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700;
+    letter-spacing: 2px; color: var(--warning);
+    display: flex; align-items: center; gap: 6px; font-size: 1rem;
 }
 
 /* =========================================
-   15. TIMER — Colores por rendimiento
+   16. TIMER COLORS
    ========================================= */
-.timer-display.low-time {
-    color: #EF4444 !important;
-    animation: pulse 1s infinite;
-    font-weight: 800;
-}
-
-#hud-timer.timer-gold {
-    color: #FBBF24 !important;
-    font-weight: 800;
-}
-
-#hud-timer.timer-silver {
-    color: #94A3B8 !important;
-    font-weight: 700;
-}
-
-#hud-timer.timer-bronze {
-    color: #D97706 !important;
-    font-weight: 600;
-}
+.timer-display.low-time { color: #EF4444 !important; animation: pulse 1s infinite; font-weight: 800; }
+#hud-timer.timer-gold   { color: #FBBF24 !important; font-weight: 800; }
+#hud-timer.timer-silver { color: #94A3B8 !important; font-weight: 700; }
+#hud-timer.timer-bronze { color: #D97706 !important; font-weight: 600; }
 
 /* =========================================
-   16. ANIMACIONES — Solo transform (60fps)
+   17. ANIMATIONS — only transform/opacity
    ========================================= */
+@keyframes hudSlideIn {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to   { opacity: 1; transform: translate3d(0,  0px, 0); }
+}
 
-/* Barra de carga: recorre el riel de izquierda a derecha */
+@keyframes cardSlideIn {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+    to   { opacity: 1; transform: translate3d(0, 0px, 0); }
+}
+
+/* Press-release bounce (driven by JS Web Animations API) */
+@keyframes btnRelease {
+    0%   { transform: scale3d(0.96, 0.96, 1); }
+    60%  { transform: scale3d(1.02, 1.02, 1); }
+    100% { transform: scale3d(1.00, 1.00, 1); }
+}
+
 @keyframes progressScan {
-    0%   { width: 0%;   left: 0%;   }
-    45%  { width: 55%;  left: 20%;  }
-    100% { width: 0%;   left: 100%; }
+    0%   { width: 0%;  left: 0%;   }
+    45%  { width: 55%; left: 20%;  }
+    100% { width: 0%;  left: 100%; }
 }
 
-@keyframes shimmer {
-    100% { transform: translateX(100%); }
-}
+@keyframes shimmer { 100% { transform: translate3d(100%, 0, 0); } }
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50%       { opacity: 0.35; }
+    50%       { opacity: 0.3; }
 }
 
-/* Solo transform/opacity — sin width/height/top/left */
 @keyframes popIn {
-    from { transform: scale(0.93) translateY(6px); opacity: 0; }
-    to   { transform: scale(1)    translateY(0);   opacity: 1; }
+    from { transform: scale3d(0.92, 0.92, 1) translate3d(0, 8px, 0); opacity: 0; }
+    to   { transform: scale3d(1.00, 1.00, 1) translate3d(0,  0,  0); opacity: 1; }
 }
 
 /* =========================================
-   17. SCROLLBAR
+   18. SCROLLBAR
    ========================================= */
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #1E293B; }
 ::-webkit-scrollbar-track { background: transparent; }
