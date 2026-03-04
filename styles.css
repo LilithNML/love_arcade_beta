@@ -562,6 +562,35 @@ body::before {
        todavía no está escrito (durante el init síncrono antes de revealUI) */
     min-height: 1.3em;
 }
+
+/* Fila que agrupa el nombre y el botón de edición */
+.hud-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 1.3em;   /* mismo min-height que .hud-name para estabilidad de layout */
+}
+
+/* Botón lápiz de edición de identidad */
+.btn-edit-identity {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-float-border);
+    background: var(--glass-base-bg);
+    color: var(--text-low);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s, background 0.18s, transform 0.18s;
+    padding: 0;
+    line-height: 1;
+}
+.btn-edit-identity:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+    background: var(--accent-soft);
+    transform: scale(1.12);
+}
 .hud-status {
     font-size: 0.72rem;
     color: var(--text-low);
