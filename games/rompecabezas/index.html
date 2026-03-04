@@ -19,7 +19,17 @@
 </head>
 <body>
 
+    <!-- ═══ BACKGROUND STACK (bottom → top) ═══════════════════════════════════ -->
+    <!-- Layer 1: Radial gradient base -->
     <div id="dynamic-bg" class="dynamic-bg"></div>
+
+    <!-- Layer 2: Living Grid — parallax-driven via JS (mouse / gyro) -->
+    <div id="grid-layer" class="grid-layer">
+        <!-- Twinkle dots rendered on this canvas -->
+        <canvas id="twinkle-canvas" class="twinkle-canvas"></canvas>
+    </div>
+
+    <!-- Layer 3: Scanlines overlay -->
     <div class="scanlines"></div>
 
     <main id="app">
@@ -34,13 +44,16 @@
                 </svg>
                 <div>Love Arcade <span class="game-tag">PUZZLE</span></div>
             </div>
-            <div class="coins-display" id="global-coins-display"></div>
+            <!-- Micro-data label above coin counter -->
+            <div class="coins-wrapper">
+                <span class="micro-label coins-micro">[ACQ_UNIT_ID // 004-TRK]</span>
+                <div class="coins-display" id="global-coins-display"></div>
+            </div>
         </header>
 
         <!-- ═══════════════════════════════ MENU ════════════════════════════════ -->
         <section id="screen-menu" class="screen active">
             <div class="menu-content">
-                <!-- Micro-data label above title -->
                 <span class="game-title-label">SYS_INIT // MODULE_READY</span>
                 <h1 class="game-title">Neural<br>Puzzle</h1>
                 <nav class="main-nav">
@@ -83,7 +96,6 @@
                     <svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                 </button>
 
-                <!-- HUD stats: each wrapped with a tactical micro-label -->
                 <div class="hud-stats">
                     <div class="hud-stat">
                         <span class="micro-label">MISSION_ID // ACTIVE</span>
@@ -97,10 +109,7 @@
             </div>
 
             <div class="canvas-wrapper" id="game-container">
-                <!--
-                    Loader: 2px progress bar at screen top edge.
-                    Replaced spinner per Precision Motion Guide.
-                -->
+                <!-- Loading overlay -->
                 <div id="game-loader" class="loading-overlay hidden">
                     <div class="progress-bar-track">
                         <div class="progress-bar-fill"></div>
@@ -109,6 +118,10 @@
                 </div>
 
                 <canvas id="puzzle-canvas"></canvas>
+
+                <!-- Canvas corner micro-data labels -->
+                <span class="canvas-corner-data top-left" id="canvas-pos-tl">POS_X: 000 // POS_Y: 000</span>
+                <span class="canvas-corner-data bottom-right" id="canvas-pos-br">RES: 000×000 // PCE: 00</span>
 
                 <div class="game-controls">
                     <button id="btn-preview" class="btn-circle" title="Vista Previa (Mantener)">
