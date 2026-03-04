@@ -1,21 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Rubik:wght@400;600&display=swap');
 
 /* =========================================
-   1. VARIABLES & TEMA
+   1. VARIABLES & TEMA — Precision Tech
    ========================================= */
 :root {
-    --bg-dark: #0f172a;
-    --bg-panel: rgba(15, 23, 42, 0.85);
-    --primary: #f43f5e;
-    --primary-hover: #e11d48;
-    --accent: #3b82f6;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --radius-lg: 16px;
-    --radius-sm: 8px;
-    --header-h: 60px;
+    --bg-dark:   #05070A;   /* OLED black, ahorra batería */
+    --bg-panel:  #0F172A;   /* Superficie sólida de paneles */
+    --primary:   #F43F5E;   /* Acción principal (rosa neón) */
+    --primary-hover: #E11D48;
+    --accent:    #3B82F6;   /* Info / borde activo (azul eléctrico) */
+    --text-main: #FFFFFF;   /* Blanco puro */
+    --text-muted: #475569;  /* Gris frío (desactivado) */
+    --success:   #10B981;   /* Esmeralda (éxito / snap) */
+    --warning:   #F59E0B;
+    --radius:    4px;        /* Industrial: esquinas mínimas */
+    --header-h:  60px;
 }
 
 /* =========================================
@@ -27,14 +26,13 @@
     padding: 0;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-    /* FIX SCROLL: Eliminamos touch-action: none global */
 }
 
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     font-family: 'Rubik', sans-serif;
-    position: fixed; /* Layout app-like */
+    position: fixed;
     inset: 0;
     width: 100%;
     height: 100dvh;
@@ -44,17 +42,18 @@ body {
 }
 
 /* =========================================
-   3. FONDO
+   3. FONDO — Sin blur (Precision: superficies sólidas)
    ========================================= */
+/* La imagen de nivel se usa sólo como tinte de color muy sutil,
+   sin ningún desenfoque. Aporta contexto visual sin glassmorphism. */
 .dynamic-bg {
     position: absolute;
     inset: 0;
     z-index: -2;
     background-size: cover;
     background-position: center;
-    filter: blur(25px) brightness(0.4);
-    transform: scale(1.1);
-    transition: background-image 0.5s ease-in-out;
+    opacity: 0.07;
+    transition: background-image 0.4s ease-in-out;
 }
 
 .scanlines {
@@ -64,8 +63,8 @@ body {
     background: repeating-linear-gradient(
         to bottom,
         transparent 0px,
-        transparent 2px,
-        rgba(0, 0, 0, 0.1) 3px
+        transparent 3px,
+        rgba(0, 0, 0, 0.18) 4px
     );
     pointer-events: none;
 }
@@ -80,17 +79,16 @@ body {
     flex-direction: column;
 }
 
+/* Sin backdrop-filter: superficie sólida pura */
 .top-bar {
     height: var(--header-h);
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg-panel);
+    border-bottom: 1px solid #1E293B;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
     z-index: 50;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     flex-shrink: 0;
 }
 
@@ -102,16 +100,18 @@ body {
     font-weight: 700;
     font-size: 1.2rem;
     text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
 .game-tag {
     background: var(--primary);
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: white;
+    font-size: 0.65rem;
+    padding: 2px 5px;
+    border-radius: var(--radius);
+    color: var(--bg-dark);
     margin-left: 5px;
     letter-spacing: 1px;
+    font-weight: 700;
 }
 
 .icon {
@@ -124,10 +124,12 @@ body {
     stroke-linejoin: round;
     display: inline-block;
     vertical-align: middle;
+    flex-shrink: 0;
 }
 
 /* =========================================
-   5. PANTALLAS (Transiciones)
+   5. PANTALLAS — Transiciones: solo translateX
+      (Prohibido animar width/height/top/left)
    ========================================= */
 .screen {
     flex: 1;
@@ -140,15 +142,15 @@ body {
     left: 0;
     opacity: 0;
     pointer-events: none;
-    transform: scale(0.98);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    overflow: hidden; /* Importante para contener scroll interno */
+    transform: translateX(14px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    overflow: hidden;
 }
 
 .screen.active {
     opacity: 1;
     pointer-events: all;
-    transform: scale(1);
+    transform: translateX(0);
     z-index: 10;
 }
 
@@ -158,46 +160,45 @@ body {
 #screen-menu {
     justify-content: center;
     align-items: center;
-    overflow-y: auto; /* Permitir scroll si el menú es muy alto */
+    overflow-y: auto;
 }
 
+/* Sin backdrop-filter. Sombra dura (Hard Shadow) */
 .menu-content {
     background: var(--bg-panel);
-    padding: 40px;
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    padding: 36px;
+    border-radius: var(--radius);
+    border: 1px solid #1E293B;
+    box-shadow: 4px 4px 0px #000000;
     text-align: center;
     width: 90%;
-    max-width: 350px;
-    backdrop-filter: blur(12px);
-    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 340px;
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* Titulo sin gradiente: blanco puro, tipografía Rajdhani */
 .game-title {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 3rem;
+    font-size: 2.8rem;
+    font-weight: 700;
     line-height: 0.9;
-    margin-bottom: 30px;
+    margin-bottom: 28px;
     text-transform: uppercase;
-    background: linear-gradient(to bottom, #ffffff, #94a3b8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    color: var(--text-main);
+    letter-spacing: 2px;
 }
 
 .main-nav {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 /* =========================================
-   7. PANTALLA: NIVELES (Grid & Scroll Fix)
+   7. PANTALLA: NIVELES (Grid & Scroll)
    ========================================= */
 #screen-levels {
-    /* Asegura que el contenedor ocupe el espacio correcto */
-    height: 100%; 
+    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -206,73 +207,70 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 15px 20px;
+    padding: 0 20px;
+    height: 52px;
+    min-height: 48px;
     flex-shrink: 0;
-    background: rgba(15, 23, 42, 0.8); /* Fondo semi-opaco para sticky feel */
+    background: var(--bg-panel);
+    border-bottom: 1px solid #1E293B;
     z-index: 5;
 }
-.screen-header h2 { font-family: 'Rajdhani'; text-transform: uppercase; }
 
-/* CONTENEDOR DE LA CUADRÍCULA */
+.screen-header h2 {
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 1.1rem;
+}
+
 #levels-container {
     flex: 1;
     display: grid;
-    /* Grid adaptable: columnas de mínimo 120px */
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    /* Filas automáticas con altura mínima */
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
     grid-auto-rows: max-content;
-    align-content: start; /* FIX: Evita que se estiren/encimen si hay pocos */
-    
-    gap: 20px;
-    padding: 20px;
-    padding-bottom: 120px; /* Espacio extra al final para scroll cómodo */
-    
-    /* ACTIVAR SCROLL */
-    overflow-y: auto; 
-    -webkit-overflow-scrolling: touch; /* Suavidad en iOS */
-    touch-action: pan-y; /* Permitir explícitamente el gesto vertical */
-    
+    align-content: start;
+    gap: 10px;
+    padding: 14px;
+    padding-bottom: 100px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     width: 100%;
     max-width: 1000px;
     margin: 0 auto;
 }
 
-/* TARJETA DE NIVEL */
+/* Tarjeta: superficie sólida, radio 4px */
 .level-card {
-    position: relative; /* Contexto para el overlay */
+    position: relative;
     aspect-ratio: 1 / 1;
-    min-height: 120px; /* FIX: Evita colapso */
-    
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-lg);
-    
+    min-height: 115px;
+    background: var(--bg-panel);
+    border: 1px solid #1E293B;
+    border-radius: var(--radius);
     display: flex;
     justify-content: center;
     align-items: center;
-    
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.12s, border-color 0.12s;
     overflow: hidden;
 }
 
-.level-card:hover { 
-    background: rgba(255, 255, 255, 0.1); 
-    transform: translateY(-3px); 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
+/* Feedback táctil: escala 0.95 instantánea */
+.level-card:active { transform: scale(0.95); }
+
+.level-card:hover { border-color: #3B82F6; }
 
 .level-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block; /* Elimina espacio fantasma inline */
+    display: block;
     opacity: 0;
     transition: opacity 0.3s ease;
 }
 .level-card img.loaded { opacity: 1; }
 
-/* Overlay de Información (Estrellas/Candado) */
 .level-overlay {
     position: absolute;
     inset: 0;
@@ -280,56 +278,61 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    
-    background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.1));
-    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.1));
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: bold;
     pointer-events: none;
 }
 
 .stars-display { letter-spacing: 2px; }
 
-/* Estados */
 .level-card.locked {
-    filter: grayscale(100%) brightness(0.7);
+    filter: grayscale(100%) brightness(0.45);
     cursor: not-allowed;
 }
-.level-card.completed { 
-    border-color: var(--success); 
+.level-card.completed {
+    border-color: var(--success);
 }
 
-/* Limpieza */
 .level-card::after, .level-card::before {
     content: none !important;
     display: none !important;
 }
 
 /* =========================================
-   8. PANTALLA: JUEGO UI
+   8. PANTALLA: JUEGO — HUD & CANVAS
    ========================================= */
 .hud {
-    padding: 10px 20px;
+    padding: 0 20px;
+    height: 48px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: var(--bg-panel);
+    border-bottom: 1px solid #1E293B;
     flex-shrink: 0;
     z-index: 20;
 }
 
 .hud-stats {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: bold;
     display: flex;
     gap: 20px;
     color: var(--text-muted);
+    letter-spacing: 1px;
 }
 .hud-stats span { color: var(--text-main); }
-.timer-display.low-time { color: #ef4444; animation: pulse 1s infinite; }
+
+/* Monoespaciada para evitar que el texto "salte" al cambiar el tiempo */
+.timer-display {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+}
 
 .canvas-wrapper {
     flex: 1;
@@ -339,126 +342,259 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 1;
-    
-    /* FIX SCROLL: Aquí sí bloqueamos el scroll para jugar cómodamente */
-    touch-action: none; 
+    touch-action: none;
+    background: var(--bg-dark);
 }
 
 canvas {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
 }
 
 .game-controls {
     position: absolute;
-    bottom: 30px;
-    right: 20px;
+    bottom: 28px;
+    right: 18px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     z-index: 60;
 }
 
+/* Botones circulares → ahora cuadrados (radio 4px) */
 .btn-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(30, 41, 59, 0.9);
+    width: 52px;
+    height: 52px;
+    min-height: 48px;
+    border-radius: var(--radius);
+    border: 1px solid var(--accent);
+    background: var(--bg-panel);
     color: var(--text-main);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 2px 2px 0px #000000;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: transform 0.1s;
-    /* Asegura que los botones respondan */
-    pointer-events: auto; 
+    pointer-events: auto;
     touch-action: manipulation;
+    transition: transform 0.1s, background 0.1s, color 0.1s;
 }
-.btn-circle:active { transform: scale(0.9); }
+.btn-circle:active {
+    transform: scale(0.95);
+    background: var(--accent);
+    color: var(--bg-dark);
+}
 .btn-circle.gold {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    border: 1px solid #fbbf24;
+    border-color: var(--warning);
+    color: var(--warning);
+}
+.btn-circle.gold:active {
+    background: var(--warning);
+    color: var(--bg-dark);
 }
 
 /* =========================================
-   9. COMPONENTES: BOTONES & MODALES
+   9. COMPONENTES: BOTONES
+      Normal:  fondo sólido #0F172A + borde de acento
+      Activo:  fondo = acento, texto = #05070A
    ========================================= */
 .btn {
-    border: none;
-    padding: 14px;
-    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    padding: 0 18px;
+    height: 48px;
+    min-height: 48px;
+    border-radius: var(--radius);
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1rem;
     text-transform: uppercase;
+    letter-spacing: 2px;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-    transition: all 0.2s;
+    transition: background 0.1s, color 0.1s;
     text-decoration: none;
-    /* Botones siempre clickeables */
-    touch-action: manipulation; 
+    touch-action: manipulation;
 }
-
-.btn:active { transform: translateY(2px); }
+.btn:active { transform: scale(0.95); }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+    background: var(--bg-panel);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-primary:active {
+    background: var(--primary);
+    color: var(--bg-dark);
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-panel);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.btn-secondary:active {
+    background: var(--accent);
+    color: var(--bg-dark);
 }
 
 .btn-danger {
     background: transparent;
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    margin-top: 10px;
+    color: #EF4444;
+    border-color: rgba(239, 68, 68, 0.45);
+    margin-top: 8px;
+}
+.btn-danger:active {
+    background: #EF4444;
+    color: var(--bg-dark);
 }
 
+/* Botón icono (HUD, headers) — mínimo 40px */
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    border-radius: var(--radius);
+    border: 1px solid #1E293B;
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: manipulation;
+    transition: background 0.1s, border-color 0.1s;
+}
+.btn-icon:active {
+    transform: scale(0.95);
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* =========================================
+   10. MODALES — Sin blur. Borde 2px azul.
+       Sombra dura 4px desplazada.
+   ========================================= */
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
+    /* No backdrop-filter. Opacidad alta para ocluir sin glassmorphism */
+    background: rgba(0, 0, 0, 0.92);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
     opacity: 1;
-    transition: opacity 0.3s;
+    transition: opacity 0.2s;
 }
-.modal-backdrop.hidden { opacity: 0; pointer-events: none; }
+.modal-backdrop.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
 
 .modal-content {
-    background: #1e293b;
-    padding: 30px;
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-panel);
+    padding: 28px;
+    border-radius: var(--radius);
+    border: 2px solid var(--accent);         /* Marco azul eléctrico */
+    box-shadow: 4px 4px 0px #000000;          /* Hard Shadow */
     text-align: center;
     width: 90%;
-    max-width: 350px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    animation: popIn 0.3s;
+    max-width: 340px;
+    animation: popIn 0.22s ease;
+}
+
+.modal-content h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
 }
 
 /* =========================================
-   10. UTILIDADES
+   11. AJUSTES
+   ========================================= */
+.settings-list {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-panel);
+    border: 1px solid #1E293B;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    min-height: 48px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+/* =========================================
+   12. LOADING — Barra lineal de 2px
+       Recorre el borde superior de la pantalla.
+       Reemplaza el spinner circular.
+   ========================================= */
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-dark);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    overflow: hidden;
+}
+.loading-overlay.hidden { display: none; }
+
+/* Riel de la barra: 2px de alto en el borde superior */
+.progress-bar-track {
+    width: 100%;
+    height: 2px;
+    background: #1E293B;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Relleno animado que recorre el ancho */
+.progress-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: var(--primary);
+    animation: progressScan 1.4s ease-in-out infinite;
+}
+
+/* Label centrado en la pantalla de carga */
+.loading-overlay p {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-muted);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* =========================================
+   13. SKELETON
    ========================================= */
 .skeleton {
-    background: #1e293b;
+    background: #0A1018;
     position: relative;
     overflow: hidden;
 }
@@ -469,67 +605,81 @@ canvas {
     transform: translateX(-100%);
     background-image: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0) 0,
-        rgba(255, 255, 255, 0.05) 20%,
-        rgba(255, 255, 255, 0.1) 60%,
-        rgba(255, 255, 255, 0)
+        transparent 0,
+        rgba(255, 255, 255, 0.04) 20%,
+        rgba(255, 255, 255, 0.07) 60%,
+        transparent
     );
-    animation: shimmer 2s infinite;
+    animation: shimmer 2.2s infinite;
 }
 
-.loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.95);
-    z-index: 30;
+/* =========================================
+   14. DISPLAY DE MONEDAS
+   ========================================= */
+.coins-display {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--warning);
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
-}
-.loading-overlay.hidden { display: none; }
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.1);
-    border-left-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+    gap: 6px;
+    font-size: 1rem;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes shimmer { 100% { transform: translateX(100%); } }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-@keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-
-/* --- FIX DE COLOR DEL TIMER --- */
-/* Usa #hud-timer para ganar contra .hud-stats span */
-
-#hud-timer.timer-gold { 
-    color: #fbbf24 !important; /* El !important es un seguro extra, aunque el ID debería bastar */
-    text-shadow: 0 0 15px rgba(251, 191, 36, 0.6); 
-    font-weight: 800; 
-    transition: color 0.3s ease;
+/* =========================================
+   15. TIMER — Colores por rendimiento
+   ========================================= */
+.timer-display.low-time {
+    color: #EF4444 !important;
+    animation: pulse 1s infinite;
+    font-weight: 800;
 }
 
-#hud-timer.timer-silver { 
-    color: #94a3b8 !important; 
-    text-shadow: 0 0 10px rgba(148, 163, 184, 0.5); 
+#hud-timer.timer-gold {
+    color: #FBBF24 !important;
+    font-weight: 800;
+}
+
+#hud-timer.timer-silver {
+    color: #94A3B8 !important;
     font-weight: 700;
 }
 
-#hud-timer.timer-bronze { 
-    color: #d97706 !important; 
+#hud-timer.timer-bronze {
+    color: #D97706 !important;
     font-weight: 600;
 }
 
-/* El estado de tiempo bajo (rojo) ya tenía buena especificidad, pero lo aseguro */
-.timer-display.low-time { 
-    color: #ef4444 !important; 
-    animation: pulse 1s infinite; 
-    font-weight: 800;
+/* =========================================
+   16. ANIMACIONES — Solo transform (60fps)
+   ========================================= */
+
+/* Barra de carga: recorre el riel de izquierda a derecha */
+@keyframes progressScan {
+    0%   { width: 0%;   left: 0%;   }
+    45%  { width: 55%;  left: 20%;  }
+    100% { width: 0%;   left: 100%; }
 }
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+}
+
+/* Solo transform/opacity — sin width/height/top/left */
+@keyframes popIn {
+    from { transform: scale(0.93) translateY(6px); opacity: 0; }
+    to   { transform: scale(1)    translateY(0);   opacity: 1; }
+}
+
+/* =========================================
+   17. SCROLLBAR
+   ========================================= */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
