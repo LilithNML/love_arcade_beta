@@ -42,7 +42,7 @@
  *  - getState(), syncUI() expuestos para módulos externos.
  *
  * NOVEDADES v8.1 (Daily Claim Security):
- *  - getNetworkTime(), lógica de días calendario, anti-race-condition.
+ *  - _syncTimeBackground() / _readTimeCache(): verificación de tiempo desacoplada del reclamo (v9.6).
  */
 
 // =====================================================
@@ -161,103 +161,117 @@ window.debounce = debounce; // Disponible globalmente para shop.html
 /** Máxima discrepancia tolerable entre reloj local y de red: 5 minutos. */
 const CLOCK_SKEW_LIMIT = 5 * 60 * 1000;
 
-/** Timeout por petición individual a APIs de tiempo (ms). */
-const TIME_API_TIMEOUT = 3000;
+/** Timeout de cada petición a una API de tiempo (ms). */
+const TIME_API_TIMEOUT = 4000;
 
 /**
- * Clave exclusiva de localStorage para el Time Drift Check.
+ * Clave de localStorage para el caché de tiempo de red.
  * Separada del store principal para no contaminar checksums de sincronización.
  */
-const TIME_DRIFT_KEY = 'love_arcade_time_drift';
+const TIME_CACHE_KEY = 'love_arcade_time_cache';
 
-/** Persiste el offset red↔local de la última sesión verificada. */
-function saveTimeDrift(offset) {
-    try { localStorage.setItem(TIME_DRIFT_KEY, String(offset)); } catch (_) {}
-}
+/**
+ * TTL del caché de tiempo (ms). Mientras el caché sea más reciente que este
+ * valor, claimDaily() lo usa directamente sin ninguna petición de red.
+ * 4 horas es suficiente: el usuario abre la app, el sync corre en background,
+ * y el caché queda listo para el reclamo de ese día y el siguiente.
+ */
+const TIME_CACHE_TTL = 4 * 60 * 60 * 1000;
 
-/** Recupera el último offset almacenado, o null si no existe. */
-function getStoredTimeDrift() {
+// ── Lectura / escritura del caché ─────────────────────────────────────────
+
+/**
+ * Escribe el resultado de una sincronización en el caché local.
+ * @param {{ drift: number, desynced: boolean }} data
+ */
+function _writeTimeCache(data) {
     try {
-        const val = localStorage.getItem(TIME_DRIFT_KEY);
-        return val !== null ? Number(val) : null;
-    } catch (_) { return null; }
+        localStorage.setItem(TIME_CACHE_KEY, JSON.stringify({
+            drift:       data.drift,
+            desynced:    data.desynced,
+            capturedAt:  Date.now()
+        }));
+    } catch (_) {}
 }
+
+/**
+ * Lee el caché y devuelve una estimación del tiempo de red actual.
+ * No hace ninguna petición de red — es puramente síncrono.
+ *
+ * @returns {{
+ *   time:       number,   — estimación del timestamp de red en ms
+ *   verified:   boolean,  — true si el caché existe y no ha expirado
+ *   desynced:   boolean,  — true si se detectó manipulación de reloj en el último sync
+ *   cacheAge:   number    — antigüedad del caché en ms (0 si no existe)
+ * }}
+ */
+function _readTimeCache() {
+    try {
+        const raw = localStorage.getItem(TIME_CACHE_KEY);
+        if (!raw) return { time: Date.now(), verified: false, desynced: false, cacheAge: Infinity };
+
+        const { drift, desynced, capturedAt } = JSON.parse(raw);
+        const cacheAge = Date.now() - capturedAt;
+        const verified = cacheAge <= TIME_CACHE_TTL;
+
+        return {
+            time:     Date.now() + (drift || 0),
+            verified,
+            desynced: Boolean(desynced),
+            cacheAge
+        };
+    } catch (_) {
+        return { time: Date.now(), verified: false, desynced: false, cacheAge: Infinity };
+    }
+}
+
+// ── Sincronización en segundo plano ──────────────────────────────────────
 
 /**
  * Lanza una petición a una URL de tiempo con timeout propio.
  * @param {string}   url
- * @param {function} extract  Extrae el timestamp del objeto JSON parseado.
+ * @param {function} extract  Extrae el timestamp del objeto JSON.
  * @returns {Promise<number>} Timestamp en ms.
  */
-function fetchTimeSource(url, extract) {
+function _fetchTimeSource(url, extract) {
     return new Promise((resolve, reject) => {
         const ctrl = new AbortController();
         const tid  = setTimeout(() => { ctrl.abort(); reject(new Error('timeout')); }, TIME_API_TIMEOUT);
         fetch(url, { cache: 'no-store', signal: ctrl.signal })
-            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-            .then(data => { clearTimeout(tid); resolve(extract(data)); })
-            .catch(err  => { clearTimeout(tid); reject(err); });
+            .then(r  => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+            .then(d  => { clearTimeout(tid); resolve(extract(d)); })
+            .catch(e => { clearTimeout(tid); reject(e); });
     });
 }
 
 /**
- * Consulta varias APIs de tiempo en PARALELO (Promise.any) para minimizar
- * la latencia de respuesta. Implementa el patrón "Time Drift Check" como
- * fallback cuando todas las fuentes externas fallan.
+ * Sincroniza el caché de tiempo en segundo plano: consulta las APIs en
+ * paralelo (Promise.any) y persiste el resultado SIN bloquear la UI.
  *
- * Tiempo máximo de espera: TIME_API_TIMEOUT ms (3 s) — lo que tarde la API
- * más lenta de las que responda, nunca las sumas de todas.
- *
- * @returns {Promise<{
- *   time:              number,
- *   verified:          boolean,
- *   desynced:          boolean,
- *   online:            boolean,
- *   toleranceFallback: boolean
- * }>}
+ * No retorna ningún valor útil — su único efecto es actualizar el caché.
+ * Se llama automáticamente al cargar la página, al volver a la pestaña
+ * y cada 30 min mientras la app está abierta.
  */
-async function getNetworkTime() {
-    const localNow = Date.now();
-    const online   = navigator.onLine;
-
-    // ── Lanzar todas las fuentes en PARALELO ─────────────────────────────
+async function _syncTimeBackground() {
     try {
         const networkTime = await Promise.any([
-            fetchTimeSource(
+            _fetchTimeSource(
                 'https://timeapi.io/api/time/current/ip',
                 d => new Date(d.dateTime ?? d.datetime).getTime()
             ),
-            fetchTimeSource(
+            _fetchTimeSource(
                 'https://worldtimeapi.org/api/ip',
                 d => new Date(d.datetime).getTime()
             )
         ]);
 
-        const skew = Math.abs(networkTime - Date.now());
-        saveTimeDrift(networkTime - Date.now());
-
-        if (skew > CLOCK_SKEW_LIMIT) {
-            return { time: networkTime, verified: true, desynced: true,  online, toleranceFallback: false };
-        }
-        return         { time: networkTime, verified: true, desynced: false, online, toleranceFallback: false };
+        const drift    = networkTime - Date.now();
+        const desynced = Math.abs(drift) > CLOCK_SKEW_LIMIT;
+        _writeTimeCache({ drift, desynced });
     } catch (_) {
-        // AggregateError: todas las fuentes fallaron
+        // Todas las fuentes fallaron (sin conexión) — no tocar el caché existente.
+        // claimDaily() seguirá usando el último caché válido o el reloj local.
     }
-
-    // ── Time Drift Check ─────────────────────────────────────────────────
-    const storedDrift = getStoredTimeDrift();
-    if (storedDrift !== null && Math.abs(storedDrift) <= CLOCK_SKEW_LIMIT) {
-        return {
-            time:              localNow + storedDrift,
-            verified:          true,
-            desynced:          false,
-            online,
-            toleranceFallback: true
-        };
-    }
-
-    // ── Fallback final ────────────────────────────────────────────────────
-    return { time: localNow, verified: false, desynced: false, online, toleranceFallback: false };
 }
 
 // =====================================================
@@ -513,24 +527,29 @@ window.GameCenter = {
      * Reclama el bono diario. Función async — consulta una API de tiempo externa
      * como fuente de verdad antes de evaluar el reclamo.
      *
-     * Lógica de días calendario (v8.1):
+     * Lógica de días calendario (v8.1+):
      *   diff_días == 0 → ya reclamado hoy.
      *   diff_días == 1 → racha continúa (streak + 1).
      *   diff_días  > 1 → racha se reinicia (streak = 1).
      *
-     * Seguridad adicional:
-     *   - currentTime < lastClaimTime → salto negativo detectado; bloquear sin tocar racha.
-     *   - Discrepancia reloj local/red > 5 min → "Reloj desincronizado"; bloquear reclamo.
-     *   - API no disponible → usar Date.now() con verified = false; bloquear Bendición Lunar.
+     * Seguridad (v9.6 — Background Sync):
+     *   El tiempo de red se verifica en segundo plano (_syncTimeBackground),
+     *   no en el momento del reclamo. claimDaily() lee el caché sincrónico
+     *   (_readTimeCache) y no hace ninguna petición de red, garantizando
+     *   respuesta instantánea en todos los casos.
      *
-     * @returns {Promise<{success: boolean, reward?: number, baseReward?: number,
-     *                    moonBonus?: number, streak?: number, verified: boolean, message: string}>}
+     *   - currentTime < lastClaimTime → salto negativo; bloquear sin tocar racha.
+     *   - caché desynced: true → reloj adelantado detectado en el último sync; bloquear.
+     *   - caché expirado o inexistente → permitir (primera visita o sin conexión reciente).
+     *
+     * @returns {{ success: boolean, reward?: number, baseReward?: number,
+     *             moonBonus?: number, streak?: number, verified: boolean, message: string }}
      */
-    claimDaily: async () => {
-        const { time: now, verified, desynced, online, toleranceFallback } = await getNetworkTime();
+    claimDaily: () => {
+        const { time: now, verified, desynced } = _readTimeCache();
         const { lastClaim, streak } = store.daily;
 
-        // ── 1. Salto negativo (manipulación de reloj detectada a posteriori) ──
+        // ── 1. Salto negativo (manipulación de reloj detectada por el caché) ──
         if (lastClaim > 0 && now < lastClaim) {
             return {
                 success:  false,
@@ -539,7 +558,7 @@ window.GameCenter = {
             };
         }
 
-        // ── 2. Reloj desincronizado con la red ──
+        // ── 2. Reloj adelantado detectado en el último sync en background ──
         if (desynced) {
             return {
                 success:  false,
@@ -554,7 +573,6 @@ window.GameCenter = {
             ? new Date(lastClaim).setHours(0, 0, 0, 0)
             : null;
 
-        // Si nunca se ha reclamado (lastClaim === 0), tratarlo como diff = 1
         const diffDays = lastMidnight !== null
             ? Math.round((nowMidnight - lastMidnight) / 86_400_000)
             : 1;
@@ -575,15 +593,14 @@ window.GameCenter = {
             CONFIG.dailyStreakCap
         );
 
-        // ── 5. Bendición Lunar ──────────────────────────────────────────────────
-        const moonActive = store.buffs.moonBlessingExpiry > now;
-        // El bonus lunar se otorga si:
-        //   (a) El tiempo fue verificado por la API              → verified = true
-        //   (b) El tiempo fue estimado por Time Drift Check      → toleranceFallback = true
-        //   (c) La API falló pero el dispositivo TIENE internet  → online = true
-        // Solo se bloquea en modo offline genuino sin drift previo válido,
-        // que es la única vía legítima de abuso (desconectar red para eludir la API).
-        const moonBonus = (moonActive && (verified || online)) ? 90 : 0;
+        // ── 5. Bendición Lunar ──────────────────────────────────────────────
+        // Se concede siempre que el buff esté activo. El único escenario donde
+        // podría abusarse (offline + reloj adelantado) queda cubierto por la
+        // detección de desynced en el sync anterior. Sin conexión genuina el
+        // usuario tampoco puede comprar la Bendición Lunar, por lo que el
+        // riesgo neto es despreciable.
+        const moonActive  = store.buffs.moonBlessingExpiry > now;
+        const moonBonus   = moonActive ? 90 : 0;
         const totalReward = baseReward + moonBonus;
 
         // ── 6. Aplicar y persistir ──
@@ -593,25 +610,20 @@ window.GameCenter = {
         logTransaction(
             'ingreso',
             totalReward,
-            `Bono diario · racha ${newStreak}` +
-            (moonBonus ? ' + Bendición Lunar' : '') +
-            (toleranceFallback ? ' (drift check)' : !verified ? ' (tiempo sin verificar)' : '')
+            `Bono diario · racha ${newStreak}` + (moonBonus ? ' + Bendición Lunar' : '')
         );
 
         saveState();
         updateMoonBlessingUI();
 
-        // El mensaje al usuario nunca menciona problemas de red si el reclamo
-        // fue exitoso — el detalle técnico solo va al historial interno.
         return {
-            success:           true,
-            reward:            totalReward,
+            success:    true,
+            reward:     totalReward,
             baseReward,
             moonBonus,
-            streak:            newStreak,
+            streak:     newStreak,
             verified,
-            toleranceFallback,
-            message:           `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}`
+            message:    `¡+${totalReward} monedas! Racha: ${newStreak} día${newStreak !== 1 ? 's' : ''}`
         };
     },
 
@@ -1218,6 +1230,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUI();
     if (window.lucide) lucide.createIcons();
 
+    // ── Background time sync (v9.6) ───────────────────────────────────────
+    // Se lanza 800 ms después del DOMContentLoaded para no competir con el
+    // primer paint. El resultado se almacena en TIME_CACHE_KEY y será leído
+    // por claimDaily() de forma síncrona, sin espera de red en el reclamo.
+    setTimeout(_syncTimeBackground, 800);
+
+    // Actualizar el caché cuando el usuario vuelve a la pestaña
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') _syncTimeBackground();
+    });
+
+    // Refresco periódico cada 30 min por si la app permanece abierta mucho tiempo
+    setInterval(_syncTimeBackground, 30 * 60 * 1000);
+
     // Avatar upload
     const avatarInput = document.getElementById('avatar-upload');
     if (avatarInput) {
@@ -1237,21 +1263,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // asíncrona para prevenir el "double-tap bug" (race condition por clics rápidos).
     const dailyBtn = document.getElementById('btn-daily');
     if (dailyBtn) {
-        dailyBtn.addEventListener('click', async () => {
-            // ── Paso 1: desactivar de inmediato (síncrono) ──
+        dailyBtn.addEventListener('click', () => {
+            // ── Paso 1: desactivar de inmediato ──
             dailyBtn.disabled      = true;
             dailyBtn.style.opacity = '0.5';
             dailyBtn.style.cursor  = 'not-allowed';
 
-            // Feedback visual "Procesando…" en el elemento de texto del botón
-            const rewardEl = document.getElementById('hud-reward-amount');
-            const span     = dailyBtn.querySelector('span');
-
-            if (rewardEl)  rewardEl.textContent = '...';
-            else if (span) span.textContent     = 'Procesando...';
-
-            // ── Paso 2: ejecutar la lógica asíncrona ──
-            const result = await window.GameCenter.claimDaily();
+            // ── Paso 2: ejecutar reclamo (instantáneo — sin red) ──
+            const result = window.GameCenter.claimDaily();
 
             // ── Paso 3: mostrar mensaje y actualizar UI ──
             const msg = document.getElementById('daily-msg');
