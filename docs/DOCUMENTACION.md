@@ -12,6 +12,7 @@
 2d. [Novedades en v9.1 — History API, Retry UI & Theme Fix](#2d-novedades-en-v91--history-api-retry-ui--theme-fix)
 2e. [Novedades en v9.2 — Font FOIT/FOUT, Coin Init & Treasury Grid](#2e-novedades-en-v92--font-foitfout-coin-init--treasury-grid)
 2f. [Novedades en v9.3 — Zero-Flicker Initiative](#2f-novedades-en-v93--zero-flicker-initiative)
+2g. [Novedades en v9.4 — Identity Update](#2g-novedades-en-v94--identity-update)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -265,6 +266,119 @@ Ahora (v9.3):          Script síncrono → applyTheme → init saldo → reveal
 | `index.html` | Script crítico inline en `<head>` + eliminar `class="theme-violet"` del `<body>` |
 | `app.js` | INIT síncrono fuera de DOMContentLoaded + nueva función `revealUI()` |
 | `styles.css` | `.hud-avatar-wrap { opacity: 0 }` + `.hud-avatar-wrap.is-ready { opacity: 1 }` |
+
+---
+
+## 2g. Novedades en v9.4 — Identity Update
+
+### Visión General
+
+Permite al usuario elegir un **nickname** (máx. 15 chars) y su **género de saludo** (`o` / `a` / `@`) en su primer acceso, con persistencia en `localStorage`. La implementación es compatible con la Zero-Flicker Initiative: el HUD permanece invisible hasta que el estado de identidad está completamente escrito en el DOM.
+
+---
+
+### Esquema de Datos (store)
+
+Dos campos nuevos añadidos a `migrateState()` en `app.js`:
+
+```javascript
+nickname: '',    // string, max 15 chars. Vacío = primer acceso.
+gender:   '@'    // 'o' | 'a' | '@' — controla el sufijo del saludo.
+```
+
+La migración silenciosa valida ambos en stores existentes:
+
+```javascript
+if (typeof merged.nickname !== 'string')       merged.nickname = '';
+if (!['o','a','@'].includes(merged.gender))    merged.gender   = '@';
+```
+
+---
+
+### API Pública (`window.GameCenter`)
+
+| Método | Descripción |
+|---|---|
+| `setIdentity(nickname, gender)` | Valida, guarda y aplica la identidad. Recorta el nickname a 15 chars. |
+| `getIdentity()` | Devuelve `{ nickname, gender }` sin referencia al store. |
+| `hasIdentity()` | `true` si `nickname.trim()` no está vacío. |
+
+---
+
+### Función interna `applyIdentity()`
+
+Escribe el nickname y sufijo de género en el DOM **síncronamente** antes de `revealUI()`:
+
+```javascript
+function applyIdentity() {
+    document.getElementById('pref-suffix').textContent   = store.gender   || '@';
+    document.getElementById('display-nickname').textContent = store.nickname || '';
+}
+```
+
+Se llama en el bloque INIT síncrono de `app.js`, justo después de `applyAvatar()`.
+
+---
+
+### HUD Dinámico (`index.html`)
+
+El saludo estático "Bienvenido de vuelta / Lilith" se reemplaza:
+
+```html
+<p class="hud-greeting">
+    Bienvenid<span id="pref-suffix">@</span> de vuelta
+</p>
+<p class="hud-name" id="display-nickname"></p>
+```
+
+El `<span id="pref-suffix">` hereda los estilos de `.hud-greeting`. El `<p id="display-nickname">` usa `.hud-name` con `min-height: 1.3em` para evitar colapso de layout durante el init.
+
+---
+
+### Flujo Zero-Flicker (pipeline de ejecución)
+
+```
+app.js (síncrono):
+  applyTheme()  →  init saldo  →  updateDailyButton()  →  applyAvatar()  →  applyIdentity()
+                                                                                    │
+                                                              nickname en store?
+                                                             ┌──────┴──────┐
+                                                            SÍ            NO
+                                                             │              │
+inline script (síncrono):                                    │              │
+  updateStreakBar()  →  updateCountdownDisplay()              │              │
+                                                             │              │
+  GameCenter.hasIdentity()?                                  │              │
+    └─ true  → revealUI()  ◄────────────────────────────────┘              │
+    └─ false → mostrar Identity Modal ◄────────────────────────────────────┘
+                    │
+                    │ (usuario confirma)
+                    ▼
+              setIdentity() → applyIdentity() → modal.hidden → revealUI()
+```
+
+El `.player-hud` permanece en `opacity: 0` en **ambos caminos** hasta el `revealUI()` final.
+
+---
+
+### Identity Modal
+
+- **Activación:** aparece síncronamente si `hasIdentity()` es `false`. No usa `DOMContentLoaded`.
+- **Overlay especial:** `.identity-modal-overlay` con `backdrop-filter: blur(12px) brightness(0.45)` y `z-index: 10500`.
+- **Chips de género:** grid de 3 botones con animación `cubic-bezier(0.34, 1.56, 0.64, 1)`.
+- **Input:** `font-family: var(--font-display)`, contador de chars en tiempo real, validación con mensaje inline.
+- **Teclado móvil:** `max-height: 90dvh` + `overflow-y: auto` en `.identity-modal-box`. Al hacer focus en el input, el botón "Empezar" hace `scrollIntoView` para quedar visible por encima del teclado.
+- **Confirmación:** click en botón o tecla `Enter`. Valida que el nickname no esté vacío antes de guardar.
+
+---
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `app.js` | `migrateState`: +`nickname`, +`gender`. `GameCenter`: +`setIdentity`, +`getIdentity`, +`hasIdentity`. Nueva función `applyIdentity()`. INIT síncrono: llama a `applyIdentity()`. |
+| `index.html` | HUD: `hud-greeting` con `<span id="pref-suffix">`, `hud-name` con `id="display-nickname"`. Identity Modal completo. Inline script: lógica condicional `hasIdentity → revealUI / modal`. |
+| `styles.css` | `.identity-modal-overlay`, `.identity-modal-box`, `.identity-chips`, `.identity-chip`, `.identity-chip--active`, `.identity-input`, `.identity-char-count`, `.identity-input-error`, `.identity-confirm-btn`. `.hud-name`: +`min-height`. |
 
 ---
 
