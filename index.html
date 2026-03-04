@@ -155,7 +155,15 @@
                         <p class="hud-greeting">
                             Bienvenid<span id="pref-suffix">@</span> de vuelta
                         </p>
-                        <p class="hud-name" id="display-nickname"></p>
+                        <div class="hud-name-row">
+                            <p class="hud-name" id="display-nickname"></p>
+                            <button id="btn-edit-identity"
+                                    class="btn-edit-identity"
+                                    type="button"
+                                    aria-label="Editar nombre y saludo">
+                                <i data-lucide="pencil" size="11"></i>
+                            </button>
+                        </div>
                         <p class="hud-status">
                             <span class="hud-status-dot"></span>
                             <span>En línea · Love Arcade</span>
@@ -743,9 +751,9 @@
             </div>
 
             <h3 id="identity-modal-title" class="modal-title identity-modal-title">
-                ¡Bienvenid@ a Love Arcade!
+                <span id="identity-modal-title-text">¡Bienvenid@ a Love Arcade!</span>
             </h3>
-            <p class="identity-modal-sub">
+            <p class="identity-modal-sub" id="identity-modal-sub">
                 Elige cómo quieres que te llame la plataforma.
             </p>
 
@@ -789,7 +797,7 @@
             <!-- Confirmar -->
             <button id="identity-confirm-btn" class="btn-primary identity-confirm-btn" type="button">
                 <i data-lucide="check" size="16"></i>
-                <span>Empezar</span>
+                <span id="identity-confirm-label">Empezar</span>
             </button>
 
         </div>
@@ -1024,86 +1032,133 @@
         updateStreakBar();
         updateCountdownDisplay();
 
-        // ── Identity Flow — v9.4 ────────────────────────────────────────────
-        // Si el usuario ya tiene nickname → revealUI() directamente.
-        // Si no → mostrar Identity Modal; revealUI() se llama al confirmar.
-        // En ambos casos el .player-hud permanece en opacity:0 hasta que
-        // TODOS los valores (racha, countdown, nickname, sufijo) estén listos.
-
-        if (window.GameCenter?.hasIdentity?.()) {
-            // Usuario conocido: todo el estado ya fue escrito síncronamente.
-            window.revealUI?.();
-        } else {
-            // Primer acceso (o nickname vacío): mostrar modal de bienvenida.
+        // ── Identity Modal — función reutilizable (bienvenida + edición) ────
+        //
+        // mode = 'welcome' → primer acceso: título/botón de bienvenida, sin
+        //                    pre-relleno, llama revealUI() al confirmar.
+        // mode = 'edit'    → usuario conocido: pre-rellena nick y género,
+        //                    título/botón de edición, NO llama revealUI()
+        //                    (el HUD ya está visible).
+        //
+        function openIdentityModal(mode) {
             const identityModal = document.getElementById('identity-modal');
-            if (identityModal) {
-                identityModal.classList.remove('hidden');
-                lucide.createIcons(); // Renderizar iconos del modal
+            if (!identityModal) { if (mode === 'welcome') window.revealUI?.(); return; }
 
-                let selectedGender = '@';
+            const isEdit = (mode === 'edit');
 
-                // ── Chip de género ──────────────────────────────────────────
-                const chips = identityModal.querySelectorAll('.identity-chip');
-                chips.forEach(chip => {
-                    chip.addEventListener('click', () => {
-                        selectedGender = chip.dataset.gender;
-                        chips.forEach(c => c.classList.toggle('identity-chip--active', c === chip));
-                    });
+            // ── Adaptar textos según modo ───────────────────────────────────
+            const titleEl   = document.getElementById('identity-modal-title-text');
+            const subEl     = document.getElementById('identity-modal-sub');
+            const confirmLbl = document.getElementById('identity-confirm-label');
+
+            if (titleEl)    titleEl.textContent  = isEdit ? 'Editar identidad' : '¡Bienvenid@ a Love Arcade!';
+            if (subEl)      subEl.textContent    = isEdit
+                ? 'Actualiza tu nombre o forma de saludo.'
+                : 'Elige cómo quieres que te llame la plataforma.';
+            if (confirmLbl) confirmLbl.textContent = isEdit ? 'Guardar cambios' : 'Empezar';
+
+            // ── Pre-rellenar valores actuales en modo edición ───────────────
+            const currentIdentity = window.GameCenter?.getIdentity?.() ?? { nickname: '', gender: '@' };
+            let selectedGender = isEdit ? currentIdentity.gender : '@';
+
+            const nicknameInput = document.getElementById('identity-nickname-input');
+            const charCount     = document.getElementById('identity-char-count');
+            const errorEl       = document.getElementById('identity-input-error');
+
+            if (nicknameInput) {
+                nicknameInput.value = isEdit ? currentIdentity.nickname : '';
+                if (charCount) charCount.textContent = `${nicknameInput.value.length}/15`;
+            }
+
+            // ── Chips: marcar la selección actual ──────────────────────────
+            const chips = identityModal.querySelectorAll('.identity-chip');
+            chips.forEach(chip => {
+                chip.classList.toggle('identity-chip--active', chip.dataset.gender === selectedGender);
+            });
+
+            // ── Mostrar modal y renderizar iconos ──────────────────────────
+            identityModal.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+            errorEl?.classList.add('hidden');
+
+            // ── Listeners (se registran con {once:true} para evitar duplicados)
+            chips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    selectedGender = chip.dataset.gender;
+                    chips.forEach(c => c.classList.toggle('identity-chip--active', c === chip));
+                }, { once: false }); // chips pueden ser clicados varias veces en el mismo modal
+            });
+
+            if (nicknameInput && charCount) {
+                nicknameInput.addEventListener('input', () => {
+                    charCount.textContent = `${nicknameInput.value.length}/15`;
+                    if (nicknameInput.value.trim()) errorEl?.classList.add('hidden');
                 });
+            }
 
-                // ── Contador de caracteres ──────────────────────────────────
-                const nicknameInput = document.getElementById('identity-nickname-input');
-                const charCount     = document.getElementById('identity-char-count');
-                const errorEl       = document.getElementById('identity-input-error');
+            // ── Focus automático ───────────────────────────────────────────
+            setTimeout(() => nicknameInput?.focus(), 280);
 
-                if (nicknameInput && charCount) {
-                    nicknameInput.addEventListener('input', () => {
-                        charCount.textContent = `${nicknameInput.value.length}/15`;
-                        // Limpiar error al escribir
-                        if (nicknameInput.value.trim()) errorEl?.classList.add('hidden');
-                    });
-                }
-
-                // ── Focus automático (con delay para respetar animación) ────
+            // ── Scroll para teclado móvil ──────────────────────────────────
+            nicknameInput?.addEventListener('focus', () => {
                 setTimeout(() => {
+                    document.getElementById('identity-confirm-btn')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 350);
+            });
+
+            // ── Confirmar ──────────────────────────────────────────────────
+            function confirmIdentity() {
+                const nickname = nicknameInput?.value.trim() || '';
+                if (!nickname) {
+                    errorEl?.classList.remove('hidden');
                     nicknameInput?.focus();
-                }, 280);
-
-                // ── Scroll al confirmar (previene que teclado móvil lo tape) ─
-                nicknameInput?.addEventListener('focus', () => {
-                    // dvh responde al teclado en Chrome/Safari modernos;
-                    // scrollIntoView es el fallback para el resto.
-                    setTimeout(() => {
-                        document.getElementById('identity-confirm-btn')
-                            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 350);
-                });
-
-                // ── Confirmar ───────────────────────────────────────────────
-                function confirmIdentity() {
-                    const nickname = nicknameInput?.value.trim() || '';
-                    if (!nickname) {
-                        errorEl?.classList.remove('hidden');
-                        nicknameInput?.focus();
-                        return;
-                    }
-                    window.GameCenter?.setIdentity?.(nickname, selectedGender);
-                    identityModal.classList.add('hidden');
+                    return;
+                }
+                window.GameCenter?.setIdentity?.(nickname, selectedGender);
+                identityModal.classList.add('hidden');
+                if (!isEdit) {
                     window.revealUI?.();
                 }
+                // En modo edición el HUD ya es visible; applyIdentity() ya fue
+                // llamado por setIdentity() → el DOM se actualiza al instante.
+            }
 
-                document.getElementById('identity-confirm-btn')
-                    ?.addEventListener('click', confirmIdentity);
+            document.getElementById('identity-confirm-btn')
+                ?.addEventListener('click', confirmIdentity, { once: true });
 
-                // Enter para confirmar (útil en desktop)
-                nicknameInput?.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); confirmIdentity(); }
+            nicknameInput?.addEventListener('keydown', function onEnter(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    nicknameInput.removeEventListener('keydown', onEnter);
+                    confirmIdentity();
+                }
+            });
+
+            // ── Cerrar al hacer clic en el overlay (solo en modo edición) ──
+            if (isEdit) {
+                identityModal.addEventListener('click', function onOverlayClick(e) {
+                    if (e.target === identityModal) {
+                        identityModal.classList.add('hidden');
+                        identityModal.removeEventListener('click', onOverlayClick);
+                    }
                 });
-            } else {
-                // Fallback: si el modal no existe, revelar de todas formas
-                window.revealUI?.();
             }
         }
+
+        // ── Identity Flow — v9.4 ────────────────────────────────────────────
+        // Si el usuario ya tiene nickname → revealUI() directamente.
+        // Si no → mostrar modal de bienvenida; revealUI() se llama al confirmar.
+
+        if (window.GameCenter?.hasIdentity?.()) {
+            window.revealUI?.();
+        } else {
+            openIdentityModal('welcome');
+        }
+
+        // ── Botón de edición en el HUD ──────────────────────────────────────
+        document.getElementById('btn-edit-identity')
+            ?.addEventListener('click', () => openIdentityModal('edit'));
 
         // ── Event listeners — solo se registran en DOMContentLoaded ─────────
         document.addEventListener('DOMContentLoaded', () => {
