@@ -31,7 +31,8 @@
 }
 
 body {
-    background-color: var(--bg-dark);
+    /* Tactical radial gradient base — replaces flat solid color */
+    background: radial-gradient(circle at center, #111A30 0%, #05070A 100%);
     color: var(--text-main);
     font-family: 'Rubik', sans-serif;
     position: fixed;
@@ -44,21 +45,66 @@ body {
 }
 
 /* =========================================
-   3. BACKGROUND
-   No blur. Tactical tint only.
+   3. BACKGROUND STACK
    ========================================= */
+
+/* Level image tint — behind everything */
 .dynamic-bg {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: -2;
+    z-index: -3;
     background-size: cover;
     background-position: center;
     opacity: 0.07;
     transition: background-image 0.4s ease-in-out;
 }
 
-.scanlines {
+/* ─── Living Grid Layer ──────────────────
+   Sits between dynamic-bg and scanlines.
+   Parallax transform driven by JS (mouse / DeviceOrientation).
+   Extends 10% beyond viewport on each edge so shifted edges
+   are never visible during parallax movement.
+   ──────────────────────────────────────── */
+.grid-layer {
+    position: fixed;
+    /* Oversize by 10% on each side to hide parallax edge bleed */
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    z-index: -2;
+    pointer-events: none;
+    will-change: transform;
+
+    /* Grid lines: 1px lines every 40px on both axes */
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 39px,
+            rgba(59, 130, 246, 0.07) 40px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 39px,
+            rgba(59, 130, 246, 0.07) 40px
+        );
+    background-size: 40px 40px;
+}
+
+/* Twinkle canvas fills the grid-layer exactly */
+.twinkle-canvas {
     position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Scanlines — topmost atmosphere layer */
+.scanlines {
+    position: fixed;
     inset: 0;
     z-index: -1;
     background: repeating-linear-gradient(
@@ -117,6 +163,17 @@ body {
     font-family: 'Rajdhani', sans-serif;
 }
 
+/* Coin display wrapper — stacks micro-label above counter */
+.coins-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.coins-micro {
+    margin-bottom: 1px;
+}
+
 .icon {
     width: 20px; height: 20px;
     fill: none; stroke: currentColor;
@@ -164,6 +221,36 @@ body {
     display: block;
 }
 
+/* ─── Canvas corner micro-data labels ──────────
+   Cosmetic telemetry readouts overlaid on
+   the game canvas — POS_X/POS_Y + resolution.
+   ──────────────────────────────────────────── */
+.canvas-corner-data {
+    position: absolute;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 7px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    opacity: 0.4;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 25;
+    line-height: 1;
+}
+
+.canvas-corner-data.top-left {
+    top: 8px;
+    left: 10px;
+}
+
+.canvas-corner-data.bottom-right {
+    bottom: 8px;
+    right: 10px;
+    text-align: right;
+}
+
 /* =========================================
    7. SCREEN: MENU
    ========================================= */
@@ -173,7 +260,6 @@ body {
     overflow-y: auto;
 }
 
-/* Panel with bracket corners — top-left and bottom-right only */
 .menu-content {
     background: var(--bg-panel);
     padding: 36px;
@@ -306,7 +392,7 @@ body {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    /* Stagger animation-delay applied via JS */
+    /* Stagger animation-delay applied via JS (0.04s × index) */
     animation: cardSlideIn 0.3s ease both;
     filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.85));
     overflow: hidden;
@@ -375,7 +461,6 @@ body {
     align-items: flex-end;
 }
 
-/* Vertical stack: micro-label on top, value below */
 .hud-stat {
     display: flex;
     flex-direction: column;
@@ -422,9 +507,8 @@ canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* =========================================
    10. BUTTONS — clip-path beveled, no border-radius
-   State: Normal = bg-panel + inset border
-   State: Active = accent bg + dark text (instant)
-   Release animation driven by JS Web Animations API
+   Release bounce driven by JS Web Animations API:
+   0.96 → 1.04 → 1.0 in 200ms
    ========================================= */
 .btn {
     border: none; outline: none;
@@ -479,7 +563,7 @@ canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 }
 .btn-icon:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
 
-/* Control buttons (Preview / Magnet) — now tactical polygons */
+/* Control buttons (Preview / Magnet) */
 .btn-circle {
     width: 52px; height: 52px; min-height: 48px;
     clip-path: var(--bevel-md);
@@ -613,15 +697,18 @@ canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
     to   { opacity: 1; transform: translate3d(0,  0px, 0); }
 }
 
+/* Level cards drop in from 20px above (spec: translateY 20px → 0) */
 @keyframes cardSlideIn {
-    from { opacity: 0; transform: translate3d(0, 8px, 0); }
-    to   { opacity: 1; transform: translate3d(0, 0px, 0); }
+    from { opacity: 0; transform: translate3d(0, 20px, 0); }
+    to   { opacity: 1; transform: translate3d(0,  0px, 0); }
 }
 
-/* Press-release bounce (driven by JS Web Animations API) */
+/* Release bounce: press 0.96 → overshoot 1.04 → settle 1.0
+   Driven by JS Web Animations API — this keyframe is kept as
+   a CSS reference / fallback for static contexts only. */
 @keyframes btnRelease {
     0%   { transform: scale3d(0.96, 0.96, 1); }
-    60%  { transform: scale3d(1.02, 1.02, 1); }
+    60%  { transform: scale3d(1.04, 1.04, 1); }
     100% { transform: scale3d(1.00, 1.00, 1); }
 }
 
