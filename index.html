@@ -152,8 +152,10 @@
                         <input type="file" id="avatar-upload-hud" hidden accept="image/*">
                     </div>
                     <div class="hud-info">
-                        <p class="hud-greeting">Bienvenido de vuelta</p>
-                        <p class="hud-name">Lilith</p>
+                        <p class="hud-greeting">
+                            Bienvenid<span id="pref-suffix">@</span> de vuelta
+                        </p>
+                        <p class="hud-name" id="display-nickname"></p>
                         <p class="hud-status">
                             <span class="hud-status-dot"></span>
                             <span>En línea · Love Arcade</span>
@@ -722,6 +724,77 @@
          Soluciona el bug de scroll causado por overflow/stacking.
          ══════════════════════════════════════════════════════════ -->
 
+    <!-- ── IDENTITY MODAL — Bienvenida (primer acceso y edición de perfil) ── -->
+    <!--
+      Comienza oculto (.hidden). El inline script lo muestra síncronamente si
+      window.GameCenter.hasIdentity() es false, manteniendo .player-hud en
+      opacity:0 hasta que el usuario confirme su nickname.
+    -->
+    <div id="identity-modal"
+         class="modal-overlay identity-modal-overlay hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="identity-modal-title">
+        <div class="modal-box identity-modal-box">
+
+            <!-- Icono central con glow -->
+            <div class="identity-modal-icon" aria-hidden="true">
+                <i data-lucide="sparkles" size="28"></i>
+            </div>
+
+            <h3 id="identity-modal-title" class="modal-title identity-modal-title">
+                ¡Bienvenid@ a Love Arcade!
+            </h3>
+            <p class="identity-modal-sub">
+                Elige cómo quieres que te llame la plataforma.
+            </p>
+
+            <!-- Selector de género -->
+            <p class="identity-label">¿Cómo te saludamos?</p>
+            <div class="identity-chips" id="identity-chips" role="group" aria-label="Forma de saludo">
+                <button class="identity-chip" data-gender="o" type="button">
+                    Bienvenid<strong>o</strong>
+                </button>
+                <button class="identity-chip identity-chip--active" data-gender="@" type="button">
+                    Bienvenid<strong>@</strong>
+                </button>
+                <button class="identity-chip" data-gender="a" type="button">
+                    Bienvenid<strong>a</strong>
+                </button>
+            </div>
+
+            <!-- Input de nickname -->
+            <p class="identity-label" style="margin-top:20px;">Tu nickname</p>
+            <div class="identity-input-wrap">
+                <input
+                    type="text"
+                    id="identity-nickname-input"
+                    class="identity-input"
+                    placeholder="Ej: Lilith, Nova, Kira…"
+                    maxlength="15"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="words"
+                    spellcheck="false"
+                    aria-label="Nickname"
+                    aria-describedby="identity-input-error"
+                >
+                <span class="identity-char-count" id="identity-char-count" aria-live="polite">0/15</span>
+            </div>
+            <p class="identity-input-error hidden" id="identity-input-error" role="alert">
+                <i data-lucide="alert-circle" size="12"></i>
+                El nickname no puede estar vacío.
+            </p>
+
+            <!-- Confirmar -->
+            <button id="identity-confirm-btn" class="btn-primary identity-confirm-btn" type="button">
+                <i data-lucide="check" size="16"></i>
+                <span>Empezar</span>
+            </button>
+
+        </div>
+    </div>
+
     <!-- ── WALLPAPER PREVIEW MODAL ── -->
     <div id="preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Vista previa de wallpaper">
         <div class="modal-box" style="max-width:500px; padding:0; overflow:hidden; background:#070710;">
@@ -944,23 +1017,93 @@
             }
         };
 
-        // ── Inicialización SÍNCRONA del HUD — Zero-Flicker v9.3 ─────────────
-        // El script inline está al final de <body>: el DOM ya existe y app.js
-        // ya ha corrido, por lo que window.GameCenter está disponible.
-        // Llamar aquí (síncronamente) garantiza que los 7 puntos de racha y
-        // el texto del botón diario tengan sus valores reales ANTES del primer
-        // paint, eliminando el salto de estado visible en el Player HUD.
+        // ── Inicialización SÍNCRONA del HUD — Zero-Flicker v9.3/v9.4 ────────
+        // El script inline corre al final de <body>: DOM listo, JS cargado,
+        // navegador aún sin pintar. Todo lo que se escriba aquí llega al
+        // primer frame sin parpadeo.
         updateStreakBar();
         updateCountdownDisplay();
 
-        // revealUI() se llama AQUÍ — después de que app.js ya corrió
-        // (updateDailyButton, updateMoonBlessingUI, applyAvatar) Y después de
-        // que updateStreakBar() y updateCountdownDisplay() terminaron.
-        // En el siguiente RAF el .player-hud se revela con TODO correcto:
-        // · Botón desactivado/activado sin flash de transition:all
-        // · Countdown en posición final sin layout-shift
-        // · Barras de racha con los días activos correctos
-        window.revealUI?.();
+        // ── Identity Flow — v9.4 ────────────────────────────────────────────
+        // Si el usuario ya tiene nickname → revealUI() directamente.
+        // Si no → mostrar Identity Modal; revealUI() se llama al confirmar.
+        // En ambos casos el .player-hud permanece en opacity:0 hasta que
+        // TODOS los valores (racha, countdown, nickname, sufijo) estén listos.
+
+        if (window.GameCenter?.hasIdentity?.()) {
+            // Usuario conocido: todo el estado ya fue escrito síncronamente.
+            window.revealUI?.();
+        } else {
+            // Primer acceso (o nickname vacío): mostrar modal de bienvenida.
+            const identityModal = document.getElementById('identity-modal');
+            if (identityModal) {
+                identityModal.classList.remove('hidden');
+                lucide.createIcons(); // Renderizar iconos del modal
+
+                let selectedGender = '@';
+
+                // ── Chip de género ──────────────────────────────────────────
+                const chips = identityModal.querySelectorAll('.identity-chip');
+                chips.forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        selectedGender = chip.dataset.gender;
+                        chips.forEach(c => c.classList.toggle('identity-chip--active', c === chip));
+                    });
+                });
+
+                // ── Contador de caracteres ──────────────────────────────────
+                const nicknameInput = document.getElementById('identity-nickname-input');
+                const charCount     = document.getElementById('identity-char-count');
+                const errorEl       = document.getElementById('identity-input-error');
+
+                if (nicknameInput && charCount) {
+                    nicknameInput.addEventListener('input', () => {
+                        charCount.textContent = `${nicknameInput.value.length}/15`;
+                        // Limpiar error al escribir
+                        if (nicknameInput.value.trim()) errorEl?.classList.add('hidden');
+                    });
+                }
+
+                // ── Focus automático (con delay para respetar animación) ────
+                setTimeout(() => {
+                    nicknameInput?.focus();
+                }, 280);
+
+                // ── Scroll al confirmar (previene que teclado móvil lo tape) ─
+                nicknameInput?.addEventListener('focus', () => {
+                    // dvh responde al teclado en Chrome/Safari modernos;
+                    // scrollIntoView es el fallback para el resto.
+                    setTimeout(() => {
+                        document.getElementById('identity-confirm-btn')
+                            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 350);
+                });
+
+                // ── Confirmar ───────────────────────────────────────────────
+                function confirmIdentity() {
+                    const nickname = nicknameInput?.value.trim() || '';
+                    if (!nickname) {
+                        errorEl?.classList.remove('hidden');
+                        nicknameInput?.focus();
+                        return;
+                    }
+                    window.GameCenter?.setIdentity?.(nickname, selectedGender);
+                    identityModal.classList.add('hidden');
+                    window.revealUI?.();
+                }
+
+                document.getElementById('identity-confirm-btn')
+                    ?.addEventListener('click', confirmIdentity);
+
+                // Enter para confirmar (útil en desktop)
+                nicknameInput?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmIdentity(); }
+                });
+            } else {
+                // Fallback: si el modal no existe, revelar de todas formas
+                window.revealUI?.();
+            }
+        }
 
         // ── Event listeners — solo se registran en DOMContentLoaded ─────────
         document.addEventListener('DOMContentLoaded', () => {
