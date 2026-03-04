@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="violet">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Lumina 2048 — Premium Zen edition para Love Arcade" />
+  <title>Lumina 2048 · Love Arcade</title>
+
+  <!-- Fuente Montserrat (pesos 600/700/800) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!--
+    ╔═══════════════════════════════════════════════════════╗
+    ║  ZERO-FLICKER INIT (v9.3 compatible)                 ║
+    ║  Leer tema del store ANTES del primer paint para     ║
+    ║  evitar el destello del color por defecto.           ║
+    ╚═══════════════════════════════════════════════════════╝
+  -->
+  <script>
+    (function () {
+      try {
+        var store  = JSON.parse(localStorage.getItem('gamecenter_v6_promos') || '{}');
+        var theme  = store.theme || 'violet';
+        var themes = { violet: '#9b59ff', pink: '#ff59b4', cyan: '#00d4ff', gold: '#f59e0b', crimson: '#e11d48' };
+        var accent = themes[theme] || '#9b59ff';
+        document.documentElement.style.setProperty('--lumina-platform-accent', accent);
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       CUSTOM PROPERTIES
+    ═══════════════════════════════════════════════════════════ */
+    :root {
+      --lumina-bg:              #0d0d12;
+      --lumina-surface:         rgba(255,255,255,0.035);
+      --lumina-surface-hover:   rgba(255,255,255,0.065);
+      --lumina-border:          rgba(255,255,255,0.07);
+      --lumina-border-bright:   rgba(255,255,255,0.14);
+      --lumina-text:            #e8eaf2;
+      --lumina-text-dim:        rgba(255,255,255,0.38);
+      --lumina-platform-accent: #9b59ff;
+
+      --lumina-gap:       8px;
+      --lumina-padding:   10px;
+      --lumina-radius:    14px;
+      --lumina-tile-r:    10px;
+
+      /* Board es cuadrado; tiles se calculan a partir del board */
+      --lumina-board-size: min(480px, calc(100vw - 32px));
+      --lumina-cell-size:  calc(
+        (var(--lumina-board-size) - 2 * var(--lumina-padding) - 3 * var(--lumina-gap)) / 4
+      );
+    }
+
+    @media (max-width: 375px) {
+      :root {
+        --lumina-board-size: 90vw;
+        --lumina-gap:        6px;
+        --lumina-padding:    8px;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--lumina-bg);
+      color: var(--lumina-text);
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FONDO PARALLAX + ORBES ANIMADOS
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-bg-parallax {
+      position: fixed;
+      inset: -10%;
+      z-index: 0;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .lumina-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      animation: lumina-orb-breathe 9s ease-in-out infinite;
+    }
+    .lumina-orb-1 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+      top: -8%; left: -8%;
+      opacity: 0.13;
+      animation-delay: 0s;
+    }
+    .lumina-orb-2 {
+      width: 380px; height: 380px;
+      background: radial-gradient(circle, #0891b2 0%, transparent 70%);
+      bottom: -4%; right: -4%;
+      opacity: 0.11;
+      animation-delay: -3.5s;
+    }
+    .lumina-orb-3 {
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+      top: 45%; left: 38%;
+      opacity: 0.09;
+      animation-delay: -7s;
+    }
+
+    @keyframes lumina-orb-breathe {
+      0%, 100% { transform: scale(1) translate(0, 0);        opacity: inherit; }
+      50%       { transform: scale(1.12) translate(8px, 8px); filter: blur(90px) brightness(1.3); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CANVAS DE PARTÍCULAS
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ÁREA DE JUEGO
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-game-area {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      min-height: 100vh;
+      padding: 12px 16px 16px;
+      gap: 10px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CABECERA
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: var(--lumina-board-size);
+      max-width: 100%;
+      gap: 8px;
+    }
+
+    .lumina-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-radius: 8px;
+      color: var(--lumina-text-dim);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      backdrop-filter: blur(12px);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .lumina-back-btn:hover, .lumina-back-btn:focus {
+      background: var(--lumina-surface-hover);
+      color: var(--lumina-text);
+      border-color: var(--lumina-border-bright);
+    }
+
+    .lumina-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-align: center;
+      background: linear-gradient(135deg, #00f5ff 0%, #a855f7 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      flex: 1;
+    }
+
+    .lumina-scores {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .lumina-score-box {
+      position: relative;
+      padding: 5px 10px;
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-radius: 8px;
+      text-align: center;
+      min-width: 58px;
+      backdrop-filter: blur(12px);
+      overflow: visible;
+    }
+
+    .lumina-score-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      color: var(--lumina-text-dim);
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .lumina-score-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--lumina-text);
+      line-height: 1.3;
+    }
+
+    /* Score pop-up flotante */
+    .lumina-score-pop {
+      position: absolute;
+      bottom: calc(100% + 2px);
+      right: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4ade80;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: lumina-pop-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      z-index: 30;
+    }
+
+    @keyframes lumina-pop-up {
+      0%   { opacity: 1; transform: translateY(0)    scale(1); }
+      100% { opacity: 0; transform: translateY(-20px) scale(0.85); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BARRA DE CONTROLES (combo + new game)
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: var(--lumina-board-size);
+      max-width: 100%;
+      gap: 12px;
+    }
+
+    #lumina-combo-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .lumina-combo-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--lumina-text-dim);
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .lumina-combo-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #lumina-combo-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #00f5ff, #a855f7);
+      box-shadow: 0 0 8px #00f5ff88;
+      transition: width 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 0.4s ease,
+                  box-shadow 0.4s ease;
+    }
+
+    .lumina-combo--flash #lumina-combo-bar {
+      animation: lumina-combo-flash 0.55s ease-out;
+    }
+
+    @keyframes lumina-combo-flash {
+      0%, 100% { filter: brightness(1); }
+      40%       { filter: brightness(2.5) saturate(2); }
+    }
+
+    /* Botones */
+    .lumina-btn {
+      padding: 7px 15px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .lumina-btn:active { transform: scale(0.96); }
+
+    .lumina-btn--new {
+      background: var(--lumina-surface);
+      border-color: var(--lumina-border);
+      color: var(--lumina-text);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+    .lumina-btn--new:hover { background: var(--lumina-surface-hover); border-color: var(--lumina-border-bright); }
+
+    .lumina-btn--primary {
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      color: #fff;
+      padding: 11px 28px;
+      font-size: 13.5px;
+      border: none;
+      box-shadow: 0 4px 22px rgba(124,58,237,0.45);
+    }
+    .lumina-btn--primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(124,58,237,0.65);
+    }
+
+    .lumina-btn--ghost {
+      background: var(--lumina-surface);
+      border-color: var(--lumina-border);
+      color: var(--lumina-text-dim);
+      padding: 9px 20px;
+    }
+    .lumina-btn--ghost:hover { background: var(--lumina-surface-hover); color: var(--lumina-text); }
+
+    /* ═══════════════════════════════════════════════════════════
+       TABLERO
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-board {
+      position: relative;
+      width:  var(--lumina-board-size);
+      height: var(--lumina-board-size);
+      max-width: 100%;
+
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--lumina-border);
+      border-radius: var(--lumina-radius);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+
+      padding: var(--lumina-padding);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--lumina-gap);
+
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.035) inset,
+        0 8px 60px rgba(0,0,0,0.55),
+        0 0 120px rgba(0,0,0,0.3);
+
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Celdas de fondo (grilla visual) */
+    .lumina-cell {
+      background: rgba(255,255,255,0.028);
+      border: 1px solid rgba(255,255,255,0.038);
+      border-radius: var(--lumina-tile-r);
+      aspect-ratio: 1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FICHAS
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-tile {
+      position: absolute;
+      width:  var(--lumina-cell-size);
+      height: var(--lumina-cell-size);
+
+      /* Posicionamiento via CSS custom properties */
+      left: calc(var(--lumina-padding) + var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap)));
+      top:  calc(var(--lumina-padding) + var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)));
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      border-radius: var(--lumina-tile-r);
+      font-weight: 700;
+      font-size: clamp(16px, calc(var(--lumina-cell-size) * 0.42), 30px);
+      line-height: 1;
+
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+
+      transition:
+        left 0.12s cubic-bezier(0.25, 0.1, 0.05, 1),
+        top  0.12s cubic-bezier(0.25, 0.1, 0.05, 1);
+
+      z-index: 5;
+      will-change: left, top;
+    }
+
+    /* Ajuste de fuente para números de 4–5 cifras */
+    .lumina-tile[data-digits="4"] { font-size: clamp(12px, calc(var(--lumina-cell-size) * 0.31), 22px); }
+    .lumina-tile[data-digits="5"] { font-size: clamp(10px, calc(var(--lumina-cell-size) * 0.26), 18px); }
+
+    /* ── Animaciones de ficha ── */
+    @keyframes lumina-tile-appear {
+      0%   { transform: scale(0.35); opacity: 0; }
+      72%  { transform: scale(1.1);  opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    @keyframes lumina-tile-merge {
+      0%   { transform: scale(1);    }
+      30%  { transform: scale(1.18); }
+      65%  { transform: scale(0.94); }
+      100% { transform: scale(1);    }
+    }
+
+    .lumina-tile--new    { animation: lumina-tile-appear 0.22s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .lumina-tile--merged { animation: lumina-tile-merge  0.20s cubic-bezier(0.34,1.56,0.64,1) both; z-index: 6; }
+
+    /* ── Ficha de Energía ── */
+    .lumina-e-icon  { font-size: 1.5em; line-height: 1; display: block; }
+    .lumina-e-label { font-size: 0.38em; letter-spacing: 0.1em; opacity: 0.75; line-height: 1; }
+
+    @keyframes lumina-energy-glow {
+      0%, 100% { filter: brightness(1)    drop-shadow(0 0  6px rgba(255,255,255,0.4)); }
+      50%       { filter: brightness(1.6) drop-shadow(0 0 16px rgba(255,255,255,0.8)); }
+    }
+    .lumina-tile--energy { animation: lumina-energy-glow 2.2s ease-in-out infinite; }
+    /* Cuando es nueva Y de energía, la animación de aparición gana al principio */
+    .lumina-tile--energy.lumina-tile--new {
+      animation: lumina-tile-appear 0.22s cubic-bezier(0.34,1.56,0.64,1) both,
+                 lumina-energy-glow 2.2s ease-in-out 0.25s infinite;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       PIE: INSTRUCCIONES
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-instructions {
+      font-size: 11.5px;
+      color: var(--lumina-text-dim);
+      text-align: center;
+      letter-spacing: 0.04em;
+      line-height: 1.5;
+      max-width: var(--lumina-board-size);
+    }
+    .lumina-instructions strong { color: rgba(255,255,255,0.55); }
+
+    .lumina-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--lumina-text-dim);
+      opacity: 0.7;
+    }
+    .lumina-hint-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MODALES
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13,13,18,0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+    .lumina-modal--visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lumina-modal-box {
+      background: rgba(255,255,255,0.055);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 36px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      max-width: 310px;
+      width: 88%;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 0 80px rgba(0,0,0,0.6);
+      animation: lumina-modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .lumina-modal-box--win {
+      background: rgba(124,58,237,0.10);
+      border-color: rgba(168,85,247,0.28);
+      box-shadow: 0 0 80px rgba(124,58,237,0.35), 0 0 0 1px rgba(168,85,247,0.08);
+    }
+
+    @keyframes lumina-modal-in {
+      0%   { transform: scale(0.82) translateY(18px); opacity: 0; }
+      100% { transform: scale(1)    translateY(0);    opacity: 1; }
+    }
+
+    .lumina-modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .lumina-modal-title--gameover {
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .lumina-modal-subtitle {
+      font-size: 13px;
+      color: var(--lumina-text-dim);
+      font-weight: 600;
+    }
+    .lumina-modal-subtitle span {
+      color: var(--lumina-text);
+      font-weight: 700;
+    }
+
+    .lumina-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ALTURAS REDUCIDAS (pantallas bajas, e.g. landscape móvil)
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-height: 640px) {
+      #lumina-game-area { gap: 6px; padding: 6px 12px 8px; }
+      .lumina-instructions, .lumina-hint { display: none; }
+      .lumina-score-box { padding: 4px 8px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Fondo animado parallax ── -->
+  <div id="lumina-bg-parallax" class="lumina-bg-parallax" aria-hidden="true">
+    <div class="lumina-orb lumina-orb-1"></div>
+    <div class="lumina-orb lumina-orb-2"></div>
+    <div class="lumina-orb lumina-orb-3"></div>
+  </div>
+
+  <!-- ── Canvas de partículas ── -->
+  <canvas id="lumina-particles" aria-hidden="true"></canvas>
+
+  <!-- ══════════════════════════════════════════════════
+       ÁREA DE JUEGO PRINCIPAL
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-game-area">
+
+    <!-- Cabecera: back / título / puntajes -->
+    <header class="lumina-header">
+      <a href="../../index.html" class="lumina-back-btn" aria-label="Volver al Hub">
+        ← Hub
+      </a>
+      <h1 class="lumina-title">LUMINA 2048</h1>
+      <div class="lumina-scores">
+        <div class="lumina-score-box" id="lumina-score-wrap" aria-live="polite" aria-label="Puntuación actual">
+          <div class="lumina-score-label">SCORE</div>
+          <div id="lumina-score" class="lumina-score-value">0</div>
+        </div>
+        <div class="lumina-score-box" aria-label="Mejor puntuación">
+          <div class="lumina-score-label">BEST</div>
+          <div id="lumina-best" class="lumina-score-value">0</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Barra de controles: combo meter + new game -->
+    <div class="lumina-controls">
+      <div id="lumina-combo-container" aria-label="Combo meter">
+        <span class="lumina-combo-label">COMBO</span>
+        <div class="lumina-combo-track">
+          <div id="lumina-combo-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+      <button id="lumina-new-game-btn" class="lumina-btn lumina-btn--new" aria-label="Nueva partida">
+        New Game
+      </button>
+    </div>
+
+    <!-- Tablero 4×4 (celdas generadas por JS en initRenderer) -->
+    <div id="lumina-board" role="grid" aria-label="Tablero Lumina 2048">
+      <!-- Celdas y fichas insertadas por lumina_render.js -->
+    </div>
+
+    <!-- Instrucciones -->
+    <p class="lumina-instructions">
+      Swipe o teclas de flecha para mover · Alcanza
+      <strong>2048</strong> para ganar
+    </p>
+    <div class="lumina-hint">
+      <span class="lumina-hint-badge">⚡ ENERGY</span>
+      Fusiona fichas de energía para ganar monedas Love Arcade
+    </div>
+
+  </div><!-- /#lumina-game-area -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       MODAL — GAME OVER
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-modal-gameover" class="lumina-modal" role="dialog" aria-modal="true" aria-label="Game Over">
+    <div class="lumina-modal-box">
+      <div class="lumina-modal-title lumina-modal-title--gameover">Game Over</div>
+      <div class="lumina-modal-subtitle">
+        Puntuación final: <span id="lumina-final-score">0</span>
+      </div>
+      <div class="lumina-modal-actions">
+        <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
+          Intentar de Nuevo
+        </button>
+        <a href="../../index.html" class="lumina-btn lumina-btn--ghost">
+          Volver al Hub
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       MODAL — VICTORIA (2048 alcanzado)
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-modal-win" class="lumina-modal" role="dialog" aria-modal="true" aria-label="¡Victoria!">
+    <div class="lumina-modal-box lumina-modal-box--win">
+      <div class="lumina-modal-title">✨ ¡Alcanzaste 2048!</div>
+      <div class="lumina-modal-subtitle">
+        Puntuación: <span id="lumina-win-score">0</span>
+      </div>
+      <div class="lumina-modal-actions">
+        <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
+          Nueva Partida
+        </button>
+        <button class="lumina-btn lumina-btn--ghost" onclick="lumina_continueGame()">
+          Seguir Jugando
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       MÓDULOS DEL JUEGO (orden de carga importa)
+  ══════════════════════════════════════════════════ -->
+  <script src="lumina_core.js"></script>
+  <script src="lumina_render.js"></script>
+  <script src="lumina_input.js"></script>
+  <script src="lumina_audio.js"></script>
+  <script src="lumina_bridge.js"></script>
+
+  <!-- ══════════════════════════════════════════════════
+       INICIALIZACIÓN PRINCIPAL
+  ══════════════════════════════════════════════════ -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+      // 1. Inicializar renderer (crea celdas de fondo, enlaza elementos DOM)
+      lumina_initRenderer();
+
+      // 2. Cargar estado guardado o iniciar partida nueva
+      lumina_bestScore = lumina_loadBestScore();
+      const restored = lumina_loadGameState();
+      if (!restored) {
+        lumina_initGame();
+      }
+
+      // 3. Render inicial
+      lumina_renderGrid();
+      lumina_updateScoreDisplay(0);
+      lumina_updateComboMeter();
+
+      // 4. Módulos de entrada y audio
+      lumina_initInput();
+      lumina_initAudio();
+
+      // 5. Sincronización de tema con la plataforma (solo lectura)
+      lumina_syncTheme();
+
+      // 6. Botón "New Game"
+      document.getElementById('lumina-new-game-btn')
+              .addEventListener('click', lumina_startNewGame);
+
+      console.log('[LUMINA] 🎮 Juego inicializado correctamente.');
+    });
+
+    // ── Acciones Globales (llamadas desde HTML onclick) ──────────────────
+
+    function lumina_startNewGame() {
+      lumina_clearBoard();
+      lumina_clearGameState();
+      lumina_initGame();
+      lumina_renderGrid();
+      lumina_updateScoreDisplay(0);
+      lumina_updateComboMeter();
+      lumina_hideModals();
+      lumina_keepGoing = false;
+    }
+
+    function lumina_continueGame() {
+      lumina_keepGoing = true;
+      lumina_hideModals();
+    }
+  </script>
+
+  <!--
+    ╔═══════════════════════════════════════════════════════╗
+    ║  MOTOR CENTRAL DE LOVE ARCADE                        ║
+    ║  DEBE IR SIEMPRE AL FINAL DEL <body>                 ║
+    ║  tras todos los scripts del juego.                   ║
+    ╚═══════════════════════════════════════════════════════╝
+  -->
+  <script src="../../js/app.js"></script>
+
+</body>
+</html>
