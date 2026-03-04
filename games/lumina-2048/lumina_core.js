@@ -5,6 +5,17 @@
  * Módulo 1 / 5: Lógica pura de la matriz 4×4.
  * Independiente del DOM. Sin efectos secundarios visuales.
  * Toda variable global lleva el prefijo lumina_ (normativa de namespace).
+ *
+ * CHANGELOG v1.1
+ * ──────────────
+ * [FIX] Mapa de rotaciones corregido: left/right estaban intercambiados, causando
+ *       que las fichas se movieran en dirección opuesta a la esperada (parecían
+ *       "teletransportarse" o aparecer en lugares aleatorios). La rotación CW ×1
+ *       lleva la columna 0 (izquierda) al tope → left=1; CW ×3 lleva la columna 3
+ *       (derecha) al tope → right=3.
+ * [FIX] Ghost Moves: la variable `moved` se renombra a `hasMoved` para mayor
+ *       claridad; lumina_addRandomTile() y lumina_checkGameOver() solo se invocan
+ *       cuando hasMoved=true, eliminando spawns fantasma.
  */
 
 'use strict';
@@ -74,23 +85,29 @@ function lumina_addRandomTile() {
  * Procesa un movimiento en la dirección dada.
  * @param {'up'|'down'|'left'|'right'} direction
  * @returns {{ moved, merges, maxMergeValue, energyMerges, comboTriggered }}
+ *
+ * La técnica de rotación unifica toda la lógica en "mover hacia arriba" (fila 0).
+ * Rotación CW: ng[c][n-1-r] = grid[r][c]
+ *   ×1 → la columna izquierda (col 0) pasa a ser la fila 0 → sirve para LEFT
+ *   ×2 → la fila inferior (row 3) pasa a ser la fila 0      → sirve para DOWN
+ *   ×3 → la columna derecha (col 3) pasa a ser la fila 0    → sirve para RIGHT
  */
 function lumina_move(direction) {
     // Limpiar flags de animación del frame anterior
     lumina_forEachTile(t => { if (t) { t.isNew = false; t.isMerged = false; } });
 
-    // Número de rotaciones CW para que "arriba" = dirección deseada
-    const rotations = { up: 0, right: 1, down: 2, left: 3 };
+    // CORRECCIÓN v1.1: left y right tenían los valores intercambiados.
+    const rotations = { up: 0, left: 1, down: 2, right: 3 };
     const times = rotations[direction];
     lumina_rotateGrid(times);
 
-    let moved   = false;
-    let merges  = [];
+    let hasMoved     = false;
+    let merges       = [];
     let energyMerges = 0;
 
     for (let col = 0; col < lumina_GRID_SIZE; col++) {
         const res = lumina_processColumn(col);
-        if (res.colMoved) moved = true;
+        if (res.colMoved) hasMoved = true;
         merges.push(...res.colMerges);
         energyMerges += res.colEnergyMerges;
     }
@@ -110,24 +127,25 @@ function lumina_move(direction) {
     }
 
     if (lumina_comboMeter >= 100) {
-        comboTriggered    = true;
-        lumina_comboMeter = 0;
+        comboTriggered     = true;
+        lumina_comboMeter  = 0;
         lumina_comboStreak = 0;
         lumina_triggerComboEffect();
     }
 
-    if (moved) {
+    // Spawn y verificaciones solo si hubo movimiento efectivo (anti-ghost-move)
+    if (hasMoved) {
         lumina_addRandomTile();
         lumina_checkGameOver();
         lumina_saveBestScore();
     }
 
-    return { moved, merges, maxMergeValue, energyMerges, comboTriggered };
+    return { moved: hasMoved, merges, maxMergeValue, energyMerges, comboTriggered };
 }
 
 /**
- * Compacta y fusiona hacia arriba la columna dada.
- * Devuelve cambios producidos.
+ * Compacta y fusiona hacia arriba la columna dada (fila 0 = destino).
+ * Recorre las fichas de arriba hacia abajo, empujándolas hacia el tope.
  */
 function lumina_processColumn(col) {
     // Recoger tiles no-nulos en orden (de arriba a abajo)
@@ -138,8 +156,8 @@ function lumina_processColumn(col) {
 
     if (!tiles.length) return { colMoved: false, colMerges: [], colEnergyMerges: 0 };
 
-    const result      = [];
-    const colMerges   = [];
+    const result        = [];
+    const colMerges     = [];
     let colEnergyMerges = 0;
     let i = 0;
 
@@ -149,9 +167,9 @@ function lumina_processColumn(col) {
 
         if (next && curr.value === next.value) {
             // ── Fusión ──
-            const newValue     = curr.value * 2;
+            const newValue      = curr.value * 2;
             const isEnergyMerge = curr.isEnergy || next.isEnergy;
-            const mergedTile   = lumina_createTile(newValue, false);
+            const mergedTile    = lumina_createTile(newValue, false);
             mergedTile.isMerged = true;
             result.push(mergedTile);
             lumina_score += newValue;
@@ -306,4 +324,4 @@ function lumina_clearGameState() {
     try { localStorage.removeItem(lumina_LS_PREFIX + 'gameState'); } catch (_) {}
 }
 
-console.log('[LUMINA] Core module v1.0 loaded.');
+console.log('[LUMINA] Core module v1.1 loaded.');
