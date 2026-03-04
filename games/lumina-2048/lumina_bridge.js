@@ -5,18 +5,122 @@
  * Módulo 5 / 5: Punto de contacto con app.js.
  * Única vía de comunicación con el sistema de monedas: completeLevel().
  * Implementa degradación elegante (modo standalone sin app.js).
+ *
+ * CHANGELOG v1.1
+ * ──────────────
+ * [FIX]  Reporte de monedas eliminado durante el gameplay.
+ *        window.GameCenter.completeLevel() SOLO se llama en GameOver o Win.
+ * [NEW]  Acumulador de sesión lumina_sessionCoins: las fusiones de Fichas de
+ *        Energía y los bonos por persistencia se acumulan localmente.
+ * [NEW]  Bono de Persistencia: +1 moneda por cada 150 puntos (calculado sobre
+ *        la puntuación final de la sesión).
+ * [NEW]  Bono de Fusión ⚡: incrementado a 10 monedas por ficha de energía
+ *        (antes era 5).
+ * [NEW]  Multiplicador de Esfuerzo: si el jugador alcanza la ficha 512, se
+ *        aplica ×1.5 al total de monedas acumuladas.
+ * [NEW]  lumina_reportFinalSession() consolida y reporta todo al cierre.
+ * [NEW]  lumina_resetSession() para limpiar estado entre partidas.
  */
 
 'use strict';
 
-const lumina_GAME_ID    = 'lumina_2048';
-let   lumina_keepGoing  = false; // true = el usuario eligió continuar tras 2048
+const lumina_GAME_ID   = 'lumina_2048';
+let   lumina_keepGoing = false; // true = el usuario eligió continuar tras 2048
 
-// ─── API Pública de Recompensas ───────────────────────────────────────────────
+// ─── Estado de Sesión (acumulador) ───────────────────────────────────────────
+
+/** Monedas de energía acumuladas durante la sesión (no se reportan hasta el final). */
+let lumina_sessionCoins       = 0;
+
+/** true si el jugador alcanzó o superó la ficha 512 en esta sesión. */
+let lumina_sessionReached512  = false;
+
+/** Mejor puntuación al inicio de la sesión, para detectar nuevo récord. */
+let lumina_sessionStartBest   = 0;
+
+// ─── API de Acumulación (llamada durante el gameplay) ─────────────────────────
+
+/**
+ * Notifica que se alcanzó un valor de ficha determinado.
+ * Activa el flag del Multiplicador de Esfuerzo si el valor ≥ 512.
+ * @param {number} value - Valor de la ficha alcanzada
+ */
+function lumina_notifyMaxTile(value) {
+    if (!lumina_sessionReached512 && value >= 512) {
+        lumina_sessionReached512 = true;
+        console.log('[LUMINA] 🔥 Hito 512 alcanzado — multiplicador ×1.5 activado para esta sesión.');
+    }
+}
+
+/**
+ * Acumula monedas por fusión de Fichas de Energía (⚡).
+ * NO reporta a GameCenter; las monedas quedan pendientes hasta el final.
+ * @param {number} count - Cantidad de fichas de energía fusionadas en el movimiento
+ */
+function lumina_accumulateEnergyMerge(count) {
+    const earned = count * 10; // 10 monedas por ficha de energía (v1.1: antes 5)
+    lumina_sessionCoins += earned;
+    console.log(`[LUMINA] ⚡ +${earned} monedas por fusión de energía (acumuladas, no reportadas).`);
+}
+
+// ─── Reporte Final (llamado en GameOver o Win) ────────────────────────────────
+
+/**
+ * Consolida todas las monedas de la sesión, aplica multiplicadores y reporta
+ * una única vez a window.GameCenter.completeLevel().
+ *
+ * Fórmula:
+ *   persistenceCoins = floor(score / 150)         ← Bono de Persistencia
+ *   energyCoins      = lumina_sessionCoins         ← Fusiones ⚡ acumuladas
+ *   total            = persistenceCoins + energyCoins
+ *   si reached512:   total = floor(total × 1.5)   ← Multiplicador de Esfuerzo
+ *
+ * @returns {{ coins: number, maxTile: number, isNewRecord: boolean }}
+ */
+function lumina_reportFinalSession() {
+    const persistenceCoins = Math.floor(lumina_score / 150);
+    let totalCoins         = persistenceCoins + lumina_sessionCoins;
+
+    if (lumina_sessionReached512) {
+        totalCoins = Math.floor(totalCoins * 1.5);
+        console.log('[LUMINA] ×1.5 aplicado (hito 512 alcanzado).');
+    }
+
+    // Garantizar mínimo de 1 moneda para cualquier partida
+    totalCoins = Math.max(1, totalCoins);
+
+    const maxTile     = lumina_getMaxTileValue();
+    const isNewRecord = lumina_score > lumina_sessionStartBest && lumina_score > 0;
+
+    console.log(`[LUMINA] 📊 Resumen de sesión:
+  Persistencia: ${persistenceCoins} monedas (${lumina_score} pts ÷ 150)
+  Energía:      ${lumina_sessionCoins} monedas
+  Multiplicador:${lumina_sessionReached512 ? ' ×1.5 ✓' : ' no aplicado'}
+  TOTAL:        ${totalCoins} monedas
+  Ficha máx:    ${maxTile}
+  Nuevo récord: ${isNewRecord}`);
+
+    lumina_reportReward('session_end', totalCoins);
+
+    return { coins: totalCoins, maxTile, isNewRecord };
+}
+
+/**
+ * Reinicia el estado de sesión. Llamar al inicio de cada partida nueva.
+ */
+function lumina_resetSession() {
+    lumina_sessionCoins      = 0;
+    lumina_sessionReached512 = false;
+    lumina_sessionStartBest  = lumina_bestScore; // captura el récord actual
+    console.log(`[LUMINA] Sesión reiniciada. Récord de referencia: ${lumina_sessionStartBest}`);
+}
+
+// ─── Comunicación con GameCenter (uso interno exclusivo) ─────────────────────
 
 /**
  * Reporta monedas al sistema Love Arcade.
- * Valida tipos e invoca window.GameCenter.completeLevel().
+ * PRIVADO: solo debe llamarse desde lumina_reportFinalSession().
+ * Nunca llamar directamente durante el gameplay.
  *
  * @param {string} reason   - Identificador semántico del hito (usado en levelId)
  * @param {number} rawCoins - Cantidad de monedas (se convierte a entero positivo)
@@ -39,37 +143,8 @@ function lumina_reportReward(reason, rawCoins) {
             console.error('[LUMINA] Error al invocar GameCenter.completeLevel:', e);
         }
     } else {
-        console.warn('[LUMINA] Modo standalone activo — monedas no acumuladas.');
+        console.warn(`[LUMINA] Modo standalone — ${coins} monedas calculadas (no enviadas).`);
     }
-}
-
-// ─── Hitos Concretos ──────────────────────────────────────────────────────────
-
-/**
- * Recompensa al alcanzar 2048 (victoria).
- * Fórmula: máx(10, floor(score / 50))
- */
-function lumina_rewardWin() {
-    const coins = Math.max(10, Math.floor(lumina_score / 50));
-    lumina_reportReward('win_2048', coins);
-}
-
-/**
- * Recompensa por fusionar una o más fichas de energía (⚡).
- * @param {number} count - Cantidad de fichas de energía fusionadas en el movimiento
- */
-function lumina_rewardEnergyMerge(count) {
-    const coins = count * 5; // 5 monedas por ficha de energía
-    lumina_reportReward('energy_merge', coins);
-}
-
-/**
- * Recompensa al romper el récord personal.
- * Llamar desde el motor principal cuando lumina_score > lumina_bestScore (antes de actualizar).
- */
-function lumina_rewardNewRecord() {
-    const coins = Math.max(5, Math.floor(lumina_bestScore / 200));
-    lumina_reportReward('new_record', coins);
 }
 
 // ─── Identidad del Usuario ────────────────────────────────────────────────────
@@ -106,4 +181,4 @@ function lumina_syncTheme() {
     } catch (_) {}
 }
 
-console.log('[LUMINA] Bridge module v1.0 loaded.');
+console.log('[LUMINA] Bridge module v1.1 loaded.');
