@@ -127,12 +127,16 @@
 
     /* ═══════════════════════════════════════════════════════════
        CANVAS DE PARTÍCULAS
+       FIX v1.1: z-index elevado explícitamente por encima del
+       contenedor de la grilla (#lumina-board z-index ~5) y del
+       game-area (z-index: 1) para evitar que las partículas de
+       fusión queden detrás de fichas nuevas.
     ═══════════════════════════════════════════════════════════ */
     #lumina-particles {
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 20;
+      z-index: 50; /* ← v1.1: elevado de 20 a 50 */
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -424,9 +428,14 @@
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
 
+      /*
+       * FIX v1.1: Transición elevada de 120ms a 160ms para cumplir el
+       * requisito mínimo de 150ms del brief y permitir una animación fluida
+       * de la propiedad left/top desde posición A a posición B.
+       */
       transition:
-        left 0.12s cubic-bezier(0.25, 0.1, 0.05, 1),
-        top  0.12s cubic-bezier(0.25, 0.1, 0.05, 1);
+        left 0.16s cubic-bezier(0.25, 0.1, 0.05, 1),
+        top  0.16s cubic-bezier(0.25, 0.1, 0.05, 1);
 
       z-index: 5;
       will-change: left, top;
@@ -461,7 +470,6 @@
       50%       { filter: brightness(1.6) drop-shadow(0 0 16px rgba(255,255,255,0.8)); }
     }
     .lumina-tile--energy { animation: lumina-energy-glow 2.2s ease-in-out infinite; }
-    /* Cuando es nueva Y de energía, la animación de aparición gana al principio */
     .lumina-tile--energy.lumina-tile--new {
       animation: lumina-tile-appear 0.22s cubic-bezier(0.34,1.56,0.64,1) both,
                  lumina-energy-glow 2.2s ease-in-out 0.25s infinite;
@@ -501,7 +509,7 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       MODALES
+       MODALES — BASE
     ═══════════════════════════════════════════════════════════ */
     .lumina-modal {
       position: fixed;
@@ -526,14 +534,14 @@
       background: rgba(255,255,255,0.055);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 20px;
-      padding: 36px 32px;
+      padding: 32px 28px;
       text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 16px;
       align-items: center;
-      max-width: 310px;
-      width: 88%;
+      max-width: 330px;
+      width: 90%;
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       box-shadow: 0 0 80px rgba(0,0,0,0.6);
@@ -551,13 +559,14 @@
     }
 
     .lumina-modal-title {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: 0.04em;
       background: linear-gradient(135deg, #a855f7, #ec4899);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      line-height: 1.1;
     }
     .lumina-modal-title--gameover {
       background: linear-gradient(135deg, #ef4444, #f97316);
@@ -565,14 +574,101 @@
       background-clip: text;
     }
 
-    .lumina-modal-subtitle {
-      font-size: 13px;
-      color: var(--lumina-text-dim);
-      font-weight: 600;
+    /* ═══════════════════════════════════════════════════════════
+       MODALES — RESUMEN DE INGRESOS (v1.1)
+       Muestra puntuación, monedas y hito máximo alcanzado.
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-modal-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
     }
-    .lumina-modal-subtitle span {
-      color: var(--lumina-text);
+
+    .lumina-summary-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* El item de monedas ocupa toda la fila */
+    .lumina-summary-item--coins {
+      grid-column: 1 / -1;
+      background: rgba(245,185,11,0.07);
+      border-color: rgba(245,185,11,0.18);
+    }
+
+    .lumina-summary-label {
+      font-size: 8px;
       font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--lumina-text-dim);
+      text-transform: uppercase;
+    }
+
+    .lumina-summary-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--lumina-text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lumina-summary-item--coins .lumina-summary-value {
+      font-size: 26px;
+      color: #fbbf24;
+    }
+
+    .lumina-summary-milestone {
+      font-size: 15px !important;
+      font-weight: 800;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Icono de moneda animado */
+    .lumina-coin-icon {
+      display: inline-block;
+      font-size: 1em;
+      animation: lumina-coin-spin 1.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    @keyframes lumina-coin-spin {
+      0%, 100% { transform: rotateY(0deg)   scale(1);    }
+      25%       { transform: rotateY(90deg)  scale(0.8);  }
+      50%       { transform: rotateY(180deg) scale(1);    }
+      75%       { transform: rotateY(270deg) scale(0.8);  }
+    }
+
+    /* Badge de nuevo récord personal */
+    .lumina-record-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: linear-gradient(135deg, rgba(245,185,11,0.15), rgba(249,115,22,0.15));
+      border: 1px solid rgba(245,185,11,0.35);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fbbf24;
+      letter-spacing: 0.06em;
+      animation: lumina-record-pulse 1.4s ease-in-out infinite;
+      width: fit-content;
+    }
+
+    @keyframes lumina-record-pulse {
+      0%, 100% { box-shadow: 0 0 0   0   rgba(245,185,11,0);    }
+      50%       { box-shadow: 0 0 14px 4px rgba(245,185,11,0.25); }
     }
 
     .lumina-modal-actions {
@@ -602,7 +698,7 @@
     <div class="lumina-orb lumina-orb-3"></div>
   </div>
 
-  <!-- ── Canvas de partículas ── -->
+  <!-- ── Canvas de partículas (z-index: 50, por encima del board) ── -->
   <canvas id="lumina-particles" aria-hidden="true"></canvas>
 
   <!-- ══════════════════════════════════════════════════
@@ -660,14 +756,44 @@
 
 
   <!-- ══════════════════════════════════════════════════
-       MODAL — GAME OVER
+       MODAL — GAME OVER (v1.1: resumen de ingresos)
   ══════════════════════════════════════════════════ -->
   <div id="lumina-modal-gameover" class="lumina-modal" role="dialog" aria-modal="true" aria-label="Game Over">
     <div class="lumina-modal-box">
+
       <div class="lumina-modal-title lumina-modal-title--gameover">Game Over</div>
-      <div class="lumina-modal-subtitle">
-        Puntuación final: <span id="lumina-final-score">0</span>
+
+      <!-- Resumen de ingresos -->
+      <div class="lumina-modal-summary">
+
+        <!-- Monedas ganadas (fila completa, posición prominente) -->
+        <div class="lumina-summary-item lumina-summary-item--coins">
+          <div class="lumina-summary-label">Monedas Ganadas</div>
+          <div class="lumina-summary-value">
+            <span class="lumina-coin-icon">🪙</span>
+            <span id="lumina-final-coins">0</span>
+          </div>
+        </div>
+
+        <!-- Puntuación final -->
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Puntuación</div>
+          <div class="lumina-summary-value" id="lumina-final-score">0</div>
+        </div>
+
+        <!-- Hito más alto -->
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Hito Máximo</div>
+          <div class="lumina-summary-value lumina-summary-milestone" id="lumina-final-milestone">—</div>
+        </div>
+
       </div>
+
+      <!-- Badge de nuevo récord (oculto por defecto, visible si isNewRecord) -->
+      <div id="lumina-go-record-badge" class="lumina-record-badge" style="display:none" aria-hidden="true">
+        🏆 ¡Nuevo Récord Personal!
+      </div>
+
       <div class="lumina-modal-actions">
         <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
           Intentar de Nuevo
@@ -676,18 +802,49 @@
           Volver al Hub
         </a>
       </div>
+
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════
-       MODAL — VICTORIA (2048 alcanzado)
+       MODAL — VICTORIA (v1.1: resumen de ingresos)
   ══════════════════════════════════════════════════ -->
   <div id="lumina-modal-win" class="lumina-modal" role="dialog" aria-modal="true" aria-label="¡Victoria!">
     <div class="lumina-modal-box lumina-modal-box--win">
+
       <div class="lumina-modal-title">✨ ¡Alcanzaste 2048!</div>
-      <div class="lumina-modal-subtitle">
-        Puntuación: <span id="lumina-win-score">0</span>
+
+      <!-- Resumen de ingresos -->
+      <div class="lumina-modal-summary">
+
+        <!-- Monedas ganadas -->
+        <div class="lumina-summary-item lumina-summary-item--coins">
+          <div class="lumina-summary-label">Monedas Ganadas</div>
+          <div class="lumina-summary-value">
+            <span class="lumina-coin-icon">🪙</span>
+            <span id="lumina-win-coins">0</span>
+          </div>
+        </div>
+
+        <!-- Puntuación final -->
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Puntuación</div>
+          <div class="lumina-summary-value" id="lumina-win-score">0</div>
+        </div>
+
+        <!-- Hito más alto -->
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Hito Máximo</div>
+          <div class="lumina-summary-value lumina-summary-milestone" id="lumina-win-milestone">2048</div>
+        </div>
+
       </div>
+
+      <!-- Badge de nuevo récord -->
+      <div id="lumina-win-record-badge" class="lumina-record-badge" style="display:none" aria-hidden="true">
+        🏆 ¡Nuevo Récord Personal!
+      </div>
+
       <div class="lumina-modal-actions">
         <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
           Nueva Partida
@@ -696,6 +853,7 @@
           Seguir Jugando
         </button>
       </div>
+
     </div>
   </div>
 
@@ -725,23 +883,26 @@
         lumina_initGame();
       }
 
-      // 3. Render inicial
+      // 3. Inicializar sesión de recompensas (captura récord de referencia)
+      lumina_resetSession();
+
+      // 4. Render inicial
       lumina_renderGrid();
       lumina_updateScoreDisplay(0);
       lumina_updateComboMeter();
 
-      // 4. Módulos de entrada y audio
+      // 5. Módulos de entrada y audio
       lumina_initInput();
       lumina_initAudio();
 
-      // 5. Sincronización de tema con la plataforma (solo lectura)
+      // 6. Sincronización de tema con la plataforma (solo lectura)
       lumina_syncTheme();
 
-      // 6. Botón "New Game"
+      // 7. Botón "New Game"
       document.getElementById('lumina-new-game-btn')
               .addEventListener('click', lumina_startNewGame);
 
-      console.log('[LUMINA] 🎮 Juego inicializado correctamente.');
+      console.log('[LUMINA] 🎮 Juego inicializado correctamente (v1.1).');
     });
 
     // ── Acciones Globales (llamadas desde HTML onclick) ──────────────────
@@ -750,6 +911,8 @@
       lumina_clearBoard();
       lumina_clearGameState();
       lumina_initGame();
+      // v1.1: Reiniciar acumulador de monedas y capturar nuevo récord de referencia
+      lumina_resetSession();
       lumina_renderGrid();
       lumina_updateScoreDisplay(0);
       lumina_updateComboMeter();
