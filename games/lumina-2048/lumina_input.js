@@ -6,6 +6,15 @@
  * Previene el scroll involuntario del navegador durante el juego.
  * Soporta flick rápido con umbral reducido y swipes lentos.
  *
+ * CHANGELOG v1.2
+ * ──────────────
+ * [FIX]  Error crítico de persistencia: el estado guardado (localStorage) se
+ *        eliminaba SOLO al iniciar una nueva partida, no al perder. Esto hacía
+ *        que al volver al juego tras una derrota se restaurara el tablero bloqueado.
+ *        Solución: lumina_clearGameState() se llama en el momento exacto en que
+ *        lumina_gameOver o lumina_gameWon se activan, antes del setTimeout del modal.
+ *        Así el "archivo de guardado" nunca sobrevive a una partida terminada.
+ *
  * CHANGELOG v1.1
  * ──────────────
  * [FIX]  Audio Latency en Android: lumina_resumeAudio() se llama explícitamente
@@ -163,9 +172,13 @@ function lumina_handleMove(direction) {
 
         // ── Condiciones de victoria/derrota ──
         // CAMBIO v1.1: reportFinalSession() se llama UNA SOLA VEZ aquí.
+        // FIX v1.2: lumina_clearGameState() se llama INMEDIATAMENTE al detectar
+        // fin de partida, antes del setTimeout, para que el guardado desaparezca
+        // en el instante exacto en que la partida muere (nunca sobrevive al cierre).
         if (!lumina_gameWon && lumina_checkWin()) {
             lumina_gameWon   = true;
             lumina_keepGoing = false;
+            lumina_clearGameState(); // ← FIX v1.2: eliminar guardado al ganar
             setTimeout(() => {
                 const sessionData = lumina_reportFinalSession();
                 lumina_showWin(sessionData);
@@ -174,6 +187,7 @@ function lumina_handleMove(direction) {
             }, 400);
 
         } else if (lumina_gameOver) {
+            lumina_clearGameState(); // ← FIX v1.2: eliminar guardado al perder
             setTimeout(() => {
                 const sessionData = lumina_reportFinalSession();
                 lumina_showGameOver(sessionData);
@@ -190,4 +204,4 @@ function lumina_doHaptic(ms) {
     try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) {}
 }
 
-console.log('[LUMINA] Input module v1.1 loaded.');
+console.log('[LUMINA] Input module v1.2 loaded.');
