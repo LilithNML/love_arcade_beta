@@ -6,6 +6,13 @@
  * Independiente del DOM. Sin efectos secundarios visuales.
  * Toda variable global lleva el prefijo lumina_ (normativa de namespace).
  *
+ * CHANGELOG v1.2
+ * ──────────────
+ * [FIX] Cap de fichas de energía: si ya hay 2 o más fichas ⚡ simultáneas en el
+ *       tablero, la siguiente ficha que spawnee es forzosamente normal (2 o 4),
+ *       ignorando el 6% de probabilidad. Previene situaciones de bloqueo prematuro
+ *       en tableros casi llenos donde el jugador no puede fusionar la energía rápido.
+ *
  * CHANGELOG v1.1
  * ──────────────
  * [FIX] Mapa de rotaciones corregido: left/right estaban intercambiados, causando
@@ -23,6 +30,7 @@
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const lumina_GRID_SIZE        = 4;
 const lumina_ENERGY_CHANCE    = 0.06;   // 6 % de probabilidad por tile nuevo
+const lumina_ENERGY_CAP       = 2;      // máx. fichas ⚡ simultáneas (v1.2: cap anti-bloqueo)
 const lumina_COMBO_THRESHOLD  = 5;      // movimientos con fusión seguidos para activar combo
 const lumina_LS_PREFIX        = 'LUMINA_'; // prefijo de namespace para localStorage
 
@@ -73,7 +81,13 @@ function lumina_addRandomTile() {
     if (!empty.length) return null;
 
     const [r, c] = empty[Math.floor(Math.random() * empty.length)];
-    const isEnergy = Math.random() < lumina_ENERGY_CHANCE;
+
+    // Cap v1.2: si ya hay lumina_ENERGY_CAP o más fichas ⚡ en el tablero,
+    // forzar ficha normal para evitar bloqueos en tableros casi llenos.
+    let energyCount = 0;
+    lumina_forEachTile(t => { if (t && t.isEnergy) energyCount++; });
+    const isEnergy = energyCount < lumina_ENERGY_CAP && Math.random() < lumina_ENERGY_CHANCE;
+
     const value    = Math.random() < 0.9 ? 2 : 4;
     lumina_grid[r][c] = lumina_createTile(value, isEnergy);
     return { r, c };
@@ -324,4 +338,4 @@ function lumina_clearGameState() {
     try { localStorage.removeItem(lumina_LS_PREFIX + 'gameState'); } catch (_) {}
 }
 
-console.log('[LUMINA] Core module v1.1 loaded.');
+console.log('[LUMINA] Core module v1.2 loaded.');
