@@ -6,18 +6,28 @@
  * Única vía de comunicación con el sistema de monedas: completeLevel().
  * Implementa degradación elegante (modo standalone sin app.js).
  *
+ * CHANGELOG v1.2
+ * ──────────────
+ * [BALANCE] Bono de Energía ⚡: reducido de 10 → 4 monedas por fusión.
+ *           Razón: el jugador fusiona ~10-12 fichas de energía a los 3 000 pts,
+ *           lo que equivale a ~40-48 monedas. Con 10 monedas la cifra era excesiva.
+ * [BALANCE] Bono de Persistencia: ajustado de 1 moneda/150 pts → 1 moneda/25 pts.
+ *           A 3 000 puntos el jugador recibe exactamente 120 monedas seguras.
+ *           Cálculo de referencia: 120 (pts) + 40 (energía) = 160 monedas totales.
+ * [BALANCE] Eliminado el multiplicador global ×1.5 por alcanzar la ficha 512.
+ *           Reemplazado por Bonos Fijos de Hito (one-time, acumulados al acumulador):
+ *             · Ficha 512  → +20 monedas
+ *             · Ficha 1024 → +50 monedas
+ *             · Ficha 2048 → +100 monedas
+ *           Estos bonos se otorgan UNA SOLA VEZ por sesión y se registran en
+ *           lumina_sessionMilestonesAwarded (Set de valores alcanzados).
+ *
  * CHANGELOG v1.1
  * ──────────────
  * [FIX]  Reporte de monedas eliminado durante el gameplay.
  *        window.GameCenter.completeLevel() SOLO se llama en GameOver o Win.
  * [NEW]  Acumulador de sesión lumina_sessionCoins: las fusiones de Fichas de
  *        Energía y los bonos por persistencia se acumulan localmente.
- * [NEW]  Bono de Persistencia: +1 moneda por cada 150 puntos (calculado sobre
- *        la puntuación final de la sesión).
- * [NEW]  Bono de Fusión ⚡: incrementado a 10 monedas por ficha de energía
- *        (antes era 5).
- * [NEW]  Multiplicador de Esfuerzo: si el jugador alcanza la ficha 512, se
- *        aplica ×1.5 al total de monedas acumuladas.
  * [NEW]  lumina_reportFinalSession() consolida y reporta todo al cierre.
  * [NEW]  lumina_resetSession() para limpiar estado entre partidas.
  */
@@ -27,28 +37,54 @@
 const lumina_GAME_ID   = 'lumina_2048';
 let   lumina_keepGoing = false; // true = el usuario eligió continuar tras 2048
 
+// ─── Configuración de Economía (v1.2) ────────────────────────────────────────
+
+/** Monedas por fusión de ficha de energía ⚡ (v1.2: 4, antes 10). */
+const lumina_COINS_PER_ENERGY = 4;
+
+/** Puntos necesarios para ganar 1 moneda de persistencia (v1.2: 25, antes 150). */
+const lumina_POINTS_PER_COIN  = 25;
+
+/**
+ * Bonos fijos de hito (one-time por sesión).
+ * Reemplaza el multiplicador ×1.5 de v1.1.
+ * Orden ascendente importa: se evalúan de menor a mayor.
+ */
+const lumina_MILESTONE_BONUSES = [
+    { value: 512,  bonus: 20  },
+    { value: 1024, bonus: 50  },
+    { value: 2048, bonus: 100 },
+];
+
 // ─── Estado de Sesión (acumulador) ───────────────────────────────────────────
 
-/** Monedas de energía acumuladas durante la sesión (no se reportan hasta el final). */
-let lumina_sessionCoins       = 0;
+/** Monedas de energía + hitos acumulados durante la sesión. */
+let lumina_sessionCoins = 0;
 
-/** true si el jugador alcanzó o superó la ficha 512 en esta sesión. */
-let lumina_sessionReached512  = false;
+/**
+ * Set de valores de hito ya premiados en esta sesión.
+ * Garantiza que cada bono se otorgue una sola vez aunque el jugador continúe.
+ * @type {Set<number>}
+ */
+let lumina_sessionMilestonesAwarded = new Set();
 
 /** Mejor puntuación al inicio de la sesión, para detectar nuevo récord. */
-let lumina_sessionStartBest   = 0;
+let lumina_sessionStartBest = 0;
 
 // ─── API de Acumulación (llamada durante el gameplay) ─────────────────────────
 
 /**
  * Notifica que se alcanzó un valor de ficha determinado.
- * Activa el flag del Multiplicador de Esfuerzo si el valor ≥ 512.
+ * Aplica los Bonos Fijos de Hito correspondientes (solo la primera vez).
  * @param {number} value - Valor de la ficha alcanzada
  */
 function lumina_notifyMaxTile(value) {
-    if (!lumina_sessionReached512 && value >= 512) {
-        lumina_sessionReached512 = true;
-        console.log('[LUMINA] 🔥 Hito 512 alcanzado — multiplicador ×1.5 activado para esta sesión.');
+    for (const m of lumina_MILESTONE_BONUSES) {
+        if (value >= m.value && !lumina_sessionMilestonesAwarded.has(m.value)) {
+            lumina_sessionMilestonesAwarded.add(m.value);
+            lumina_sessionCoins += m.bonus;
+            console.log(`[LUMINA] 🏆 Hito ${m.value} alcanzado — +${m.bonus} monedas (bono fijo, one-time).`);
+        }
     }
 }
 
@@ -58,7 +94,7 @@ function lumina_notifyMaxTile(value) {
  * @param {number} count - Cantidad de fichas de energía fusionadas en el movimiento
  */
 function lumina_accumulateEnergyMerge(count) {
-    const earned = count * 10; // 10 monedas por ficha de energía (v1.1: antes 5)
+    const earned = count * lumina_COINS_PER_ENERGY; // v1.2: 4 monedas por ficha
     lumina_sessionCoins += earned;
     console.log(`[LUMINA] ⚡ +${earned} monedas por fusión de energía (acumuladas, no reportadas).`);
 }
@@ -66,25 +102,22 @@ function lumina_accumulateEnergyMerge(count) {
 // ─── Reporte Final (llamado en GameOver o Win) ────────────────────────────────
 
 /**
- * Consolida todas las monedas de la sesión, aplica multiplicadores y reporta
- * una única vez a window.GameCenter.completeLevel().
+ * Consolida todas las monedas de la sesión y reporta una única vez
+ * a window.GameCenter.completeLevel().
  *
- * Fórmula:
- *   persistenceCoins = floor(score / 150)         ← Bono de Persistencia
- *   energyCoins      = lumina_sessionCoins         ← Fusiones ⚡ acumuladas
+ * Fórmula de Estabilidad v1.2:
+ *   persistenceCoins = floor(score / 25)          ← 1 moneda cada 25 pts
+ *   energyCoins      = lumina_sessionCoins         ← fusiones ⚡ + bonos de hito
  *   total            = persistenceCoins + energyCoins
- *   si reached512:   total = floor(total × 1.5)   ← Multiplicador de Esfuerzo
+ *
+ * Referencia de calibración (desempeño promedio = 3 000 pts):
+ *   120 (persistencia) + 40 (energía, ~10 fusiones) = 160 monedas
  *
  * @returns {{ coins: number, maxTile: number, isNewRecord: boolean }}
  */
 function lumina_reportFinalSession() {
-    const persistenceCoins = Math.floor(lumina_score / 150);
+    const persistenceCoins = Math.floor(lumina_score / lumina_POINTS_PER_COIN);
     let totalCoins         = persistenceCoins + lumina_sessionCoins;
-
-    if (lumina_sessionReached512) {
-        totalCoins = Math.floor(totalCoins * 1.5);
-        console.log('[LUMINA] ×1.5 aplicado (hito 512 alcanzado).');
-    }
 
     // Garantizar mínimo de 1 moneda para cualquier partida
     totalCoins = Math.max(1, totalCoins);
@@ -92,10 +125,11 @@ function lumina_reportFinalSession() {
     const maxTile     = lumina_getMaxTileValue();
     const isNewRecord = lumina_score > lumina_sessionStartBest && lumina_score > 0;
 
-    console.log(`[LUMINA] 📊 Resumen de sesión:
-  Persistencia: ${persistenceCoins} monedas (${lumina_score} pts ÷ 150)
-  Energía:      ${lumina_sessionCoins} monedas
-  Multiplicador:${lumina_sessionReached512 ? ' ×1.5 ✓' : ' no aplicado'}
+    const milestonesLog = [...lumina_sessionMilestonesAwarded].join(', ') || 'ninguno';
+    console.log(`[LUMINA] 📊 Resumen de sesión (v1.2):
+  Persistencia: ${persistenceCoins} monedas (${lumina_score} pts ÷ ${lumina_POINTS_PER_COIN})
+  Energía+Hitos:${lumina_sessionCoins} monedas
+  Hitos logrados: ${milestonesLog}
   TOTAL:        ${totalCoins} monedas
   Ficha máx:    ${maxTile}
   Nuevo récord: ${isNewRecord}`);
@@ -109,9 +143,9 @@ function lumina_reportFinalSession() {
  * Reinicia el estado de sesión. Llamar al inicio de cada partida nueva.
  */
 function lumina_resetSession() {
-    lumina_sessionCoins      = 0;
-    lumina_sessionReached512 = false;
-    lumina_sessionStartBest  = lumina_bestScore; // captura el récord actual
+    lumina_sessionCoins             = 0;
+    lumina_sessionMilestonesAwarded = new Set();
+    lumina_sessionStartBest         = lumina_bestScore;
     console.log(`[LUMINA] Sesión reiniciada. Récord de referencia: ${lumina_sessionStartBest}`);
 }
 
@@ -181,4 +215,4 @@ function lumina_syncTheme() {
     } catch (_) {}
 }
 
-console.log('[LUMINA] Bridge module v1.1 loaded.');
+console.log('[LUMINA] Bridge module v1.2 loaded.');
