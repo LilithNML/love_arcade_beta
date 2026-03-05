@@ -7,6 +7,13 @@
  * Escala pentatónica para garantizar armonía en todos los tonos.
  * Reverb espacial sintético en la pantalla de victoria.
  *
+ * CHANGELOG v1.2
+ * ──────────────
+ * [NEW]  lumina_playCoinTinkle(progress): sonido de tintineo para la animación
+ *        del contador de monedas en el modal de fin de partida. La frecuencia y
+ *        el tempo se aceleran a medida que progress (0→1) aumenta, creando la
+ *        sensación de que se acumula un botín masivo en poco tiempo.
+ *
  * CHANGELOG v1.1
  * ──────────────
  * [FIX]  Audio Latency en Android: el AudioContext ahora se reanuda
@@ -205,4 +212,61 @@ function lumina_playWinSound() {
     } catch (_) {}
 }
 
-console.log('[LUMINA] Audio module v1.1 loaded.');
+// ─── Sonido de Tintineo de Monedas ───────────────────────────────────────────
+
+/**
+ * Reproduce un tintineo metálico breve para la animación del contador de monedas.
+ * La frecuencia y el volumen escalan con `progress` (0→1) para que el sonido
+ * se acelere y suba de tono a medida que el contador se acerca al total,
+ * reforzando la sensación de "botín masivo".
+ *
+ * Uso: llamar en cada frame del animador de monedas (lumina_render.js),
+ * pasando la fracción de progreso actual de la animación.
+ *
+ * @param {number} progress - Fracción de avance de la animación (0.0 → 1.0)
+ */
+function lumina_playCoinTinkle(progress) {
+    if (!lumina_audioReady()) return;
+    try {
+        const now = lumina_audioCtx.currentTime;
+
+        // Frecuencia: sube de ~880 Hz (cálido) a ~2 200 Hz (brillante) según progreso
+        const baseFreq = 880 + progress * 1320;
+
+        // Volumen: aumenta sutilmente con el progreso (0.04 → 0.09)
+        const gainVal  = 0.04 + progress * 0.05;
+
+        // Duración: se acorta con el progreso para simular aceleración
+        const duration = 0.06 - progress * 0.03; // 60 ms → 30 ms
+
+        const gain = lumina_audioCtx.createGain();
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        gain.connect(lumina_audioCtx.destination);
+
+        // Tono principal: triangle (suave, metálico)
+        const osc = lumina_audioCtx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.15, now + duration * 0.3);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + duration + 0.01);
+
+        // Armónico de brillo (quinta justa): activo en la segunda mitad de la animación
+        if (progress > 0.5) {
+            const shimGain = lumina_audioCtx.createGain();
+            shimGain.gain.setValueAtTime(gainVal * 0.4, now);
+            shimGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            shimGain.connect(lumina_audioCtx.destination);
+            const shimOsc = lumina_audioCtx.createOscillator();
+            shimOsc.type = 'sine';
+            shimOsc.frequency.value = baseFreq * 1.5;
+            shimOsc.connect(shimGain);
+            shimOsc.start(now);
+            shimOsc.stop(now + duration + 0.01);
+        }
+    } catch (_) {}
+}
+
+console.log('[LUMINA] Audio module v1.2 loaded.');
