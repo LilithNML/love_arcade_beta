@@ -6,6 +6,16 @@
  * Usa variables CSS --tile-x / --tile-y para posicionar fichas.
  * Gestiona el canvas de partículas con requestAnimationFrame.
  *
+ * CHANGELOG v1.2
+ * ──────────────
+ * [NEW]  lumina_animateCoinCount(el, target): animador de 500 ms que hace "scroll"
+ *        numérico del contador de monedas de 0 al total. Usa easing easeOutCubic
+ *        para que los últimos dígitos caigan despacio y se perciba el valor final.
+ *        Llama a lumina_playCoinTinkle(progress) en cada frame para sincronizar
+ *        el tintineo acelerado del audio con el contador visual.
+ * [UPD]  lumina_showGameOver() y lumina_showWin() delegan el display de monedas
+ *        a lumina_animateCoinCount() en lugar de asignar textContent directamente.
+ *
  * CHANGELOG v1.1
  * ──────────────
  * [FIX]  Z-Index de Partículas: el canvas de partículas ahora tiene z-index
@@ -319,6 +329,62 @@ function lumina_initParallax() {
     })();
 }
 
+// ─── Animación de Contador de Monedas ────────────────────────────────────────
+
+/**
+ * Anima el texto de un elemento desde 0 hasta `target` en ~500 ms.
+ * Usa easing easeOutCubic para que el contador desacelere al final,
+ * haciendo que el número "aterrice" suavemente en el total real.
+ * Dispara lumina_playCoinTinkle(progress) en cada frame para el audio acelerado.
+ *
+ * @param {HTMLElement} el     - Elemento cuyo textContent se animará
+ * @param {number}      target - Valor final de monedas
+ */
+function lumina_animateCoinCount(el, target) {
+    if (!el || target <= 0) {
+        if (el) el.textContent = (target || 0).toLocaleString();
+        return;
+    }
+
+    const DURATION = 500; // ms
+    const startTs  = performance.now();
+
+    // Controla la cadencia del tintineo: un pitido cada N ms (decrece con progreso)
+    let lastTinkleTs = startTs;
+
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function step(now) {
+        const elapsed  = now - startTs;
+        const raw      = Math.min(elapsed / DURATION, 1);
+        const progress = easeOutCubic(raw);
+        const current  = Math.round(progress * target);
+
+        el.textContent = current.toLocaleString();
+
+        // Tintineo acelerado: intervalo baja de 40 ms (inicio) a 12 ms (final)
+        const tinkleInterval = 40 - raw * 28;
+        if (now - lastTinkleTs >= tinkleInterval) {
+            lastTinkleTs = now;
+            if (typeof lumina_playCoinTinkle === 'function') {
+                lumina_playCoinTinkle(raw);
+            }
+        }
+
+        if (raw < 1) {
+            requestAnimationFrame(step);
+        } else {
+            // Frame final: asegurar valor exacto y un tinkle de remate
+            el.textContent = target.toLocaleString();
+            if (typeof lumina_playCoinTinkle === 'function') {
+                lumina_playCoinTinkle(1);
+            }
+        }
+    }
+
+    requestAnimationFrame(step);
+}
+
 // ─── Modales ──────────────────────────────────────────────────────────────────
 
 /**
@@ -333,9 +399,9 @@ function lumina_showGameOver(sessionData) {
     const elScore = document.getElementById('lumina-final-score');
     if (elScore) elScore.textContent = lumina_score.toLocaleString();
 
-    // Monedas ganadas
+    // Monedas ganadas — animación scroll numérico (v1.2)
     const elCoins = document.getElementById('lumina-final-coins');
-    if (elCoins && sessionData) elCoins.textContent = (sessionData.coins || 0).toLocaleString();
+    if (elCoins && sessionData) lumina_animateCoinCount(elCoins, sessionData.coins || 0);
 
     // Hito máximo alcanzado
     const elMilestone = document.getElementById('lumina-final-milestone');
@@ -367,9 +433,9 @@ function lumina_showWin(sessionData) {
     const elScore = document.getElementById('lumina-win-score');
     if (elScore) elScore.textContent = lumina_score.toLocaleString();
 
-    // Monedas ganadas
+    // Monedas ganadas — animación scroll numérico (v1.2)
     const elCoins = document.getElementById('lumina-win-coins');
-    if (elCoins && sessionData) elCoins.textContent = (sessionData.coins || 0).toLocaleString();
+    if (elCoins && sessionData) lumina_animateCoinCount(elCoins, sessionData.coins || 0);
 
     // Hito máximo
     const elMilestone = document.getElementById('lumina-win-milestone');
@@ -399,4 +465,4 @@ function lumina_clearBoard() {
     lumina_tileEls.clear();
 }
 
-console.log('[LUMINA] Render module v1.1 loaded.');
+console.log('[LUMINA] Render module v1.2 loaded.');
