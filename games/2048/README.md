@@ -1,6 +1,6 @@
 # 2048 — Documentación Técnica
 
-> **Versión:** `2.0.0` · **Plataforma:** Love Arcade · **Core compatible:** Game Center Core v7.5+
+> **Versión:** `2.1.0` · **Plataforma:** Love Arcade · **Core compatible:** Game Center Core v7.5+
 > **Ubicación:** `games/lumina-2048/`
 > **Nombre anterior:** Lumina 2048 (v1.x)
 
@@ -11,304 +11,258 @@
 ```
 games/lumina-2048/
 ├── index.html          ← Punto de entrada principal
-├── lumina_core.js      ← Módulo 1: Motor lógico (sin cambios en v2.0)
+├── lumina_core.js      ← Módulo 1: Motor lógico (sin cambios desde v1.2)
 ├── lumina_render.js    ← Módulo 2: Capa visual, partículas
-├── lumina_input.js     ← Módulo 3: Teclado + TouchEvents (sin cambios en v2.0)
-├── lumina_audio.js     ← Módulo 4: Síntesis Web Audio API (sin cambios en v2.0)
-└── lumina_bridge.js    ← Módulo 5: Integración Love Arcade (sin cambios en v2.0)
+├── lumina_input.js     ← Módulo 3: Teclado + TouchEvents (sin cambios desde v1.2)
+├── lumina_audio.js     ← Módulo 4: Síntesis Web Audio API (sin cambios desde v1.3)
+└── lumina_bridge.js    ← Módulo 5: Integración Love Arcade (sin cambios desde v1.2)
 ```
 
 ---
 
-## Changelog v2.0 — Rediseño Solid Modernism
+## Changelog v2.1 — Accesibilidad y Optimización Gama Baja
 
-**Objetivo:** eliminar la identidad visual "Lumina" (glassmorphism, orbes, brillos),
-sustituirla por una estética Solid Modernism de alta legibilidad y bajo coste gráfico,
-y mantener todas las optimizaciones de rendimiento de v1.3.
+**Objetivo:** corregir el contraste de la ficha 2 según la auditoría de accesibilidad
+y aplicar cinco optimizaciones adicionales orientadas a mejorar la experiencia en
+dispositivos de gama baja.
 
 **Archivos modificados:** `index.html`, `lumina_render.js`.
 **Archivos sin cambios:** `lumina_core.js`, `lumina_input.js`, `lumina_audio.js`, `lumina_bridge.js`.
 
 ---
 
-### 1. Identidad Visual
+### 1. Corrección de Contraste — Ficha 2 (Accesibilidad)
 
-El juego pasa a llamarse **2048**. El título en la cabecera muestra solo "2048"
-en Montserrat 900 (Black) blanco sólido. No hay gradiente en el texto del título.
+El auditor identificó que los azules profundos de las fichas 2 y 4 tienen un ratio
+de contraste muy bajo respecto al fondo del tablero, lo que puede provocar que estas
+fichas "desaparezcan" en pantallas con brillo reducido.
 
-La paleta sigue la directriz brief §3 ("escala de azules/violetas para valores
-bajos, naranjas/ámbar vibrantes para valores altos"):
+**Ficha 2 — cambios en `lumina_TILE_PALETTE`:**
 
-| Ficha | Color bg | Color texto | Categoría |
-|-------|----------|-------------|-----------|
-| 2 | `#1D2444` | `#4A607E` | Azul casi invisible |
-| 4 | `#1C3068` | `#7EB4E8` | Azul marino |
-| 8 | `#1350A8` | `#A8CCFF` | Azul medio |
-| 16 | `#1860C8` | `#C8E2FF` | Azul brillante |
-| 32 | `#3040E0` | `#D4DCFF` | Azul-índigo |
-| 64 | `#7C3AED` | `#EDE0FF` | Violeta |
-| 128 | `#9C27B0` | `#F4D8FF` | Violeta oscuro |
-| 256 | `#B82810` | `#FFD0C0` | Rojo-naranja |
-| 512 | `#E84808` | `#FFE8D8` | Naranja vibrante |
-| 1024 | `#D97706` | `#FFF8E0` | Ámbar |
-| **2048** | `linear-gradient(135deg, #F59E0B, #F97316)` | `#FFFFFF` | **Único con gradiente** |
+| Propiedad | v2.0 | v2.1 | Ratio contraste |
+|-----------|------|------|-----------------|
+| Fondo (`bg`) | `#1D2444` | `#232B52` | — |
+| Texto (`text`) | `#4A607E` | `#7090BC` | 2.4:1 → **4.3:1** |
 
-La ficha ⚡ ENERGY usa `#0B4D72` (azul eléctrico sólido) con texto `#BAE6FD`.
+La elevación del fondo equivale a aproximadamente +2 puntos de luminosidad HSL,
+suficiente para que la ficha sea distinguible a brillo mínimo sin alterar la
+progresión cromática del conjunto. El ratio de contraste texto/fondo resultante
+(4.3:1) supera el umbral WCAG AA para texto grande y bold (3:1 requerido).
+
+La ficha 4 no requirió corrección: su texto `#7EB4E8` sobre `#1C3068` ya ofrecía
+un ratio de 5.7:1.
 
 ---
 
-### 2. Regla 90/10 — Implementación
+### 2. Eliminación de Transición CSS de Color en la Barra de Combo
 
-**90% Superficies Sólidas:**
+**`index.html` — `#lumina-combo-bar`:**
 
-Todas las variables CSS que usaban `rgba()` semitransparente para simular
-glassmorphism han sido reemplazadas por colores hexadecimales sólidos:
+La propiedad `transition` que incluía `background 0.4s ease` ha sido eliminada.
+El color del combo bar es establecido desde JavaScript en cada movimiento del jugador,
+lo que hacía que la transición CSS disparase una interpolación de color en la CPU
+durante 0.4 segundos × 60 fps = hasta 24 recálculos por movimiento. `background`
+(color) no es compositor-only: el navegador debe calcular el color interpolado
+en cada frame en el hilo principal.
 
-```css
-/* ANTES (v1.3) */
---lumina-surface: rgba(255,255,255,0.035);
---lumina-border:  rgba(255,255,255,0.07);
+Con la transición eliminada, el cambio de color es un único recálculo de estilo
+instantáneo. La transición de `width` (numérica) se conserva porque su interpolación
+sí puede ser gestionada por el compositor.
 
-/* AHORA (v2.0) */
---lumina-surface: #161B27;
---lumina-border:  #252D40;
+---
+
+### 3. Asignación Única de `className` en `lumina_syncTileEl`
+
+**`lumina_render.js`:**
+
+Las cuatro operaciones que anteriormente manejaban las clases de animación de cada
+ficha han sido reemplazadas por una única asignación de `el.className`:
+
+```js
+// ANTES (v2.0): 4 operaciones DOM
+el.classList.remove('lumina-tile--new', 'lumina-tile--merged', 'lumina-tile--energy');
+if (tile.isEnergy) el.classList.add('lumina-tile--energy');
+if (tile.isNew)    el.classList.add('lumina-tile--new');
+if (tile.isMerged) el.classList.add('lumina-tile--merged');
+
+// AHORA (v2.1): 1 operación DOM
+let cls = 'lumina-tile';
+if (tile.isEnergy) cls += ' lumina-tile--energy';
+if (tile.isNew)    cls += ' lumina-tile--new';
+if (tile.isMerged) cls += ' lumina-tile--merged';
+el.className = cls;
 ```
 
-El fondo del documento es `#0F1115` — un near-black que reduce el consumo
-energético en pantallas OLED respecto a los grises semitransparentes previos.
-
-**10% Efectos Visuales (solo cuando la acción está detenida):**
-
-Los modales de victoria y game over conservan `backdrop-filter: blur(14px)`.
-Esto está explícitamente justificado por el brief: "se reserva únicamente
-para modales de victoria o menús principales, donde la acción está detenida."
+Cada operación de `classList` dispara una validación interna del `DOMTokenList`
+y puede forzar un micro-recálculo de estilo. En un movimiento típico con 4–8 fichas
+afectadas, la optimización elimina entre 16 y 32 operaciones de DOM por movimiento.
 
 ---
 
-### 3. Eliminación de backdrop-filter en el tablero
+### 4. Caché de Valor en `lumina_updateComboMeter`
 
-Este es el cambio de rendimiento más significativo del rediseño.
+**`lumina_render.js`:**
 
-`backdrop-filter: blur(24px)` ha sido eliminado del tablero (`#lumina-board`)
-y de todos los elementos activos durante el gameplay: fichas, score boxes,
-botones y la barra de controles. Esto libera la carga de la GPU que antes
-procesaba el desenfoque en tiempo real cada vez que algún elemento se movía.
+La función ahora guarda el último valor escrito al DOM en `lumina_lastComboMeter`.
+Si `lumina_comboMeter` no ha cambiado entre llamadas (por ejemplo, en movimientos
+sin fusión que resetean el combo a 0 y llaman a la función igualmente), retorna
+inmediatamente sin tocar ningún estilo.
 
-La profundidad visual que antes aportaban las sombras difusas se recrea
-ahora con un `border-bottom` de 2–3 px ligeramente más oscuro, técnica
-del flat design sombreado que no requiere ningún cálculo de composición:
-
-```css
-/* ANTES (v1.3): dispara compositing en cada frame */
-border-radius: 14px;
-backdrop-filter: blur(24px);
-box-shadow: 0 8px 60px rgba(0,0,0,0.55), ...;
-
-/* AHORA (v2.0): borde estático, cero coste GPU */
-border-radius: 4px;
-border-bottom: 3px solid rgba(0,0,0,0.55);
-box-shadow: 0 6px 28px rgba(0,0,0,0.55); /* sombra simple de profundidad */
+```js
+if (lumina_comboMeter === lumina_lastComboMeter) return;
+lumina_lastComboMeter = lumina_comboMeter;
+// ... actualizar DOM solo cuando el valor realmente cambió
 ```
 
----
-
-### 4. Eliminación del Parallax de Fondo
-
-El módulo de parallax giroscópico (orbes animados + efecto de desplazamiento
-con `DeviceOrientationEvent`) ha sido completamente eliminado:
-
-Las siguientes funciones y variables ya no existen en `lumina_render.js`:
-`lumina_parallaxEl`, `lumina_parallaxRAF`, `lumina_parallaxTargetX/Y`,
-`lumina_parallaxCurrentX/Y`, `lumina_parallaxStep()`,
-`lumina_startParallaxLoop()`, `lumina_initParallax()`,
-`lumina_PARALLAX_IDLE_THRESHOLD`.
-
-El HTML correspondiente (el `div#lumina-bg-parallax` con sus tres orbes)
-también ha sido eliminado de `index.html`. El fondo es ahora un color sólido
-gestionado íntegramente por CSS.
-
-`lumina_onVisibilityChange()` y `lumina_initRenderer()` han sido actualizados
-para reflejar la ausencia del parallax.
+La variable `lumina_lastComboMeter` se resetea a `-1` en `lumina_clearBoard()` para
+garantizar que la primera actualización tras una nueva partida siempre escriba el DOM.
 
 ---
 
-### 5. Tipografía — Montserrat Black 900
+### 5. Color Adaptativo del Combo por Nivel de Calidad
 
-La fuente se actualiza a los pesos 600/700/800/**900**. Las fichas ahora usan
-`font-weight: 900` (Montserrat Black), lo que hace que los números "pesen"
-visualmente y sean el elemento de mayor jerarquía dentro de cada celda.
+**`lumina_render.js`:**
 
-El título "2048" en la cabecera también usa weight 900, reforzando la identidad.
+En gama baja, el gradiente HSL dinámico del combo bar se sustituye por el color
+acento sólido de plataforma:
 
----
-
-### 6. Ficha de Energía — Animación Optimizada
-
-La animación `lumina-energy-glow` de v1.3 (que mutaba `box-shadow` e `opacity`
-cada frame) ha sido reemplazada por `lumina-energy-idle`, que muta únicamente
-`opacity`. Dado que `opacity` es una propiedad compositor-only, esta animación
-no desencadena ni layout ni paint:
-
-```css
-/* ANTES (v1.3): box-shadow mutable → más costoso */
-@keyframes lumina-energy-glow {
-  50% { box-shadow: 0 0 14px ...; opacity: 1; }
-}
-
-/* AHORA (v2.0): solo opacity — compositor puro */
-@keyframes lumina-energy-idle {
-  50% { opacity: 0.78; }
+```js
+if (lumina_qualityLevel === 'low') {
+    lumina_comboBarEl.style.background = 'var(--lumina-platform-accent)';
+} else {
+    const hue = Math.round(260 - lumina_comboMeter * 2.2);
+    lumina_comboBarEl.style.background =
+        `linear-gradient(90deg, hsl(${hue},85%,58%), hsl(${hue - 50},90%,62%))`;
 }
 ```
 
----
-
-### 7. Compatibilidad Retroactiva
-
-Todos los IDs de DOM, las funciones públicas de JavaScript y los nombres
-de clase CSS se mantienen sin cambios. Los módulos `lumina_core.js`,
-`lumina_input.js`, `lumina_audio.js` y `lumina_bridge.js` son binariamente
-compatibles con v2.0 sin ninguna modificación.
+En gama media y alta se mantiene el gradiente HSL dinámico. La combinación de
+esta optimización con la eliminación de la transición CSS de color (§2) elimina
+completamente el coste de interpolación de color en gama baja.
 
 ---
 
-## Changelog v1.3 — Optimización de Rendimiento (High Performance)
+### 6. Debounce del Evento `resize` en el Canvas de Partículas
 
-**KPIs alcanzados:**
-- FPS estable a 60 en gama media; mínimo 30 FPS en gama baja.
-- GPU Usage: 0% durante tablero estático (idle state).
-- Reducción notable del drenaje de batería tras 15 minutos de sesión.
+**`lumina_render.js`:**
 
-### 1. Idle State del Render Loop
+El handler `lumina_resizeParticleCanvas` ahora incorpora un debounce de 150 ms.
+El evento `resize` puede dispararse decenas de veces por segundo durante un cambio
+de orientación del dispositivo. Sin debounce, cada disparo reasigna `width`/`height`
+del canvas, lo que invalida el contexto 2D completo y fuerza un ciclo de reinicio.
+Con debounce, solo se ejecuta la última llamada de cada ráfaga.
 
-El loop de partículas se detiene automáticamente cuando el array `lumina_particles`
-queda vacío, garantizando `lumina_particleRAF = null` y un `clearRect` final.
-El parallax (eliminado en v2.0) también tenía idle state en v1.3.
-
-### 2. Page Visibility API
-
-`lumina_onVisibilityChange()` cancela todos los loops rAF y suspende el
-AudioContext al detectar `document.hidden`. Los reactiva al volver a la pestaña.
-
-### 3. Sistema LOD — Calidad Adaptativa
-
-`lumina_detectQuality()` evalúa `navigator.hardwareConcurrency` y
-`navigator.deviceMemory` al iniciar:
-
-| Gama | Cores | RAM | maxParticles | Confeti |
-|------|-------|-----|--------------|---------|
-| Alta | > 4 | > 2 GB | 50 | 100 piezas |
-| Media | ≤ 4 | ≤ 2 GB | 20 | 50 piezas |
-| Baja | ≤ 2 | ≤ 1 GB | 0 | Desactivado |
-
-### 4. Frame-time Adaptativo
-
-El loop de partículas mide el tiempo entre frames. Si el promedio de los
-últimos 8 supera 18 ms (< 55 FPS), `maxParticles` se reduce a la mitad.
-
-### 5. Posicionamiento de Fichas via `transform`
-
-Las fichas usan `transform: translate()` en lugar de `left/top`, lo que
-convierte el movimiento en una operación compositor-only sin layout recalc.
-Las animaciones de aparición y merge incluyen el `translate()` en cada
-fotograma clave para evitar conflictos con la transición base.
-
-### 6. Gestión de Energía del AudioContext
-
-El `AudioContext` se suspende automáticamente tras 30 segundos de
-inactividad y al ocultarse la pestaña. Se reanuda en el siguiente
-`touchstart` o al volver a la pestaña.
+El listener también se registra con `{ passive: true }`, lo que permite al navegador
+componer el siguiente frame sin esperar a que el handler finalice.
 
 ---
 
-## Changelog v1.2 — Balance de Economía
+### 7. Optimizaciones CSS en Fichas
 
-| Bono | v1.1 | v1.2 |
-|------|------|------|
-| **Fusión ⚡** | 10 monedas/ficha | 4 monedas/ficha |
-| **Persistencia** | `floor(score/150)` | `floor(score/25)` |
-| **Hito 512** | Multiplicador ×1.5 | +20 monedas (one-time) |
-| **Hito 1024** | — | +50 monedas (one-time) |
-| **Hito 2048** | — | +100 monedas (one-time) |
+**`index.html` — `.lumina-tile`:**
 
-**Referencia (3 000 pts):** `120 (persistencia) + 40 (energía) = 160 monedas`
+Se han añadido dos propiedades CSS:
+
+`contain: layout style paint` — la propiedad `paint` se suma a la contención
+de `layout style` que ya existía desde v1.3. Indica al navegador que el contenido
+de cada ficha no desborda su caja, lo que permite reducir el área de invalidación
+de pintura durante movimientos: en lugar de propagar la invalidación a las celdas
+vecinas, el motor de pintura solo invalida los píxeles dentro de cada caja de ficha.
+
+`text-rendering: optimizeSpeed` — instruye al rasterizador de fuentes a priorizar
+velocidad sobre precisión de hinting. En Montserrat Black a los tamaños usados
+(16–30 px), el impacto visual es imperceptible; en gama baja, el rasterizador puede
+omitir pasos costosos de autohinting, reduciendo el tiempo de composición de frames
+con muchas fichas visibles.
 
 ---
 
-## Changelog v1.1 — Correcciones Críticas
+### 8. `user-select: none` en `<body>` y `overscroll-behavior` en el Área de Juego
 
-- Mapa de rotaciones `left/right` corregido en `lumina_core.js`.
-- Ghost Moves eliminados (protección `hasMoved`).
-- Audio Latency Android resuelto (`AudioContext` reanudado en `touchstart`).
-- Rediseño del sistema de recompensas: `completeLevel()` solo al cierre de partida.
+**`index.html`:**
+
+`-webkit-user-select: none; user-select: none` se añaden al `<body>` como protección
+global contra la selección accidental de texto durante gestos de swipe en iOS WebKit.
+El `#lumina-board` ya tenía esta propiedad, pero algunos motores de gama baja
+aplican la herencia de forma inconsistente.
+
+`overscroll-behavior: none` se añade explícitamente a `#lumina-game-area` además
+del `<body>`. Algunos navegadores WebKit de gama baja ignoran el valor heredado
+del `body` cuando el contenedor hijo tiene `overflow-y: auto` propio.
+
+---
+
+## Changelog v2.0 — Rediseño Solid Modernism
+
+**Objetivo:** eliminar la identidad visual "Lumina" (glassmorphism, orbes, brillos),
+sustituirla por una estética Solid Modernism de alta legibilidad y bajo coste gráfico.
+
+**Archivos modificados:** `index.html`, `lumina_render.js`.
+
+### Identidad Visual
+
+El juego pasa a llamarse **2048**. La paleta sigue la directriz "azules/violetas para
+valores bajos, naranjas/ámbar vibrantes para valores altos" del brief §3. Solo la
+ficha 2048 tiene gradiente. La ficha ⚡ ENERGY usa `#0B4D72` (azul eléctrico sólido).
+
+### Regla 90/10
+
+Todas las superficies activas durante el gameplay son sólidas. `backdrop-filter`
+se conserva únicamente en los modales de victoria y derrota, donde el gameplay
+está detenido (brief §2, reserva del 10% de efectos visuales).
+
+### Cambios Clave
+
+`backdrop-filter: blur(24px)` eliminado del tablero, fichas, botones y score boxes,
+liberando la carga GPU que antes procesaba el desenfoque en tiempo real.
+
+El módulo de parallax giroscópico (orbes animados + `DeviceOrientationEvent`) fue
+eliminado por completo. El fondo es ahora `#0F1115` (near-black, OLED-friendly).
+
+`font-weight: 900` (Montserrat Black) en fichas y título. La jerarquía visual la
+aporta el peso tipográfico, no efectos de luz.
+
+La profundidad visual se logra mediante `border-bottom: 3px solid rgba(0,0,0,0.38)`
+en fichas (flat design sombreado), sin ningún `box-shadow` con blur.
+
+La animación de la ficha ⚡ pasó de mutar `box-shadow + opacity` a mutar solo
+`opacity`, que es compositor-only y no dispara repaint.
+
+---
+
+## Changelog v1.3 — Optimización de Rendimiento (retenido)
+
+El sistema LOD (`lumina_detectQuality`), el Idle State de partículas, la Page
+Visibility API, el frame-time adaptativo, la caché de estilos `lumina_tileValueCache`
+y el posicionamiento de fichas via `transform: translate()` (compositor-only) se
+mantienen íntegramente desde v1.3.
+
+---
+
+## Changelog v1.2 — Balance de Economía (sin cambios)
+
+| Bono | Cálculo |
+|------|---------|
+| Persistencia | `floor(score / 25)` |
+| Fusión ⚡ | 4 monedas por ficha fusionada |
+| Hito 512 | +20 monedas (one-time por sesión) |
+| Hito 1024 | +50 monedas (one-time por sesión) |
+| Hito 2048 | +100 monedas (one-time por sesión) |
+
+**Referencia de calibración:** 3 000 pts → ~160 monedas.
 
 ---
 
 ## Mecánicas de Juego
 
-### 2048 Estándar
+**2048 estándar:** fusionar fichas del mismo valor con flechas de teclado o swipe.
+Objetivo: alcanzar la ficha 2048.
 
-Fusionar fichas del mismo valor moviéndolas con flechas del teclado o swipe
-táctil. El objetivo es alcanzar la ficha de **2048**.
+**Combo Meter:** cinco movimientos consecutivos con fusión llenan el medidor al 100%
+y fusionan automáticamente todos los pares de fichas con valor 2 y 4.
 
-### Combo Meter (exclusivo)
-
-Cada movimiento con al menos una fusión incrementa el streak. Al completar
-**5 movimientos consecutivos**, el Combo Meter llega al 100% y fusiona
-automáticamente todos los pares de fichas con valor 2 y 4.
-
-### Fichas de Energía (⚡)
-
-Con un **6%** de probabilidad (máx. 2 simultáneas), cada tile nuevo puede ser
-una Ficha de Energía. Al fusionarse, acumula **4 monedas** en la sesión.
-
----
-
-## Arquitectura de Módulos
-
-### `lumina_core.js` (sin cambios en v2.0)
-
-Motor lógico puro de la matriz 4×4. Independiente del DOM. Gestiona el movimiento
-mediante rotaciones de grilla, la detección de victoria/derrota, el Combo Meter,
-las Fichas de Energía y la persistencia en `localStorage`.
-
-### `lumina_render.js` (actualizado en v2.0)
-
-Capa visual. Gestiona la sincronización DOM, las animaciones CSS, las partículas
-en canvas, el sistema LOD, la Page Visibility API y los modales.
-
-- **v2.0:** Nueva paleta sólida, eliminación del parallax, simplificación de `lumina_syncTileEl`.
-- **v1.3:** Idle State, LOD, frame-time adaptativo, caché de estilos.
-- **v1.2:** `lumina_animateCoinCount()` — animador 500 ms con tintineo.
-
-### `lumina_input.js` (sin cambios en v2.0)
-
-Gestión de teclado y TouchEvents. `lumina_resumeAudio()` en cada `touchstart`.
-`lumina_clearGameState()` al detectar fin de partida.
-
-### `lumina_audio.js` (sin cambios en v2.0)
-
-Síntesis procedural via Web Audio API. Escala pentatónica, reverb sintético en
-victoria. Gestión de energía del AudioContext (suspensión tras 30 s de inactividad).
-
-### `lumina_bridge.js` (sin cambios en v2.0)
-
-Punto de contacto con `app.js`. Acumulador de sesión, bonos fijos de hito,
-reporte único a `window.GameCenter.completeLevel()` al cierre de partida.
-
----
-
-## Economía de Monedas (v1.2, sin cambios)
-
-| Fuente | Cálculo | Cuándo se suma |
-|--------|---------|----------------|
-| Persistencia | `floor(score / 25)` | Al cerrar la sesión |
-| Fusión ⚡ | `4 × fichas_energía_fusionadas` | Acumulado, reportado al cierre |
-| Hito 512 | +20 (one-time) | Al alcanzar ficha 512 por primera vez |
-| Hito 1024 | +50 (one-time) | Al alcanzar ficha 1024 por primera vez |
-| Hito 2048 | +100 (one-time) | Al alcanzar ficha 2048 por primera vez |
-
-**Calibración:** 3 000 pts → ~160 monedas
+**Fichas de Energía ⚡:** 6% de probabilidad por tile nuevo (máx. 2 simultáneas).
+Al fusionarse, acumulan 4 monedas en el acumulador de sesión.
 
 ---
 
@@ -325,53 +279,47 @@ reporte único a `window.GameCenter.completeLevel()` al cierre de partida.
 
 ## Checklist de Entrega ✅
 
-### Estructura y Navegación
-- [x] Botón "← Hub" visible → `../../index.html`
-- [x] `../../js/app.js` referenciado al final del `<body>`
+### Accesibilidad (v2.1) — NUEVO
+- [x] Ficha 2 bg: `#232B52` (+2 pts luminosidad respecto a v2.0)
+- [x] Ficha 2 text: `#7090BC` — ratio texto/fondo: 4.3:1 (WCAG AA ✓ para texto bold)
+- [x] Ficha 4 sin cambios (ratio preexistente: 5.7:1)
 
-### Responsividad
-- [x] Mobile First: tablero ocupa `90vw` en pantallas ≤ 375 px
-- [x] Controles táctiles (swipe + flick) totalmente funcionales
+### Optimizaciones Gama Baja (v2.1) — NUEVO
+- [x] `className` única en `lumina_syncTileEl` (4 ops classList → 1)
+- [x] Caché `lumina_lastComboMeter` — sin escrituras DOM redundantes
+- [x] Combo bar: color sólido en gama baja, gradiente HSL en media/alta
+- [x] Transición CSS `background` eliminada del combo bar (no compositor-only)
+- [x] `lumina_resizeParticleCanvas` con debounce 150 ms y `{ passive: true }`
+- [x] `contain: layout style paint` en `.lumina-tile` (área de paint reducida)
+- [x] `text-rendering: optimizeSpeed` en `.lumina-tile`
+- [x] `user-select: none` en `<body>` (herencia uniforme en WebKit)
+- [x] `overscroll-behavior: none` explícito en `#lumina-game-area`
+- [x] `lumina_lastComboMeter` reseteado en `lumina_clearBoard()`
 
-### Rediseño Visual (v2.0) — NUEVO
-- [x] Nombre actualizado a "2048"
-- [x] Fondo `#0F1115` (OLED-friendly near-black)
+### Rediseño Visual (v2.0) — Retenido
+- [x] Nombre "2048", fondo `#0F1115`, superficies sólidas
 - [x] `backdrop-filter` eliminado de tablero, fichas, botones y score boxes
-- [x] Fichas con colores sólidos (azules → violetas → naranjas/ámbar)
-- [x] Gradiente exclusivo en la ficha 2048
+- [x] `backdrop-filter` conservado en modales (gameplay detenido)
+- [x] Parallax y orbes eliminados de HTML, CSS y JS
+- [x] Montserrat 900 en fichas y título
 - [x] Profundidad via `border-bottom` oscuro (flat design sombreado)
-- [x] Parallax y orbes de fondo eliminados de HTML, CSS y JS
-- [x] Montserrat weight 900 en fichas y título
-- [x] Título "2048" en blanco sólido, sin gradiente de texto
-- [x] Ficha ⚡ ENERGY: color sólido `#0B4D72`, sin glow animado
-- [x] Animación `lumina-energy-idle`: solo `opacity` (compositor-only)
-- [x] Barra combo: color sólido, sin `box-shadow` de glow
-- [x] Record badge: estático, sin animación pulsante
-- [x] Modales conservan `backdrop-filter` (gameplay detenido, brief §2)
 
-### Rendimiento (v1.3) — Retenido íntegramente
-- [x] Idle State: partículas detienen su loop rAF en reposo
-- [x] Page Visibility API: loops cancelados al ocultar la pestaña
+### Rendimiento (v1.3) — Retenido
+- [x] Idle State de partículas (loop rAF detenido en reposo)
+- [x] Page Visibility API (loops cancelados al ocultar pestaña)
 - [x] AudioContext suspendido tras 30 s de inactividad
-- [x] LOD: `lumina_detectQuality()` al iniciar
-- [x] Frame-time adaptativo: `maxParticles` reducido si FPS < 55
+- [x] LOD `lumina_detectQuality()` al iniciar
+- [x] Frame-time adaptativo (maxParticles reducido si FPS < 55)
 - [x] Posicionamiento via `transform` (compositor-only)
 - [x] `will-change: transform, opacity` en fichas y canvas
 - [x] `contain: layout style` en `#lumina-board`
-- [x] Caché de estilos `lumina_tileValueCache`
-
-### Sistema de Recompensas (v1.2) — Sin cambios
-- [x] Cero llamadas a `completeLevel()` durante el gameplay
-- [x] Persistencia: `floor(score / 25)`
-- [x] Fusión ⚡: 4 monedas por ficha
-- [x] Bonos fijos: +20 (512), +50 (1024), +100 (2048) — one-time por sesión
-- [x] Reporte único al cierre
+- [x] Caché `lumina_tileValueCache`
 
 ### Compatibilidad Retroactiva
-- [x] Todos los IDs de DOM mantenidos sin cambios
-- [x] Todas las funciones públicas JS mantenidas sin cambios
+- [x] Todos los IDs de DOM sin cambios
+- [x] Todas las funciones públicas JS sin cambios
 - [x] `lumina_core.js`, `lumina_input.js`, `lumina_audio.js`, `lumina_bridge.js` sin tocar
 
 ---
 
-*2048 · Love Arcade · Game Center Core v7.5 · 2026 · v2.0.0*
+*2048 · Love Arcade · Game Center Core v7.5 · 2026 · v2.1.0*
