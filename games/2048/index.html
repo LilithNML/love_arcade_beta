@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="2048 — Premium edition para Love Arcade" />
+  <title>2048 · Love Arcade</title>
+
+  <!-- Montserrat — pesos 600 / 700 / 800 / 900 (ExtraBold + Black) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!--
+    ╔═══════════════════════════════════════════════════════╗
+    ║  ZERO-FLICKER INIT (v9.3 compatible)                 ║
+    ║  Leer tema del store ANTES del primer paint.         ║
+    ╚═══════════════════════════════════════════════════════╝
+  -->
+  <script>
+    (function () {
+      try {
+        var store  = JSON.parse(localStorage.getItem('gamecenter_v6_promos') || '{}');
+        var theme  = store.theme || 'violet';
+        var themes = { violet: '#7C3AED', pink: '#DB2777', cyan: '#0891B2', gold: '#D97706', crimson: '#E11D48' };
+        var accent = themes[theme] || '#7C3AED';
+        document.documentElement.style.setProperty('--lumina-platform-accent', accent);
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       CUSTOM PROPERTIES — v2.0 Solid Modernism
+       Toda superficie es un valor sólido y opaco.
+       Sin rgba semitransparentes en tablero ni fichas.
+    ═══════════════════════════════════════════════════════════ */
+    :root {
+      /* ── Fondo (OLED-friendly near-black) ── */
+      --lumina-bg:              #0F1115;
+
+      /* ── Superficies — sólidas, no translúcidas ── */
+      --lumina-surface:         #161B27;
+      --lumina-surface-hover:   #1E2438;
+      --lumina-border:          #252D40;
+      --lumina-border-bright:   #3A4460;
+      --lumina-text:            #E8EAF2;
+      --lumina-text-dim:        rgba(232,234,242,0.42);
+      --lumina-platform-accent: #7C3AED;   /* sobreescrito por zero-flicker */
+
+      /* ── Tablero ── */
+      --lumina-board-bg:        #13171F;
+      --lumina-cell-bg:         #191E2C;
+      --lumina-cell-border:     #20263A;
+
+      /* ── Espaciado ── */
+      --lumina-gap:       8px;
+      --lumina-padding:   10px;
+
+      /* ── Geometría: bordes rectos y funcionales (4 px) ── */
+      --lumina-radius:    4px;
+      --lumina-tile-r:    4px;
+
+      /* ── Dimensiones del tablero ── */
+      --lumina-board-size: min(480px, calc(100vw - 32px));
+      --lumina-cell-size:  calc(
+        (var(--lumina-board-size) - 2 * var(--lumina-padding) - 3 * var(--lumina-gap)) / 4
+      );
+    }
+
+    @media (max-width: 375px) {
+      :root {
+        --lumina-board-size: 90vw;
+        --lumina-gap:        6px;
+        --lumina-padding:    8px;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--lumina-bg);
+      color: var(--lumina-text);
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CANVAS DE PARTÍCULAS
+       Solo activo durante fusiones ≥128 (Idle State: loop rAF
+       se detiene cuando el array queda vacío, GPU = 0%).
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      will-change: transform;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ÁREA DE JUEGO
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-game-area {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      min-height: 100vh;
+      padding: 12px 16px 16px;
+      gap: 10px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CABECERA
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: var(--lumina-board-size);
+      max-width: 100%;
+      gap: 8px;
+    }
+
+    /* v2.0: Sólido, sin backdrop-filter */
+    .lumina-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-bottom: 2px solid rgba(0,0,0,0.40);
+      border-radius: var(--lumina-radius);
+      color: var(--lumina-text-dim);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      transition: background 0.14s, color 0.14s, border-color 0.14s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .lumina-back-btn:hover, .lumina-back-btn:focus {
+      background: var(--lumina-surface-hover);
+      color: var(--lumina-text);
+      border-color: var(--lumina-border-bright);
+    }
+
+    /*
+     * v2.0: Título — Montserrat 900, sólido blanco.
+     * Sin gradiente, sin brillo. El número "pesa" por la tipografía.
+     */
+    .lumina-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-align: center;
+      color: var(--lumina-text);
+      flex: 1;
+    }
+
+    .lumina-scores {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* v2.0: Score box — sólido, sin backdrop-filter */
+    .lumina-score-box {
+      position: relative;
+      padding: 5px 10px;
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-bottom: 2px solid rgba(0,0,0,0.40);
+      border-radius: var(--lumina-radius);
+      text-align: center;
+      min-width: 58px;
+      overflow: visible;
+    }
+
+    .lumina-score-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      color: var(--lumina-text-dim);
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .lumina-score-value {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--lumina-text);
+      line-height: 1.3;
+    }
+
+    .lumina-score-pop {
+      position: absolute;
+      bottom: calc(100% + 2px);
+      right: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4ADE80;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: lumina-pop-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      z-index: 30;
+    }
+
+    @keyframes lumina-pop-up {
+      0%   { opacity: 1; transform: translateY(0)     scale(1);    }
+      100% { opacity: 0; transform: translateY(-20px) scale(0.85); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BARRA DE CONTROLES
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: var(--lumina-board-size);
+      max-width: 100%;
+      gap: 12px;
+    }
+
+    #lumina-combo-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .lumina-combo-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--lumina-text-dim);
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .lumina-combo-track {
+      flex: 1;
+      height: 4px;
+      background: var(--lumina-cell-bg);
+      border: 1px solid var(--lumina-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    /* v2.0: Barra sólida, sin glow/box-shadow */
+    #lumina-combo-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: var(--lumina-platform-accent);
+      transition: width 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 0.4s ease;
+    }
+
+    .lumina-combo--flash #lumina-combo-bar {
+      animation: lumina-combo-flash 0.50s ease-out;
+    }
+
+    /* v2.0: Flash por opacity, compositor-only */
+    @keyframes lumina-combo-flash {
+      0%, 100% { opacity: 1; }
+      35%       { opacity: 0.25; }
+    }
+
+    /* ── Botones ── */
+    .lumina-btn {
+      padding: 7px 15px;
+      border: 1px solid transparent;
+      border-bottom: 2px solid rgba(0,0,0,0.40);
+      border-radius: var(--lumina-radius);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.14s, color 0.14s, filter 0.14s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .lumina-btn:active { transform: scale(0.96); }
+
+    /* v2.0: Sólido, sin backdrop-filter */
+    .lumina-btn--new {
+      background: var(--lumina-surface);
+      border-color: var(--lumina-border);
+      border-bottom-color: rgba(0,0,0,0.40);
+      color: var(--lumina-text);
+      flex-shrink: 0;
+    }
+    .lumina-btn--new:hover {
+      background: var(--lumina-surface-hover);
+      border-color: var(--lumina-border-bright);
+    }
+
+    /* Primary: color acento de plataforma, profundidad por borde */
+    .lumina-btn--primary {
+      background: var(--lumina-platform-accent);
+      color: #FFF;
+      padding: 12px 28px;
+      font-size: 13.5px;
+      font-weight: 800;
+      border: none;
+      border-bottom: 3px solid rgba(0,0,0,0.35);
+    }
+    .lumina-btn--primary:hover { filter: brightness(1.15); }
+
+    .lumina-btn--ghost {
+      background: var(--lumina-surface);
+      border-color: var(--lumina-border);
+      border-bottom-color: rgba(0,0,0,0.40);
+      color: var(--lumina-text-dim);
+      padding: 9px 20px;
+    }
+    .lumina-btn--ghost:hover {
+      background: var(--lumina-surface-hover);
+      color: var(--lumina-text);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TABLERO — v2.0 Solid Modernism
+       Cambios respecto a v1.3:
+       · Fondo sólido (no glass). Elimina backdrop-filter.
+       · Profundidad por border-bottom, no por box-shadow difuso.
+       · border-radius: 4px (de 14px → aristas limpias).
+       · contain: layout style (retenido de v1.3).
+       · box-shadow mínimo: solo profundidad, sin "halo" difuso.
+    ═══════════════════════════════════════════════════════════ */
+    #lumina-board {
+      position: relative;
+      width:  var(--lumina-board-size);
+      height: var(--lumina-board-size);
+      max-width: 100%;
+
+      background: var(--lumina-board-bg);
+      border: 1px solid var(--lumina-border);
+      border-bottom: 3px solid rgba(0,0,0,0.55);
+      border-radius: var(--lumina-radius);
+
+      padding: var(--lumina-padding);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--lumina-gap);
+
+      /* Sombra de profundidad discreta: sin halo difuso */
+      box-shadow: 0 6px 28px rgba(0,0,0,0.55);
+
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+
+      contain: layout style;   /* v1.3: aislamiento de layout (retenido) */
+    }
+
+    .lumina-cell {
+      background: var(--lumina-cell-bg);
+      border: 1px solid var(--lumina-cell-border);
+      border-radius: var(--lumina-tile-r);
+      aspect-ratio: 1;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FICHAS — v2.0 Solid Modernism
+       Cambios respecto a v1.3:
+       · NO backdrop-filter (GPU killer #1 eliminado).
+       · NO box-shadow con glow de color (eliminado).
+       · NO textShadow de color (eliminado).
+       · Profundidad: border-bottom 3px rgba(0,0,0,0.35) —
+         estilo flat design sombreado (brief §4).
+       · font-weight: 900 — Montserrat Black, números que "pesan".
+       · border-radius: 4px (de 10px).
+       · Posicionamiento via transform: retenido de v1.3.
+       · will-change: transform, opacity: retenido de v1.3.
+       · El color sólido de fondo es inyectado por lumina_render.js.
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-tile {
+      position: absolute;
+      width:  var(--lumina-cell-size);
+      height: var(--lumina-cell-size);
+
+      /* v1.3: posición estática + transform compositor-only */
+      left: var(--lumina-padding);
+      top:  var(--lumina-padding);
+      transform: translate(
+        calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+        calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+      );
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      border-radius: var(--lumina-tile-r);
+
+      /* v2.0: Montserrat Black — los números pesan */
+      font-weight: 900;
+      font-size: clamp(16px, calc(var(--lumina-cell-size) * 0.42), 30px);
+      line-height: 1;
+
+      /*
+       * v2.0: Profundidad sin sombra difusa.
+       * Un borde inferior y derecho más oscuros imitan la fuente de luz
+       * superior-izquierda del flat design. Cero blur, cero repaint.
+       */
+      border-top:    1px solid rgba(255,255,255,0.06);
+      border-left:   1px solid rgba(0,0,0,0.12);
+      border-right:  1px solid rgba(0,0,0,0.22);
+      border-bottom: 3px solid rgba(0,0,0,0.38);
+
+      transition: transform 0.16s cubic-bezier(0.25, 0.1, 0.05, 1);
+
+      z-index: 5;
+      will-change: transform, opacity;   /* v1.3: capa GPU propia */
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .lumina-tile[data-digits="4"] { font-size: clamp(12px, calc(var(--lumina-cell-size) * 0.31), 22px); }
+    .lumina-tile[data-digits="5"] { font-size: clamp(10px, calc(var(--lumina-cell-size) * 0.26), 18px); }
+
+    /*
+     * Animaciones de escala: compositor-only (transform únicamente).
+     * Incluyen el translate() de posición para coexistir con la
+     * transición base (técnica retenida de v1.3).
+     */
+    @keyframes lumina-tile-appear {
+      0%   { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(0.35); opacity: 0; }
+      72%  { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(1.08); opacity: 1; }
+      100% { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(1);    opacity: 1; }
+    }
+    @keyframes lumina-tile-merge {
+      0%   { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(1); }
+      30%  { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(1.16); }
+      65%  { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(0.95); }
+      100% { transform: translate(
+               calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
+               calc(var(--tile-y) * (var(--lumina-cell-size) + var(--lumina-gap)))
+             ) scale(1); }
+    }
+
+    .lumina-tile--new    { animation: lumina-tile-appear 0.22s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .lumina-tile--merged { animation: lumina-tile-merge  0.20s cubic-bezier(0.34,1.56,0.64,1) both; z-index: 6; }
+
+    /* ── Ficha de Energía ── */
+    .lumina-e-icon  { font-size: 1.5em; line-height: 1; display: block; }
+    .lumina-e-label { font-size: 0.38em; letter-spacing: 0.1em; opacity: 0.75; line-height: 1; }
+
+    /*
+     * v2.0: Ficha de Energía — distinción por color sólido.
+     * La animación usa solo opacity: compositor-only, cero repaint.
+     * Reemplaza la animación lumina-energy-glow de v1.3 que mutaba
+     * box-shadow cada frame (más costoso que opacity).
+     */
+    @keyframes lumina-energy-idle {
+      0%, 100% { opacity: 1;    }
+      50%       { opacity: 0.78; }
+    }
+    .lumina-tile--energy {
+      animation: lumina-energy-idle 3.2s ease-in-out infinite;
+    }
+    .lumina-tile--energy.lumina-tile--new {
+      animation:
+        lumina-tile-appear 0.22s cubic-bezier(0.34,1.56,0.64,1) both,
+        lumina-energy-idle 3.2s ease-in-out 0.28s infinite;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       PIE: INSTRUCCIONES
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-instructions {
+      font-size: 11.5px;
+      color: var(--lumina-text-dim);
+      text-align: center;
+      letter-spacing: 0.04em;
+      line-height: 1.5;
+      max-width: var(--lumina-board-size);
+    }
+    .lumina-instructions strong { color: rgba(255,255,255,0.55); }
+
+    .lumina-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--lumina-text-dim);
+      opacity: 0.7;
+    }
+    .lumina-hint-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MODALES — BASE
+       Blur/glass PERMITIDO aquí: la acción está detenida (§2 brief).
+       Regla del 10%: efectos visuales reservados para momentos
+       sin gameplay activo.
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(9,11,16,0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+    .lumina-modal--visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lumina-modal-box {
+      background: #1A2030;
+      border: 1px solid var(--lumina-border-bright);
+      border-bottom: 3px solid rgba(0,0,0,0.50);
+      border-radius: 8px;
+      padding: 32px 28px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      max-width: 330px;
+      width: 90%;
+      box-shadow: 0 10px 60px rgba(0,0,0,0.72);
+      animation: lumina-modal-in 0.38s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .lumina-modal-box--win {
+      background: #181826;
+      border-color: rgba(124,58,237,0.42);
+    }
+
+    @keyframes lumina-modal-in {
+      0%   { transform: scale(0.82) translateY(18px); opacity: 0; }
+      100% { transform: scale(1)    translateY(0);    opacity: 1; }
+    }
+
+    .lumina-modal-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--lumina-text);
+      line-height: 1.1;
+    }
+    .lumina-modal-title--gameover { color: #F97316; }
+    .lumina-modal-title--win      { color: var(--lumina-platform-accent); }
+
+    /* ═══════════════════════════════════════════════════════════
+       MODALES — RESUMEN DE INGRESOS
+    ═══════════════════════════════════════════════════════════ */
+    .lumina-modal-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .lumina-summary-item {
+      background: var(--lumina-surface);
+      border: 1px solid var(--lumina-border);
+      border-bottom: 2px solid rgba(0,0,0,0.38);
+      border-radius: 6px;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .lumina-summary-item--coins {
+      grid-column: 1 / -1;
+      background: #1C1A00;
+      border-color: rgba(217,119,6,0.32);
+      border-bottom-color: rgba(0,0,0,0.40);
+    }
+
+    .lumina-summary-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--lumina-text-dim);
+      text-transform: uppercase;
+    }
+
+    .lumina-summary-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--lumina-text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lumina-summary-item--coins .lumina-summary-value {
+      font-size: 26px;
+      color: #FBBF24;
+    }
+
+    .lumina-summary-milestone {
+      font-size: 15px !important;
+      font-weight: 800;
+      color: var(--lumina-platform-accent);
+    }
+
+    .lumina-coin-icon {
+      display: inline-block;
+      font-size: 1em;
+      animation: lumina-coin-spin 1.8s ease-in-out infinite;
+      transform-origin: center;
+      will-change: transform;
+    }
+
+    @keyframes lumina-coin-spin {
+      0%, 100% { transform: rotateY(0deg)   scale(1);   }
+      25%       { transform: rotateY(90deg)  scale(0.8); }
+      50%       { transform: rotateY(180deg) scale(1);   }
+      75%       { transform: rotateY(270deg) scale(0.8); }
+    }
+
+    /* v2.0: Badge estático — sin animación pulsante */
+    .lumina-record-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: rgba(217,119,6,0.12);
+      border: 1px solid rgba(217,119,6,0.38);
+      border-bottom: 2px solid rgba(0,0,0,0.30);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #FBBF24;
+      letter-spacing: 0.06em;
+      width: fit-content;
+    }
+
+    .lumina-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ALTURAS REDUCIDAS (landscape móvil)
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-height: 640px) {
+      #lumina-game-area { gap: 6px; padding: 6px 12px 8px; }
+      .lumina-instructions, .lumina-hint { display: none; }
+      .lumina-score-box { padding: 4px 8px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Canvas de partículas (solo activo en fusiones ≥128, Idle State) -->
+  <canvas id="lumina-particles" aria-hidden="true"></canvas>
+
+  <!-- ══════════════════════════════════════════════════
+       ÁREA DE JUEGO PRINCIPAL
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-game-area">
+
+    <header class="lumina-header">
+      <a href="../../index.html" class="lumina-back-btn" aria-label="Volver al Hub">
+        ← Hub
+      </a>
+      <h1 class="lumina-title">2048</h1>
+      <div class="lumina-scores">
+        <div class="lumina-score-box" id="lumina-score-wrap" aria-live="polite" aria-label="Puntuación actual">
+          <div class="lumina-score-label">SCORE</div>
+          <div id="lumina-score" class="lumina-score-value">0</div>
+        </div>
+        <div class="lumina-score-box" aria-label="Mejor puntuación">
+          <div class="lumina-score-label">BEST</div>
+          <div id="lumina-best" class="lumina-score-value">0</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="lumina-controls">
+      <div id="lumina-combo-container" aria-label="Combo meter">
+        <span class="lumina-combo-label">COMBO</span>
+        <div class="lumina-combo-track">
+          <div id="lumina-combo-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+      <button id="lumina-new-game-btn" class="lumina-btn lumina-btn--new" aria-label="Nueva partida">
+        New Game
+      </button>
+    </div>
+
+    <div id="lumina-board" role="grid" aria-label="Tablero 2048">
+      <!-- Celdas y fichas insertadas por lumina_render.js -->
+    </div>
+
+    <p class="lumina-instructions">
+      Swipe o teclas de flecha para mover · Alcanza
+      <strong>2048</strong> para ganar
+    </p>
+    <div class="lumina-hint">
+      <span class="lumina-hint-badge">⚡ ENERGY</span>
+      Fusiona fichas de energía para ganar monedas Love Arcade
+    </div>
+
+  </div><!-- /#lumina-game-area -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       MODAL — GAME OVER
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-modal-gameover" class="lumina-modal" role="dialog" aria-modal="true" aria-label="Game Over">
+    <div class="lumina-modal-box">
+
+      <div class="lumina-modal-title lumina-modal-title--gameover">Game Over</div>
+
+      <div class="lumina-modal-summary">
+        <div class="lumina-summary-item lumina-summary-item--coins">
+          <div class="lumina-summary-label">Monedas Ganadas</div>
+          <div class="lumina-summary-value">
+            <span class="lumina-coin-icon">🪙</span>
+            <span id="lumina-final-coins">0</span>
+          </div>
+        </div>
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Puntuación</div>
+          <div class="lumina-summary-value" id="lumina-final-score">0</div>
+        </div>
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Hito Máximo</div>
+          <div class="lumina-summary-value lumina-summary-milestone" id="lumina-final-milestone">—</div>
+        </div>
+      </div>
+
+      <div id="lumina-go-record-badge" class="lumina-record-badge" style="display:none" aria-hidden="true">
+        🏆 ¡Nuevo Récord Personal!
+      </div>
+
+      <div class="lumina-modal-actions">
+        <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
+          Intentar de Nuevo
+        </button>
+        <a href="../../index.html" class="lumina-btn lumina-btn--ghost">
+          Volver al Hub
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       MODAL — VICTORIA
+  ══════════════════════════════════════════════════ -->
+  <div id="lumina-modal-win" class="lumina-modal" role="dialog" aria-modal="true" aria-label="¡Victoria!">
+    <div class="lumina-modal-box lumina-modal-box--win">
+
+      <div class="lumina-modal-title lumina-modal-title--win">¡2048 Alcanzado!</div>
+
+      <div class="lumina-modal-summary">
+        <div class="lumina-summary-item lumina-summary-item--coins">
+          <div class="lumina-summary-label">Monedas Ganadas</div>
+          <div class="lumina-summary-value">
+            <span class="lumina-coin-icon">🪙</span>
+            <span id="lumina-win-coins">0</span>
+          </div>
+        </div>
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Puntuación</div>
+          <div class="lumina-summary-value" id="lumina-win-score">0</div>
+        </div>
+        <div class="lumina-summary-item">
+          <div class="lumina-summary-label">Hito Máximo</div>
+          <div class="lumina-summary-value lumina-summary-milestone" id="lumina-win-milestone">2048</div>
+        </div>
+      </div>
+
+      <div id="lumina-win-record-badge" class="lumina-record-badge" style="display:none" aria-hidden="true">
+        🏆 ¡Nuevo Récord Personal!
+      </div>
+
+      <div class="lumina-modal-actions">
+        <button class="lumina-btn lumina-btn--primary" onclick="lumina_startNewGame()">
+          Nueva Partida
+        </button>
+        <button class="lumina-btn lumina-btn--ghost" onclick="lumina_continueGame()">
+          Seguir Jugando
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       MÓDULOS DEL JUEGO (orden de carga importa)
+  ══════════════════════════════════════════════════ -->
+  <script src="lumina_core.js"></script>
+  <script src="lumina_render.js"></script>
+  <script src="lumina_input.js"></script>
+  <script src="lumina_audio.js"></script>
+  <script src="lumina_bridge.js"></script>
+
+  <!-- ══════════════════════════════════════════════════
+       INICIALIZACIÓN PRINCIPAL
+  ══════════════════════════════════════════════════ -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+      lumina_initRenderer();
+
+      lumina_bestScore = lumina_loadBestScore();
+      const restored = lumina_loadGameState();
+      if (!restored) {
+        lumina_initGame();
+      }
+
+      lumina_resetSession();
+
+      lumina_renderGrid();
+      lumina_updateScoreDisplay(0);
+      lumina_updateComboMeter();
+
+      lumina_initInput();
+      lumina_initAudio();
+
+      lumina_syncTheme();
+
+      document.getElementById('lumina-new-game-btn')
+              .addEventListener('click', lumina_startNewGame);
+
+      console.log('[2048] 🎮 Juego inicializado correctamente (v2.0 Solid Modernism).');
+    });
+
+    function lumina_startNewGame() {
+      lumina_clearBoard();
+      lumina_clearGameState();
+      lumina_initGame();
+      lumina_resetSession();
+      lumina_renderGrid();
+      lumina_updateScoreDisplay(0);
+      lumina_updateComboMeter();
+      lumina_hideModals();
+      lumina_keepGoing = false;
+    }
+
+    function lumina_continueGame() {
+      lumina_keepGoing = true;
+      lumina_hideModals();
+    }
+  </script>
+
+  <!--
+    ╔═══════════════════════════════════════════════════════╗
+    ║  MOTOR CENTRAL DE LOVE ARCADE                        ║
+    ║  DEBE IR SIEMPRE AL FINAL DEL <body>                 ║
+    ╚═══════════════════════════════════════════════════════╝
+  -->
+  <script src="../../js/app.js"></script>
+
+</body>
+</html>
