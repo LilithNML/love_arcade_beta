@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0d0d0d"/>
+  <title>Snake</title>
+  <style>
+    /* ─────────────────────────────────────────────
+       DESIGN TOKENS — Flat Design, No Glassmorphism
+       ───────────────────────────────────────────── */
+    :root {
+      --LAS_bg:          #0d0d0d;
+      --LAS_surface:     #141414;
+      --LAS_surface2:    #1c1c1c;
+      --LAS_border:      #2a2a2a;
+      --LAS_accent:      #30d158;
+      --LAS_accent2:     #ff9f0a;
+      --LAS_danger:      #ff3b30;
+      --LAS_info:        #0a84ff;
+      --LAS_purple:      #bf5af2;
+      --LAS_text:        #f5f5f5;
+      --LAS_text2:       #888888;
+      --LAS_text3:       #444444;
+      --LAS_neon:        #00ff88;
+      --LAS_gold:        #ffd60a;
+      --LAS_cell:        20px;
+      --LAS_font:        "Courier New", "Lucida Console", monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--LAS_bg);
+      color: var(--LAS_text);
+      font-family: var(--LAS_font);
+      touch-action: none;
+    }
+
+    /* ─────────────────────────────────────────────
+       APP SHELL
+       ───────────────────────────────────────────── */
+    #LAS_app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      max-width: 430px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ─────────────────────────────────────────────
+       HEADER (respects Love Arcade navbar)
+       ───────────────────────────────────────────── */
+    #LAS_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--LAS_surface);
+      border-bottom: 1px solid var(--LAS_border);
+      padding: 0 14px;
+      height: 48px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .LAS_header-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--LAS_accent);
+      text-transform: uppercase;
+    }
+
+    .LAS_header-btn {
+      background: none;
+      border: 1px solid var(--LAS_border);
+      color: var(--LAS_text2);
+      font-family: var(--LAS_font);
+      font-size: 11px;
+      padding: 5px 10px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .LAS_header-btn:hover,
+    .LAS_header-btn:focus {
+      border-color: var(--LAS_accent);
+      color: var(--LAS_accent);
+      outline: none;
+    }
+    .LAS_header-btn.active {
+      border-color: var(--LAS_accent);
+      color: var(--LAS_accent);
+    }
+
+    /* ─────────────────────────────────────────────
+       SCORE BAR
+       ───────────────────────────────────────────── */
+    #LAS_scorebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--LAS_surface);
+      border-bottom: 1px solid var(--LAS_border);
+      padding: 6px 14px;
+      flex-shrink: 0;
+    }
+
+    .LAS_score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .LAS_score-label {
+      font-size: 8px;
+      color: var(--LAS_text3);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .LAS_score-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--LAS_text);
+      line-height: 1;
+    }
+
+    /* Combo bar — solid, no blur */
+    #LAS_comboWrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    #LAS_comboLabel {
+      font-size: 8px;
+      color: var(--LAS_text3);
+      letter-spacing: 2px;
+    }
+    #LAS_comboBarOuter {
+      width: 80px;
+      height: 6px;
+      background: var(--LAS_surface2);
+      border: 1px solid var(--LAS_border);
+      position: relative;
+      overflow: hidden;
+    }
+    #LAS_comboBarFill {
+      height: 100%;
+      background: var(--LAS_accent2);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    #LAS_comboMulti {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--LAS_accent2);
+    }
+
+    /* ─────────────────────────────────────────────
+       CANVAS AREA
+       ───────────────────────────────────────────── */
+    #LAS_canvasWrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--LAS_bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #LAS_canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Active power-up badge */
+    #LAS_powerupBadge {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--LAS_text2);
+      background: var(--LAS_surface);
+      border: 1px solid var(--LAS_border);
+      padding: 3px 7px;
+      pointer-events: none;
+      display: none;
+    }
+    #LAS_powerupBadge.visible { display: block; }
+    #LAS_powerupBadge.magnet  { color: var(--LAS_info);   border-color: var(--LAS_info); }
+    #LAS_powerupBadge.ghost   { color: var(--LAS_purple); border-color: var(--LAS_purple); }
+    #LAS_powerupBadge.brake   { color: var(--LAS_gold);   border-color: var(--LAS_gold); }
+
+    /* ─────────────────────────────────────────────
+       SCREENS (START / GAMEOVER overlay panels)
+       ───────────────────────────────────────────── */
+    .LAS_screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--LAS_bg);
+      z-index: 20;
+      padding: 24px 20px;
+      gap: 0;
+    }
+    .LAS_screen.hidden { display: none; }
+
+    /* START SCREEN */
+    #LAS_startScreen .LAS_logo {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      color: var(--LAS_accent);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    #LAS_startScreen .LAS_tagline {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--LAS_text3);
+      margin-bottom: 36px;
+    }
+
+    /* Skin Carousel */
+    #LAS_skinSection {
+      width: 100%;
+      margin-bottom: 28px;
+    }
+    .LAS_skin-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--LAS_text3);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #LAS_skinCarousel {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0;
+      scrollbar-width: none;
+      justify-content: center;
+    }
+    #LAS_skinCarousel::-webkit-scrollbar { display: none; }
+
+    .LAS_skin-card {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      border: 1px solid var(--LAS_border);
+      padding: 6px;
+      width: 72px;
+      background: var(--LAS_surface);
+      transition: border-color 0.15s;
+    }
+    .LAS_skin-card canvas {
+      display: block;
+    }
+    .LAS_skin-card-name {
+      font-size: 7px;
+      letter-spacing: 0.5px;
+      color: var(--LAS_text2);
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .LAS_skin-card.selected {
+      border-color: var(--LAS_accent);
+    }
+    .LAS_skin-card.locked {
+      cursor: default;
+      opacity: 0.5;
+    }
+    .LAS_skin-card.locked .LAS_skin-card-name {
+      color: var(--LAS_text3);
+    }
+    .LAS_skin-unlock-score {
+      font-size: 6px;
+      color: var(--LAS_text3);
+      letter-spacing: 1px;
+    }
+
+    /* ─── PLAY BUTTON ─── */
+    #LAS_playBtn {
+      width: 100%;
+      max-width: 260px;
+      height: 52px;
+      background: var(--LAS_accent);
+      border: none;
+      color: #000;
+      font-family: var(--LAS_font);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    #LAS_playBtn:hover { background: #28b84e; }
+    #LAS_playBtn:active { background: #1e8c3c; transform: scale(0.99); }
+
+    /* Highscore on start screen */
+    .LAS_best-score {
+      margin-top: 16px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--LAS_text3);
+    }
+    .LAS_best-score span {
+      color: var(--LAS_text2);
+    }
+
+    /* GAMEOVER SCREEN */
+    #LAS_gameoverScreen .LAS_go-title {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--LAS_danger);
+      margin-bottom: 28px;
+    }
+    .LAS_go-stats {
+      width: 100%;
+      max-width: 260px;
+      border: 1px solid var(--LAS_border);
+      margin-bottom: 28px;
+    }
+    .LAS_go-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--LAS_border);
+    }
+    .LAS_go-stat-row:last-child { border-bottom: none; }
+    .LAS_go-stat-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--LAS_text3);
+      text-transform: uppercase;
+    }
+    .LAS_go-stat-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--LAS_text);
+    }
+    .LAS_go-stat-val.highlight { color: var(--LAS_accent2); }
+
+    .LAS_go-reward {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--LAS_gold);
+      margin-bottom: 24px;
+      text-align: center;
+      border: 1px solid var(--LAS_gold);
+      padding: 8px 20px;
+    }
+    .LAS_go-new-record {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--LAS_accent2);
+      margin-bottom: 12px;
+      display: none;
+    }
+    .LAS_go-new-record.visible { display: block; }
+
+    #LAS_playAgainBtn {
+      width: 100%;
+      max-width: 260px;
+      height: 48px;
+      background: var(--LAS_surface2);
+      border: 1px solid var(--LAS_accent);
+      color: var(--LAS_accent);
+      font-family: var(--LAS_font);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.12s;
+      margin-bottom: 10px;
+    }
+    #LAS_playAgainBtn:hover { background: var(--LAS_surface); }
+
+    #LAS_menuBtn {
+      background: none;
+      border: none;
+      color: var(--LAS_text3);
+      font-family: var(--LAS_font);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 6px;
+    }
+    #LAS_menuBtn:hover { color: var(--LAS_text2); }
+
+    /* Skin unlock notification toast */
+    #LAS_unlockToast {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--LAS_surface);
+      border: 1px solid var(--LAS_accent2);
+      color: var(--LAS_accent2);
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 8px 16px;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      text-align: center;
+      white-space: nowrap;
+    }
+    #LAS_unlockToast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Combo flash — border on canvas wrap */
+    #LAS_canvasWrap.LAS_combo-flash {
+      outline: 3px solid var(--LAS_accent2);
+    }
+    #LAS_canvasWrap.LAS_combo-flash-2 {
+      outline: 3px solid #ff6b00;
+    }
+    #LAS_canvasWrap.LAS_combo-flash-3 {
+      outline: 3px solid var(--LAS_danger);
+    }
+  </style>
+</head>
+<body>
+
+<div id="LAS_app">
+
+  <!-- HEADER -->
+  <header id="LAS_header">
+    <div class="LAS_header-title">Snake</div>
+    <div style="display:flex;gap:8px;">
+      <button class="LAS_header-btn" id="LAS_pauseBtn" style="display:none;">PAUSE</button>
+      <button class="LAS_header-btn" id="LAS_muteBtn">MUTE</button>
+    </div>
+  </header>
+
+  <!-- SCORE BAR -->
+  <div id="LAS_scorebar">
+    <div class="LAS_score-block">
+      <div class="LAS_score-label">Score</div>
+      <div class="LAS_score-val" id="LAS_scoreVal">0</div>
+    </div>
+    <div id="LAS_comboWrap">
+      <div id="LAS_comboLabel">COMBO</div>
+      <div id="LAS_comboBarOuter">
+        <div id="LAS_comboBarFill"></div>
+      </div>
+      <div id="LAS_comboMulti">x1</div>
+    </div>
+    <div class="LAS_score-block">
+      <div class="LAS_score-label">Best</div>
+      <div class="LAS_score-val" id="LAS_bestVal">0</div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div id="LAS_canvasWrap">
+    <canvas id="LAS_canvas"></canvas>
+    <div id="LAS_powerupBadge"></div>
+  </div>
+
+  <!-- UNLOCK TOAST -->
+  <div id="LAS_unlockToast"></div>
+
+  <!-- ─── START SCREEN ─── -->
+  <div id="LAS_startScreen" class="LAS_screen">
+    <div class="LAS_logo">Snake</div>
+    <div class="LAS_tagline">LOVE ARCADE CLASSIC</div>
+
+    <div id="LAS_skinSection">
+      <div class="LAS_skin-label">SELECT SKIN</div>
+      <div id="LAS_skinCarousel"></div>
+    </div>
+
+    <button id="LAS_playBtn">PLAY</button>
+    <div class="LAS_best-score">BEST: <span id="LAS_startBest">0</span></div>
+  </div>
+
+  <!-- ─── GAME OVER SCREEN ─── -->
+  <div id="LAS_gameoverScreen" class="LAS_screen hidden">
+    <div class="LAS_go-title">GAME OVER</div>
+
+    <div class="LAS_go-stats">
+      <div class="LAS_go-stat-row">
+        <div class="LAS_go-stat-label">Score</div>
+        <div class="LAS_go-stat-val" id="LAS_goScore">0</div>
+      </div>
+      <div class="LAS_go-stat-row">
+        <div class="LAS_go-stat-label">Length</div>
+        <div class="LAS_go-stat-val" id="LAS_goLength">3</div>
+      </div>
+      <div class="LAS_go-stat-row">
+        <div class="LAS_go-stat-label">Best</div>
+        <div class="LAS_go-stat-val" id="LAS_goBest">0</div>
+      </div>
+    </div>
+
+    <div class="LAS_go-new-record" id="LAS_goNewRecord">NEW RECORD!</div>
+    <div class="LAS_go-reward" id="LAS_goReward">+0 COINS EARNED</div>
+
+    <button id="LAS_playAgainBtn">PLAY AGAIN</button>
+    <button id="LAS_menuBtn">MAIN MENU</button>
+  </div>
+
+</div><!-- #LAS_app -->
+
+<!-- ─── MODULES ─── -->
+<script src="snake-audio.js"></script>
+<script src="snake-economy.js"></script>
+<script src="snake-renderer.js"></script>
+<script src="snake-core.js"></script>
+
+<script>
+/* ─────────────────────────────────────────────
+   MAIN ORCHESTRATOR
+   ─────────────────────────────────────────────
+   Wires all 4 modules together.
+   Handles UI events, skin carousel, combo HUD.
+   ───────────────────────────────────────────── */
+
+(function () {
+  'use strict';
+
+  // ── GameCenter stub (if not injected by host) ──
+  if (!window.GameCenter) {
+    window.GameCenter = {
+      completeLevel: function (gameId, levelId, reward) {
+        console.log(`[GameCenter] completeLevel(${gameId}, ${levelId}, ${reward})`);
+      }
+    };
+  }
+
+  // ─────────────────────────────────────────────
+  // LAYOUT: calculate grid dimensions from viewport
+  // ─────────────────────────────────────────────
+
+  const LAS_CELL = LAS_Renderer.CELL; // 20px
+
+  function LAS_calcGrid() {
+    const wrap = document.getElementById('LAS_canvasWrap');
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    const cols = Math.floor(w / LAS_CELL);
+    const rows = Math.floor(h / LAS_CELL);
+    return { cols: Math.max(cols, 12), rows: Math.max(rows, 14) };
+  }
+
+  // ─────────────────────────────────────────────
+  // INIT
+  // ─────────────────────────────────────────────
+
+  let LAS_currentSkin = LAS_Economy.getSelectedSkin();
+  let LAS_gameResult  = null;
+  let LAS_comboFlashTimer = null;
+
+  async function LAS_bootstrap() {
+    const { cols, rows } = LAS_calcGrid();
+    const canvas = document.getElementById('LAS_canvas');
+
+    LAS_Renderer.initCanvas(canvas, cols, rows);
+    await LAS_Renderer.buildImageCache(LAS_currentSkin);
+
+    LAS_Core.init(cols, rows);
+
+    LAS_bindModuleCallbacks();
+    LAS_bindUIEvents();
+    LAS_buildSkinCarousel();
+    LAS_updateHUD(0);
+
+    document.getElementById('LAS_startBest').textContent = LAS_Economy.getHighScore();
+    document.getElementById('LAS_bestVal').textContent   = LAS_Economy.getHighScore();
+  }
+
+  // ─────────────────────────────────────────────
+  // MODULE CALLBACKS
+  // ─────────────────────────────────────────────
+
+  function LAS_bindModuleCallbacks() {
+
+    // Frame render
+    LAS_Core.onFrame(() => {
+      const state = LAS_Core.getState();
+      const comboBorder = LAS_Economy.getComboMultiplier() >= 2;
+      LAS_Renderer.render(state, LAS_currentSkin, comboBorder);
+
+      // Overlays
+      if (state.gameState === 'COUNTDOWN') {
+        LAS_Renderer.drawCountdown(state.countdown);
+      } else if (state.gameState === 'PAUSED') {
+        LAS_Renderer.drawPauseScreen();
+      }
+
+      // Power-up badge
+      LAS_updatePowerupBadge(state.activePowerup);
+    });
+
+    // State changes
+    LAS_Core.onStateChange((newState) => {
+      const pauseBtn = document.getElementById('LAS_pauseBtn');
+      if (newState === 'PLAYING') {
+        pauseBtn.style.display = 'block';
+        pauseBtn.textContent   = 'PAUSE';
+      } else if (newState === 'PAUSED') {
+        pauseBtn.textContent   = 'RESUME';
+      } else {
+        pauseBtn.style.display = 'none';
+      }
+    });
+
+    // Eat callback
+    LAS_Core.onEat((isPowerup) => {
+      LAS_Audio.init();
+      if (isPowerup) {
+        LAS_Audio.sfxPowerup();
+      } else {
+        LAS_Audio.sfxEat();
+      }
+      const points = LAS_Economy.onItemEaten(isPowerup);
+      LAS_updateHUD(LAS_Economy.getSessionScore());
+    });
+
+    // Death callback
+    LAS_Core.onDeath(() => {
+      LAS_Audio.sfxDeath();
+
+      const state  = LAS_Core.getState();
+      const score  = LAS_Economy.getSessionScore();
+      const result = LAS_Economy.endSession(score, state.length);
+      LAS_gameResult = result;
+
+      // Render final frame + game over overlay
+      LAS_Renderer.render(state, LAS_currentSkin, false);
+      LAS_Renderer.drawGameOverScreen(score, result.allTimeHigh, result.isNewRecord);
+
+      // Show game over screen
+      setTimeout(() => LAS_showGameover(result, score, state.length), 900);
+    });
+
+    // Turn → gold particles
+    LAS_Core.onTurn((x, y) => {
+      if (LAS_currentSkin === 'gold') {
+        LAS_Renderer.triggerTurnParticles(x, y);
+      }
+    });
+
+    // Economy callbacks
+    LAS_Economy.onComboChange((multiplier) => {
+      LAS_updateComboBar(multiplier);
+      if (multiplier >= 2) {
+        LAS_Audio.sfxCombo(multiplier);
+        LAS_flashComboBorder(multiplier);
+      }
+    });
+
+    LAS_Economy.onScoreChange((score) => {
+      LAS_updateHUD(score);
+    });
+
+    LAS_Economy.onSkinUnlock((skinId) => {
+      LAS_showUnlockToast(skinId);
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // UI EVENTS
+  // ─────────────────────────────────────────────
+
+  function LAS_bindUIEvents() {
+    // Play button
+    document.getElementById('LAS_playBtn').addEventListener('click', () => {
+      LAS_Audio.init();
+      LAS_Audio.sfxStart();
+      LAS_startPlay();
+    });
+
+    // Play again
+    document.getElementById('LAS_playAgainBtn').addEventListener('click', () => {
+      LAS_Audio.sfxClick();
+      LAS_hideScreen('LAS_gameoverScreen');
+      LAS_startPlay();
+    });
+
+    // Menu
+    document.getElementById('LAS_menuBtn').addEventListener('click', () => {
+      LAS_Audio.sfxClick();
+      LAS_hideScreen('LAS_gameoverScreen');
+      LAS_showScreen('LAS_startScreen');
+      LAS_buildSkinCarousel();
+      document.getElementById('LAS_startBest').textContent = LAS_Economy.getHighScore();
+      document.getElementById('LAS_bestVal').textContent   = LAS_Economy.getHighScore();
+    });
+
+    // Pause
+    document.getElementById('LAS_pauseBtn').addEventListener('click', () => {
+      LAS_Audio.sfxClick();
+      LAS_Core.togglePause();
+    });
+
+    // Mute
+    document.getElementById('LAS_muteBtn').addEventListener('click', () => {
+      const muted = LAS_Audio.toggleMute();
+      document.getElementById('LAS_muteBtn').classList.toggle('active', muted);
+      document.getElementById('LAS_muteBtn').textContent = muted ? 'UNMUTE' : 'MUTE';
+    });
+
+    // Tap on canvas during play
+    document.getElementById('LAS_canvas').addEventListener('click', () => {
+      const state = LAS_Core.getState().gameState;
+      if (state === 'PAUSED') LAS_Core.resume();
+    });
+
+    // Touch input
+    LAS_Core.bindTouchInput(document.getElementById('LAS_canvas'));
+
+    // Window resize
+    window.addEventListener('resize', LAS_handleResize);
+  }
+
+  // ─────────────────────────────────────────────
+  // PLAY FLOW
+  // ─────────────────────────────────────────────
+
+  function LAS_startPlay() {
+    LAS_hideScreen('LAS_startScreen');
+    LAS_hideScreen('LAS_gameoverScreen');
+    LAS_Economy.startSession();
+    LAS_updateHUD(0);
+    document.getElementById('LAS_comboBarFill').style.width = '0%';
+    document.getElementById('LAS_comboMulti').textContent = 'x1';
+    document.getElementById('LAS_comboMulti').style.color = 'var(--LAS_text3)';
+    LAS_Core.startGame();
+  }
+
+  // ─────────────────────────────────────────────
+  // GAMEOVER SCREEN
+  // ─────────────────────────────────────────────
+
+  function LAS_showGameover(result, score, length) {
+    document.getElementById('LAS_goScore').textContent  = score;
+    document.getElementById('LAS_goLength').textContent = length;
+    document.getElementById('LAS_goBest').textContent   = result.allTimeHigh;
+    document.getElementById('LAS_goReward').textContent = `+${result.rewardAmount} COINS EARNED`;
+
+    const newRecordEl = document.getElementById('LAS_goNewRecord');
+    newRecordEl.classList.toggle('visible', result.isNewRecord);
+
+    document.getElementById('LAS_bestVal').textContent = result.allTimeHigh;
+    LAS_showScreen('LAS_gameoverScreen');
+  }
+
+  // ─────────────────────────────────────────────
+  // SKIN CAROUSEL
+  // ─────────────────────────────────────────────
+
+  function LAS_buildSkinCarousel() {
+    const carousel = document.getElementById('LAS_skinCarousel');
+    carousel.innerHTML = '';
+    const skins    = LAS_Economy.getSkinDefinitions();
+    const highScore = LAS_Economy.getHighScore();
+
+    skins.forEach(skin => {
+      const available = highScore >= skin.unlockScore;
+      const isSelected = skin.id === LAS_currentSkin;
+
+      const card = document.createElement('div');
+      card.className = 'LAS_skin-card' +
+        (isSelected ? ' selected' : '') +
+        (!available ? ' locked' : '');
+
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width  = 60;
+      previewCanvas.height = 36;
+      LAS_Renderer.drawSkinPreview(previewCanvas, skin.id, !available);
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'LAS_skin-card-name';
+      nameEl.textContent = skin.name;
+
+      card.appendChild(previewCanvas);
+      card.appendChild(nameEl);
+
+      if (!available) {
+        const lockEl = document.createElement('div');
+        lockEl.className = 'LAS_skin-unlock-score';
+        lockEl.textContent = `${skin.unlockScore}+`;
+        card.appendChild(lockEl);
+      }
+
+      if (available) {
+        card.addEventListener('click', () => {
+          LAS_Audio.sfxClick();
+          LAS_selectSkin(skin.id);
+        });
+      }
+
+      carousel.appendChild(card);
+    });
+  }
+
+  async function LAS_selectSkin(skinId) {
+    if (!LAS_Economy.isSkinAvailable(skinId)) return;
+    LAS_currentSkin = skinId;
+    LAS_Economy.setSelectedSkin(skinId);
+    await LAS_Renderer.buildImageCache(skinId);
+    LAS_buildSkinCarousel();
+  }
+
+  // ─────────────────────────────────────────────
+  // HUD UPDATES
+  // ─────────────────────────────────────────────
+
+  function LAS_updateHUD(score) {
+    document.getElementById('LAS_scoreVal').textContent = score;
+  }
+
+  function LAS_updateComboBar(multiplier) {
+    const data  = LAS_Economy.getComboBarData();
+    const fill  = document.getElementById('LAS_comboBarFill');
+    const multi = document.getElementById('LAS_comboMulti');
+
+    fill.style.width = data.multiplierPercent + '%';
+
+    if (multiplier > 1) {
+      multi.textContent = `x${multiplier}`;
+      multi.style.color = 'var(--LAS_accent2)';
+    } else {
+      multi.textContent = 'x1';
+      multi.style.color = 'var(--LAS_text3)';
+      fill.style.width  = '0%';
+    }
+  }
+
+  function LAS_updatePowerupBadge(activePowerup) {
+    const badge = document.getElementById('LAS_powerupBadge');
+    if (!activePowerup) {
+      badge.classList.remove('visible', 'magnet', 'ghost', 'brake');
+      return;
+    }
+    const labels = { magnet: 'MAGNET', ghost: 'GHOST', brake: 'BRAKE' };
+    badge.className  = `LAS_powerupBadge visible ${activePowerup.type}`;
+    badge.textContent = labels[activePowerup.type] || '';
+  }
+
+  // ─────────────────────────────────────────────
+  // COMBO BORDER FLASH (solid color, no blur)
+  // ─────────────────────────────────────────────
+
+  function LAS_flashComboBorder(multiplier) {
+    const wrap = document.getElementById('LAS_canvasWrap');
+    wrap.classList.remove('LAS_combo-flash', 'LAS_combo-flash-2', 'LAS_combo-flash-3');
+    if (LAS_comboFlashTimer) clearTimeout(LAS_comboFlashTimer);
+
+    const cls = multiplier >= 5 ? 'LAS_combo-flash-3'
+              : multiplier >= 3 ? 'LAS_combo-flash-2'
+              : 'LAS_combo-flash';
+    wrap.classList.add(cls);
+
+    LAS_comboFlashTimer = setTimeout(() => {
+      wrap.classList.remove('LAS_combo-flash', 'LAS_combo-flash-2', 'LAS_combo-flash-3');
+    }, 400);
+  }
+
+  // ─────────────────────────────────────────────
+  // SKIN UNLOCK TOAST
+  // ─────────────────────────────────────────────
+
+  function LAS_showUnlockToast(skinId) {
+    const skin  = LAS_Economy.getSkinDefinitions().find(s => s.id === skinId);
+    if (!skin) return;
+    const toast = document.getElementById('LAS_unlockToast');
+    toast.textContent = `UNLOCKED: ${skin.name.toUpperCase()}`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  // ─────────────────────────────────────────────
+  // SCREEN HELPERS
+  // ─────────────────────────────────────────────
+
+  function LAS_showScreen(id) {
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function LAS_hideScreen(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  // ─────────────────────────────────────────────
+  // RESIZE HANDLER
+  // ─────────────────────────────────────────────
+
+  let LAS_resizeTimer = null;
+  function LAS_handleResize() {
+    clearTimeout(LAS_resizeTimer);
+    LAS_resizeTimer = setTimeout(async () => {
+      const { cols, rows } = LAS_calcGrid();
+      const canvas = document.getElementById('LAS_canvas');
+      LAS_Renderer.initCanvas(canvas, cols, rows);
+      LAS_Core.init(cols, rows);
+      await LAS_Renderer.buildImageCache(LAS_currentSkin);
+    }, 200);
+  }
+
+  // ─────────────────────────────────────────────
+  // GO!
+  // ─────────────────────────────────────────────
+
+  LAS_bootstrap();
+
+})();
+</script>
+</body>
+</html>
