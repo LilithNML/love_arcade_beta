@@ -482,6 +482,14 @@
 
       z-index: 5;
       will-change: transform, opacity; /* v1.3: capa GPU propia */
+      /*
+       * v1.3.1: Fuerza a cada ficha a ser una capa de composición
+       * independiente en la GPU. Combinado con will-change: transform,
+       * garantiza que el repaint de una ficha nunca invalide las
+       * capas de las fichas vecinas ni del tablero.
+       */
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     .lumina-tile[data-digits="4"] { font-size: clamp(12px, calc(var(--lumina-cell-size) * 0.31), 22px); }
