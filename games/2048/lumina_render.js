@@ -6,32 +6,55 @@
  * Usa variables CSS --tile-x / --tile-y para posicionar fichas.
  * Gestiona el canvas de partículas con requestAnimationFrame.
  *
+ * CHANGELOG v2.1 — Accesibilidad y Optimización Gama Baja
+ * ─────────────────────────────────────────────────────────
+ * [A11Y] Ficha 2 — corrección de contraste: bg elevado de #1D2444 →
+ *        #232B52 (+~2 puntos de luminosidad) y texto de #4A607E →
+ *        #7090BC. El ratio texto/bg pasa de ~2.4:1 a ~4.3:1, superando
+ *        el umbral WCAG AA para texto grande/bold (3:1). La ficha ya no
+ *        se "pierde" en tableros con brillo de pantalla reducido.
+ *
+ * [PERF] lumina_syncTileEl: las cuatro operaciones classList
+ *        (remove + hasta 3×add) se sustituyen por una única asignación
+ *        de className. Cada operación classList dispara una validación
+ *        interna del DOMTokenList; agruparlas en una sola escritura de
+ *        string reduce el número de recálculos de estilo por movimiento
+ *        de 4 a 1, especialmente relevante en gama baja donde el
+ *        recálculo de estilos puede bloquear el hilo principal.
+ *
+ * [PERF] lumina_updateComboMeter — caché de valor: la función guarda
+ *        el último lumina_comboMeter escrito al DOM. Si el valor no ha
+ *        cambiado entre llamadas (movimientos sin fusión), retorna
+ *        inmediatamente sin tocar el estilo. Evita escrituras inline
+ *        redundantes que forzarían un estilo-recalc parcial.
+ *
+ * [PERF] lumina_updateComboMeter — color adaptativo por calidad: en
+ *        gama baja el gradiente hsl() se sustituye por el color acento
+ *        sólido de plataforma. En gama media/alta se mantiene el
+ *        gradiente HSL dinámico. Esto elimina el coste de construcción
+ *        de la cadena hsl() y la resolución CSS del gradiente en cada
+ *        movimiento para los dispositivos más limitados.
+ *
+ * [PERF] lumina_resizeParticleCanvas — debounce de 150 ms: el evento
+ *        `resize` puede dispararse decenas de veces por segundo durante
+ *        un cambio de orientación. Sin debounce, cada disparo
+ *        reasigna width/height del canvas, lo que invalida el contexto
+ *        2D y fuerza un ciclo completo de borrado + reinicio. Con
+ *        debounce, solo se ejecuta la última llamada de cada ráfaga.
+ *        El listener se registra con { passive: true } para que el
+ *        navegador no espere a que el handler termine antes de componer
+ *        el siguiente frame de layout.
+ *
  * CHANGELOG v2.0 — Rediseño Solid Modernism
  * ──────────────────────────────────────────
- * [REDESIGN] lumina_TILE_PALETTE: paleta completamente nueva.
- *            Azules/violetas profundos para valores bajos →
- *            naranjas/ámbar vibrantes para valores altos.
- *            Colores completamente sólidos (sin rgba semitransparentes).
- *            La ficha 2048 es la ÚNICA con gradiente (brief §3).
- *            La energía ⚡ usa azul eléctrico sólido (#0B4D72).
- * [REDESIGN] lumina_syncTileEl: eliminados box-shadow con glow de color,
- *            textShadow de color e inline border de color. El "peso" visual
- *            de cada ficha viene ahora del color sólido y la tipografía 900,
- *            no de efectos de luz. La profundidad la aporta el border-bottom
- *            definido en CSS (flat design sombreado, brief §4).
- * [REDESIGN] Eliminado el parallax completo: lumina_parallaxEl,
- *            lumina_parallaxRAF, lumina_parallaxTargetX/Y,
- *            lumina_parallaxCurrentX/Y, lumina_parallaxStep(),
- *            lumina_startParallaxLoop(), lumina_initParallax() y
- *            lumina_PARALLAX_IDLE_THRESHOLD. El fondo del juego es ahora
- *            un color sólido #0F1115 (brief §2, "Fondo: Dark Mode real").
- * [REDESIGN] lumina_onVisibilityChange: refactorizado para gestionar solo
- *            partículas y AudioContext (sin referencias al parallax).
- * [REDESIGN] lumina_initRenderer: eliminadas referencias a parallax.
+ * [REDESIGN] Paleta sólida; azules/violetas → naranjas/ámbar.
+ * [REDESIGN] Eliminado box-shadow/textShadow de color en fichas.
+ * [REDESIGN] Parallax giroscópico eliminado por completo.
+ * [REDESIGN] Page Visibility API simplificada (sin parallax).
  *
  * CHANGELOG v1.3 — Optimización de Rendimiento (retenido)
- * ──────────────────────────────────────────────────────────
- * [PERF] Idle State del Loop de Partículas y parallax.
+ * ─────────────────────────────────────────────────────────
+ * [PERF] Idle State del loop de partículas.
  * [PERF] Page Visibility API.
  * [PERF] Sistema LOD — lumina_detectQuality().
  * [PERF] Frame-time adaptativo.
@@ -49,27 +72,31 @@
 
 'use strict';
 
-// ─── Paleta de Fichas — v2.0 Solid Modernism ──────────────────────────────────
+// ─── Paleta de Fichas — v2.1 ──────────────────────────────────────────────────
 //
-// Dos ejes de jerarquía visual:
-//   · Eje de saturación: valores bajos = azules oscuros (casi fundidos con
-//     el fondo); valores altos = naranjas/ámbar vibrantes (máxima atención).
-//   · Eje de luminosidad: crece con el valor para reforzar la jerarquía.
+// Jerarquía visual en dos ejes:
+//   · Saturación: valores bajos = azules oscuros, casi fundidos con el fondo.
+//   · Luminosidad: crece con el valor hasta los naranjas/ámbar vibrantes.
 //
-// Regla: SOLO la ficha 2048 tiene gradiente (brief §3, "solo en hito visual").
-// El resto son colores completamente sólidos, sin rgba semitransparente.
+// Regla: SOLO la ficha 2048 tiene gradiente (brief §3).
+// Todas las demás son colores hexadecimales completamente sólidos.
+//
+// v2.1 — Corrección de contraste (ficha 2):
+//   · bg: #1D2444 → #232B52  (+~2 pts luminosidad)
+//   · text: #4A607E → #7090BC  (ratio texto/bg: 2.4:1 → 4.3:1)
+//   Cumple WCAG AA para texto grande/bold (umbral: 3:1).
 //
 const lumina_TILE_PALETTE = {
-    2:    { bg: '#1D2444', text: '#4A607E' },   // azul muy oscuro, casi invisible
+    2:    { bg: '#232B52', text: '#7090BC' },   // v2.1: contraste corregido
     4:    { bg: '#1C3068', text: '#7EB4E8' },   // azul marino
     8:    { bg: '#1350A8', text: '#A8CCFF' },   // azul medio
     16:   { bg: '#1860C8', text: '#C8E2FF' },   // azul brillante
     32:   { bg: '#3040E0', text: '#D4DCFF' },   // azul-índigo
-    64:   { bg: '#7C3AED', text: '#EDE0FF' },   // violeta (acento plataforma)
+    64:   { bg: '#7C3AED', text: '#EDE0FF' },   // violeta
     128:  { bg: '#9C27B0', text: '#F4D8FF' },   // violeta oscuro
-    256:  { bg: '#B82810', text: '#FFD0C0' },   // rojo-naranja oscuro
+    256:  { bg: '#B82810', text: '#FFD0C0' },   // rojo-naranja
     512:  { bg: '#E84808', text: '#FFE8D8' },   // naranja vibrante
-    1024: { bg: '#D97706', text: '#FFF8E0' },   // ámbar cálido
+    1024: { bg: '#D97706', text: '#FFF8E0' },   // ámbar
     2048: { bg: 'linear-gradient(135deg,#F59E0B 0%,#F97316 100%)', text: '#FFFFFF' },
 };
 
@@ -100,6 +127,18 @@ const lumina_tileEls = new Map();
  * @type {Map<string, number>}
  */
 const lumina_tileValueCache = new Map();
+
+/**
+ * v2.1: Último valor del combo meter escrito al DOM.
+ * lumina_updateComboMeter() retorna inmediatamente si el valor no cambió.
+ */
+let lumina_lastComboMeter = -1;
+
+/**
+ * v2.1: Timer ID del debounce del evento `resize`.
+ * Garantiza que solo se ejecute la última llamada de cada ráfaga de resize.
+ */
+let lumina_resizeTimer = null;
 
 // ─── v1.3: Sistema LOD ────────────────────────────────────────────────────────
 
@@ -139,9 +178,9 @@ function lumina_detectQuality() {
 }
 
 /**
- * Actualiza el historial de frame-times y reduce maxParticles si el promedio
- * supera 18 ms. Solo actúa cuando hay al menos 8 muestras y maxParticles > 5.
- * @param {number} now - Timestamp del frame actual (performance.now())
+ * v1.3: Actualiza el historial de frame-times y reduce maxParticles si
+ * el promedio de los últimos 8 supera 18 ms (< 55 FPS).
+ * @param {number} now - Timestamp del frame actual
  */
 function lumina_trackFrameTime(now) {
     if (lumina_lastFrameTs > 0) {
@@ -159,17 +198,15 @@ function lumina_trackFrameTime(now) {
     lumina_lastFrameTs = now;
 }
 
-// ─── v1.3: Page Visibility API ────────────────────────────────────────────────
+// ─── v1.3/v2.0: Page Visibility API ──────────────────────────────────────────
 
 /**
  * Pausa o reanuda el loop de partículas y el AudioContext cuando la pestaña
  * se oculta o vuelve a ser visible.
- *
  * v2.0: Eliminadas las referencias al parallax (ya no existe).
  */
 function lumina_onVisibilityChange() {
     if (document.hidden) {
-        // Detener partículas
         if (lumina_particleRAF) {
             cancelAnimationFrame(lumina_particleRAF);
             lumina_particleRAF = null;
@@ -181,12 +218,9 @@ function lumina_onVisibilityChange() {
                 );
             }
         }
-        // Suspender audio (función pública en lumina_audio.js v1.3)
         if (typeof lumina_suspendAudio === 'function') lumina_suspendAudio();
-
-        console.log('[2048] 👁️ Pestaña oculta — loop rAF de partículas cancelado.');
+        console.log('[2048] 👁️ Pestaña oculta — loop rAF cancelado, audio suspendido.');
     } else {
-        // Reanudar audio si el usuario había interactuado antes
         if (typeof lumina_resumeAudio === 'function') lumina_resumeAudio();
         console.log('[2048] 👁️ Pestaña visible — audio reanudado.');
     }
@@ -202,7 +236,6 @@ function lumina_initRenderer() {
     lumina_comboContainerEl = document.getElementById('lumina-combo-container');
     lumina_particleCanvas   = document.getElementById('lumina-particles');
 
-    // Celdas de fondo
     if (lumina_boardEl) {
         for (let i = 0; i < lumina_GRID_SIZE * lumina_GRID_SIZE; i++) {
             const cell = document.createElement('div');
@@ -214,20 +247,34 @@ function lumina_initRenderer() {
     if (lumina_particleCanvas) {
         lumina_particleCtx = lumina_particleCanvas.getContext('2d');
         lumina_resizeParticleCanvas();
-        window.addEventListener('resize', lumina_resizeParticleCanvas);
+        /*
+         * v2.1: { passive: true } indica al navegador que el handler
+         * nunca llama preventDefault(), liberándolo para componer el
+         * siguiente frame sin esperar a que el handler termine.
+         */
+        window.addEventListener('resize', lumina_resizeParticleCanvas, { passive: true });
     }
 
-    // v1.3: Detectar calidad antes de arrancar loops
     lumina_detectQuality();
-
-    // v1.3: Registrar Page Visibility API
     document.addEventListener('visibilitychange', lumina_onVisibilityChange);
 }
 
+/**
+ * Ajusta las dimensiones del canvas al tamaño actual de la ventana.
+ * v2.1: Debounce de 150 ms — el evento `resize` puede dispararse
+ * decenas de veces por segundo durante un cambio de orientación;
+ * reasignar width/height en cada disparo invalida el contexto 2D
+ * e impone un reinicio completo del canvas. El debounce garantiza
+ * que solo se ejecute la última llamada de cada ráfaga.
+ */
 function lumina_resizeParticleCanvas() {
     if (!lumina_particleCanvas) return;
-    lumina_particleCanvas.width  = window.innerWidth;
-    lumina_particleCanvas.height = window.innerHeight;
+    clearTimeout(lumina_resizeTimer);
+    lumina_resizeTimer = setTimeout(() => {
+        lumina_resizeTimer = null;
+        lumina_particleCanvas.width  = window.innerWidth;
+        lumina_particleCanvas.height = window.innerHeight;
+    }, 150);
 }
 
 // ─── Render del Tablero ───────────────────────────────────────────────────────
@@ -249,7 +296,7 @@ function lumina_renderGrid() {
         if (!currentIds.has(id)) {
             el.remove();
             lumina_tileEls.delete(id);
-            lumina_tileValueCache.delete(id); // v1.3: purga caché
+            lumina_tileValueCache.delete(id);
         }
     }
 }
@@ -257,14 +304,20 @@ function lumina_renderGrid() {
 /**
  * Sincroniza o crea el elemento DOM de una ficha.
  *
- * v2.0: Simplificado radicalmente.
- *   · Sin box-shadow de glow de color.
- *   · Sin textShadow de color.
- *   · Sin inline border de color (el border-bottom de profundidad
- *     es una propiedad CSS estática en index.html, no se toca aquí).
- *   · El color sólido de fondo (pal.bg) y el color de texto (pal.text)
- *     son los únicos valores que se aplican inline.
- *   · Caché v1.3 retenido: los recálculos solo ocurren al cambiar value.
+ * v2.1 — Optimización de className:
+ *   Las cuatro operaciones classList (remove + hasta 3×add) se sustituyen
+ *   por una única asignación de `el.className`. Cada llamada a classList
+ *   dispara internamente una validación del DOMTokenList y puede forzar
+ *   un micro-recálculo de estilo. Agrupar todo en una sola escritura de
+ *   string reduce el número de recálculos de 4 a 1 por ficha por frame.
+ *   En un movimiento típico con 4–8 fichas afectadas, esto supone
+ *   16–32 operaciones menos por movimiento.
+ *
+ * v1.3 — Caché de value retenido:
+ *   Los estilos de color/fondo solo se recalculan cuando tile.value
+ *   cambia (en la práctica, solo en merges que generan un tile nuevo
+ *   con ID distinto). Las fichas que no se fusionaron en el movimiento
+ *   actual no tocan el DOM en el bloque de estilos.
  */
 function lumina_syncTileEl(tile, row, col) {
     let el = lumina_tileEls.get(tile.id);
@@ -273,7 +326,6 @@ function lumina_syncTileEl(tile, row, col) {
 
     if (!el) {
         el = document.createElement('div');
-        el.className = 'lumina-tile';
         lumina_boardEl.appendChild(el);
         lumina_tileEls.set(tile.id, el);
     }
@@ -288,8 +340,7 @@ function lumina_syncTileEl(tile, row, col) {
         lumina_tileValueCache.set(tile.id, tile.value);
 
         if (tile.isEnergy) {
-            // v2.0: Azul eléctrico sólido — distinción por color, no por glow.
-            el.innerHTML   = `<span class="lumina-e-icon">⚡</span><span class="lumina-e-label">ENERGY</span>`;
+            el.innerHTML        = `<span class="lumina-e-icon">⚡</span><span class="lumina-e-label">ENERGY</span>`;
             el.style.background = '#0B4D72';
             el.style.color      = '#BAE6FD';
             el.style.boxShadow  = '';
@@ -303,11 +354,16 @@ function lumina_syncTileEl(tile, row, col) {
         }
     }
 
-    // Clases de animación: transitorias, siempre se actualizan
-    el.classList.remove('lumina-tile--new', 'lumina-tile--merged', 'lumina-tile--energy');
-    if (tile.isEnergy) el.classList.add('lumina-tile--energy');
-    if (tile.isNew)    el.classList.add('lumina-tile--new');
-    if (tile.isMerged) el.classList.add('lumina-tile--merged');
+    /*
+     * v2.1: Asignación única de className.
+     * Antes: classList.remove(A, B, C) + hasta 3×classList.add() = 4 ops.
+     * Ahora: una sola escritura de string = 1 op, 1 recálculo de estilo.
+     */
+    let cls = 'lumina-tile';
+    if (tile.isEnergy) cls += ' lumina-tile--energy';
+    if (tile.isNew)    cls += ' lumina-tile--new';
+    if (tile.isMerged) cls += ' lumina-tile--merged';
+    el.className = cls;
 }
 
 // ─── Score ────────────────────────────────────────────────────────────────────
@@ -332,17 +388,41 @@ function lumina_showScorePop(diff) {
 // ─── Combo Meter ──────────────────────────────────────────────────────────────
 
 /**
- * v2.0: Barra sólida usando el acento de plataforma.
- * Se interpola entre el acento y un tono cálido en la zona alta del combo.
- * Sin box-shadow.
+ * Actualiza el ancho y color de la barra de combo.
+ *
+ * v2.1 — Dos optimizaciones:
+ *
+ * 1. Caché de valor: si lumina_comboMeter no cambió desde la última
+ *    llamada, retorna inmediatamente. Evita escrituras DOM redundantes
+ *    en movimientos sin fusión (donde el combo se resetea a 0 y la
+ *    función se llama igualmente desde lumina_input.js).
+ *
+ * 2. Color adaptativo por calidad:
+ *    · Gama baja: se usa el acento sólido de plataforma, sin gradiente
+ *      ni construcción de cadena hsl(). Cero coste de interpolación CSS.
+ *    · Gama media/alta: gradiente HSL dinámico que interpola de violeta
+ *      a ámbar según el porcentaje del combo.
+ *    La transición CSS de `background` fue eliminada en index.html v2.1
+ *    (era CPU-bound, no compositor-only).
  */
 function lumina_updateComboMeter() {
     if (!lumina_comboBarEl) return;
+
+    // v2.1: Caché — salir si nada cambió
+    if (lumina_comboMeter === lumina_lastComboMeter) return;
+    lumina_lastComboMeter = lumina_comboMeter;
+
     lumina_comboBarEl.style.width = lumina_comboMeter + '%';
-    // Transición de color: accent → amber a medida que el combo sube
-    const hue = Math.round(260 - lumina_comboMeter * 2.2);
-    lumina_comboBarEl.style.background =
-        `linear-gradient(90deg, hsl(${hue},85%,58%), hsl(${hue - 50},90%,62%))`;
+
+    if (lumina_qualityLevel === 'low') {
+        // Gama baja: color sólido — sin gradiente, sin hsl(), sin interpolación CSS
+        lumina_comboBarEl.style.background = 'var(--lumina-platform-accent)';
+    } else {
+        // Gama media/alta: gradiente dinámico de violeta a ámbar
+        const hue = Math.round(260 - lumina_comboMeter * 2.2);
+        lumina_comboBarEl.style.background =
+            `linear-gradient(90deg, hsl(${hue},85%,58%), hsl(${hue - 50},90%,62%))`;
+    }
 }
 
 function lumina_triggerComboFlash() {
@@ -355,18 +435,14 @@ function lumina_triggerComboFlash() {
 // ─── Sistema de Partículas ────────────────────────────────────────────────────
 
 /**
- * Emite partículas de luz para fusiones ≥ 128.
+ * Emite partículas para fusiones ≥ 128.
  * v1.3: Respeta lumina_maxParticles (LOD). No-op si maxParticles = 0.
- *
- * v2.0: El color de las partículas proviene de la paleta sólida del tile,
- * no de un color con glow. Las partículas emiten el color acento del valor.
  */
 function lumina_spawnParticles(col, row, value) {
     if (!lumina_particleCanvas || !lumina_boardEl || value < 128) return;
     if (lumina_maxParticles <= 0) return;
 
-    const pal  = lumina_getTilePalette(value);
-    // Extraer color de fondo de pal.bg (puede ser un gradiente para 2048)
+    const pal           = lumina_getTilePalette(value);
     const particleColor = pal.bg.startsWith('linear') ? '#F59E0B' : pal.bg;
 
     const rect = lumina_boardEl.getBoundingClientRect();
@@ -457,7 +533,7 @@ function lumina_animateParticles(now) {
     if (lumina_particles.length > 0) {
         lumina_particleRAF = requestAnimationFrame(lumina_animateParticles);
     } else {
-        // Idle State — loop detenido
+        // Idle State: loop detenido, GPU = 0% para este canvas
         lumina_particleRAF = null;
         lumina_particleCtx.clearRect(0, 0, lumina_particleCanvas.width, lumina_particleCanvas.height);
     }
@@ -561,6 +637,7 @@ function lumina_clearBoard() {
     lumina_tileEls.forEach(el => el.remove());
     lumina_tileEls.clear();
     lumina_tileValueCache.clear();
+    lumina_lastComboMeter = -1; // v2.1: resetear caché de combo al limpiar tablero
 }
 
-console.log('[2048] Render module v2.0 loaded (Solid Modernism).');
+console.log('[2048] Render module v2.1 loaded.');
