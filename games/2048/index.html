@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="description" content="2048 — Premium edition para Love Arcade" />
-  <title>2048 · Love Arcade</title>
+  <title>2048</title>
 
   <!-- Montserrat — pesos 600 / 700 / 800 / 900 (ExtraBold + Black) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -31,37 +31,24 @@
 
   <style>
     /* ═══════════════════════════════════════════════════════════
-       CUSTOM PROPERTIES — v2.0 Solid Modernism
-       Toda superficie es un valor sólido y opaco.
-       Sin rgba semitransparentes en tablero ni fichas.
+       CUSTOM PROPERTIES — v2.0 Solid Modernism (sin cambios en v2.1)
     ═══════════════════════════════════════════════════════════ */
     :root {
-      /* ── Fondo (OLED-friendly near-black) ── */
       --lumina-bg:              #0F1115;
-
-      /* ── Superficies — sólidas, no translúcidas ── */
       --lumina-surface:         #161B27;
       --lumina-surface-hover:   #1E2438;
       --lumina-border:          #252D40;
       --lumina-border-bright:   #3A4460;
       --lumina-text:            #E8EAF2;
       --lumina-text-dim:        rgba(232,234,242,0.42);
-      --lumina-platform-accent: #7C3AED;   /* sobreescrito por zero-flicker */
-
-      /* ── Tablero ── */
+      --lumina-platform-accent: #7C3AED;
       --lumina-board-bg:        #13171F;
       --lumina-cell-bg:         #191E2C;
       --lumina-cell-border:     #20263A;
-
-      /* ── Espaciado ── */
       --lumina-gap:       8px;
       --lumina-padding:   10px;
-
-      /* ── Geometría: bordes rectos y funcionales (4 px) ── */
       --lumina-radius:    4px;
       --lumina-tile-r:    4px;
-
-      /* ── Dimensiones del tablero ── */
       --lumina-board-size: min(480px, calc(100vw - 32px));
       --lumina-cell-size:  calc(
         (var(--lumina-board-size) - 2 * var(--lumina-padding) - 3 * var(--lumina-gap)) / 4
@@ -91,12 +78,18 @@
       font-family: 'Montserrat', sans-serif;
       overflow: hidden;
       overscroll-behavior: none;
+      /*
+       * v2.1: Protección global contra selección accidental de texto
+       * durante gestos de swipe en iOS WebKit. El board ya tenía
+       * user-select: none, pero algunos navegadores de gama baja
+       * aplican la herencia de forma inconsistente.
+       */
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     /* ═══════════════════════════════════════════════════════════
        CANVAS DE PARTÍCULAS
-       Solo activo durante fusiones ≥128 (Idle State: loop rAF
-       se detiene cuando el array queda vacío, GPU = 0%).
     ═══════════════════════════════════════════════════════════ */
     #lumina-particles {
       position: fixed;
@@ -122,6 +115,12 @@
       gap: 10px;
       overflow-y: auto;
       overflow-x: hidden;
+      /*
+       * v2.1: overscroll-behavior explícito en el contenedor además
+       * del body. Algunos motores WebKit de gama baja ignoran la
+       * herencia cuando el contenedor tiene overflow-y: auto propio.
+       */
+      overscroll-behavior: none;
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -136,7 +135,6 @@
       gap: 8px;
     }
 
-    /* v2.0: Sólido, sin backdrop-filter */
     .lumina-back-btn {
       display: inline-flex;
       align-items: center;
@@ -161,10 +159,6 @@
       border-color: var(--lumina-border-bright);
     }
 
-    /*
-     * v2.0: Título — Montserrat 900, sólido blanco.
-     * Sin gradiente, sin brillo. El número "pesa" por la tipografía.
-     */
     .lumina-title {
       font-size: 24px;
       font-weight: 900;
@@ -180,7 +174,6 @@
       flex-shrink: 0;
     }
 
-    /* v2.0: Score box — sólido, sin backdrop-filter */
     .lumina-score-box {
       position: relative;
       padding: 5px 10px;
@@ -264,23 +257,34 @@
       overflow: hidden;
     }
 
-    /* v2.0: Barra sólida, sin glow/box-shadow */
+    /*
+     * v2.1: Eliminada la transición de `background` de la barra de combo.
+     *
+     * El color del gradiente era establecido desde JS en cada movimiento,
+     * lo que hacía que la CSS transition de `background` disparara una
+     * interpolación de color en la CPU en cada frame de la animación.
+     * `background` (color) no es compositor-only: el navegador debe
+     * recalcular el color interpolado durante toda la duración de la
+     * transición (antes: 0.4 s × 60 fps = 24 recálculos por movimiento).
+     * Con la transición eliminada, el cambio de color es un único
+     * recálculo de estilo instantáneo. El ancho sigue animándose vía
+     * CSS porque su interpolación numérica sí puede ser compositor-only.
+     * El color lo gestiona lumina_render.js con lógica de caché.
+     */
     #lumina-combo-bar {
       height: 100%;
       width: 0%;
       border-radius: 2px;
       background: var(--lumina-platform-accent);
-      transition: width 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
-                  background 0.4s ease;
+      transition: width 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .lumina-combo--flash #lumina-combo-bar {
       animation: lumina-combo-flash 0.50s ease-out;
     }
 
-    /* v2.0: Flash por opacity, compositor-only */
     @keyframes lumina-combo-flash {
-      0%, 100% { opacity: 1; }
+      0%, 100% { opacity: 1;    }
       35%       { opacity: 0.25; }
     }
 
@@ -304,7 +308,6 @@
     }
     .lumina-btn:active { transform: scale(0.96); }
 
-    /* v2.0: Sólido, sin backdrop-filter */
     .lumina-btn--new {
       background: var(--lumina-surface);
       border-color: var(--lumina-border);
@@ -317,7 +320,6 @@
       border-color: var(--lumina-border-bright);
     }
 
-    /* Primary: color acento de plataforma, profundidad por borde */
     .lumina-btn--primary {
       background: var(--lumina-platform-accent);
       color: #FFF;
@@ -342,13 +344,7 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       TABLERO — v2.0 Solid Modernism
-       Cambios respecto a v1.3:
-       · Fondo sólido (no glass). Elimina backdrop-filter.
-       · Profundidad por border-bottom, no por box-shadow difuso.
-       · border-radius: 4px (de 14px → aristas limpias).
-       · contain: layout style (retenido de v1.3).
-       · box-shadow mínimo: solo profundidad, sin "halo" difuso.
+       TABLERO
     ═══════════════════════════════════════════════════════════ */
     #lumina-board {
       position: relative;
@@ -366,14 +362,13 @@
       grid-template-columns: repeat(4, 1fr);
       gap: var(--lumina-gap);
 
-      /* Sombra de profundidad discreta: sin halo difuso */
       box-shadow: 0 6px 28px rgba(0,0,0,0.55);
 
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
 
-      contain: layout style;   /* v1.3: aislamiento de layout (retenido) */
+      contain: layout style;
     }
 
     .lumina-cell {
@@ -384,25 +379,31 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       FICHAS — v2.0 Solid Modernism
-       Cambios respecto a v1.3:
-       · NO backdrop-filter (GPU killer #1 eliminado).
-       · NO box-shadow con glow de color (eliminado).
-       · NO textShadow de color (eliminado).
-       · Profundidad: border-bottom 3px rgba(0,0,0,0.35) —
-         estilo flat design sombreado (brief §4).
-       · font-weight: 900 — Montserrat Black, números que "pesan".
-       · border-radius: 4px (de 10px).
-       · Posicionamiento via transform: retenido de v1.3.
-       · will-change: transform, opacity: retenido de v1.3.
-       · El color sólido de fondo es inyectado por lumina_render.js.
+       FICHAS — v2.1
+       Cambios respecto a v2.0:
+
+       1. contain: layout style paint
+          Se añade `paint` a la contención existente de `layout style`.
+          El navegador interpreta esto como: "el contenido de esta ficha
+          no desborda su caja". Con position:absolute y dimensiones
+          explícitas esto es siempre cierto. El beneficio: al mover
+          fichas, el motor de pintura sólo invalida los píxeles dentro
+          de cada caja de ficha, en vez de propagar la invalidación a
+          las celdas vecinas. Reduce el área de repintado cuando varias
+          fichas se mueven o aparecen simultáneamente.
+
+       2. text-rendering: optimizeSpeed
+          Instruye al rasterizador de fuentes a priorizar velocidad
+          sobre precisión de hinting. En Montserrat Black a tamaños
+          grandes (16–30 px) el impacto visual es imperceptible; en
+          gama baja la diferencia de CPU es medible porque el
+          rasterizador puede omitir pasos costosos de autohinting.
     ═══════════════════════════════════════════════════════════ */
     .lumina-tile {
       position: absolute;
       width:  var(--lumina-cell-size);
       height: var(--lumina-cell-size);
 
-      /* v1.3: posición estática + transform compositor-only */
       left: var(--lumina-padding);
       top:  var(--lumina-padding);
       transform: translate(
@@ -417,17 +418,13 @@
       text-align: center;
 
       border-radius: var(--lumina-tile-r);
-
-      /* v2.0: Montserrat Black — los números pesan */
       font-weight: 900;
       font-size: clamp(16px, calc(var(--lumina-cell-size) * 0.42), 30px);
       line-height: 1;
 
-      /*
-       * v2.0: Profundidad sin sombra difusa.
-       * Un borde inferior y derecho más oscuros imitan la fuente de luz
-       * superior-izquierda del flat design. Cero blur, cero repaint.
-       */
+      /* v2.1: velocidad de rasterización sobre calidad de hinting */
+      text-rendering: optimizeSpeed;
+
       border-top:    1px solid rgba(255,255,255,0.06);
       border-left:   1px solid rgba(0,0,0,0.12);
       border-right:  1px solid rgba(0,0,0,0.22);
@@ -436,19 +433,17 @@
       transition: transform 0.16s cubic-bezier(0.25, 0.1, 0.05, 1);
 
       z-index: 5;
-      will-change: transform, opacity;   /* v1.3: capa GPU propia */
+      will-change: transform, opacity;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
+
+      /* v2.1: paint añadido — reduce el área de invalidación de pintura */
+      contain: layout style paint;
     }
 
     .lumina-tile[data-digits="4"] { font-size: clamp(12px, calc(var(--lumina-cell-size) * 0.31), 22px); }
     .lumina-tile[data-digits="5"] { font-size: clamp(10px, calc(var(--lumina-cell-size) * 0.26), 18px); }
 
-    /*
-     * Animaciones de escala: compositor-only (transform únicamente).
-     * Incluyen el translate() de posición para coexistir con la
-     * transición base (técnica retenida de v1.3).
-     */
     @keyframes lumina-tile-appear {
       0%   { transform: translate(
                calc(var(--tile-x) * (var(--lumina-cell-size) + var(--lumina-gap))),
@@ -489,12 +484,7 @@
     .lumina-e-icon  { font-size: 1.5em; line-height: 1; display: block; }
     .lumina-e-label { font-size: 0.38em; letter-spacing: 0.1em; opacity: 0.75; line-height: 1; }
 
-    /*
-     * v2.0: Ficha de Energía — distinción por color sólido.
-     * La animación usa solo opacity: compositor-only, cero repaint.
-     * Reemplaza la animación lumina-energy-glow de v1.3 que mutaba
-     * box-shadow cada frame (más costoso que opacity).
-     */
+    /* Solo opacity: compositor-only, cero repaint */
     @keyframes lumina-energy-idle {
       0%, 100% { opacity: 1;    }
       50%       { opacity: 0.78; }
@@ -543,9 +533,7 @@
 
     /* ═══════════════════════════════════════════════════════════
        MODALES — BASE
-       Blur/glass PERMITIDO aquí: la acción está detenida (§2 brief).
-       Regla del 10%: efectos visuales reservados para momentos
-       sin gameplay activo.
+       Blur/glass PERMITIDO: gameplay detenido (brief §2, 10%).
     ═══════════════════════════════════════════════════════════ */
     .lumina-modal {
       position: fixed;
@@ -674,7 +662,6 @@
       75%       { transform: rotateY(270deg) scale(0.8); }
     }
 
-    /* v2.0: Badge estático — sin animación pulsante */
     .lumina-record-badge {
       display: flex;
       align-items: center;
@@ -711,12 +698,8 @@
 
 <body>
 
-  <!-- Canvas de partículas (solo activo en fusiones ≥128, Idle State) -->
   <canvas id="lumina-particles" aria-hidden="true"></canvas>
 
-  <!-- ══════════════════════════════════════════════════
-       ÁREA DE JUEGO PRINCIPAL
-  ══════════════════════════════════════════════════ -->
   <div id="lumina-game-area">
 
     <header class="lumina-header">
@@ -764,9 +747,7 @@
   </div><!-- /#lumina-game-area -->
 
 
-  <!-- ══════════════════════════════════════════════════
-       MODAL — GAME OVER
-  ══════════════════════════════════════════════════ -->
+  <!-- MODAL — GAME OVER -->
   <div id="lumina-modal-gameover" class="lumina-modal" role="dialog" aria-modal="true" aria-label="Game Over">
     <div class="lumina-modal-box">
 
@@ -806,9 +787,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════════════
-       MODAL — VICTORIA
-  ══════════════════════════════════════════════════ -->
+  <!-- MODAL — VICTORIA -->
   <div id="lumina-modal-win" class="lumina-modal" role="dialog" aria-modal="true" aria-label="¡Victoria!">
     <div class="lumina-modal-box lumina-modal-box--win">
 
@@ -849,18 +828,12 @@
   </div>
 
 
-  <!-- ══════════════════════════════════════════════════
-       MÓDULOS DEL JUEGO (orden de carga importa)
-  ══════════════════════════════════════════════════ -->
   <script src="lumina_core.js"></script>
   <script src="lumina_render.js"></script>
   <script src="lumina_input.js"></script>
   <script src="lumina_audio.js"></script>
   <script src="lumina_bridge.js"></script>
 
-  <!-- ══════════════════════════════════════════════════
-       INICIALIZACIÓN PRINCIPAL
-  ══════════════════════════════════════════════════ -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
 
@@ -886,7 +859,7 @@
       document.getElementById('lumina-new-game-btn')
               .addEventListener('click', lumina_startNewGame);
 
-      console.log('[2048] 🎮 Juego inicializado correctamente (v2.0 Solid Modernism).');
+      console.log('[2048] 🎮 Juego inicializado correctamente (v2.1).');
     });
 
     function lumina_startNewGame() {
