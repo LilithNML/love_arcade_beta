@@ -719,8 +719,8 @@ Cuando la transición `opacity 0→1` empieza, el scroll ya está en `top: 0`.
 
 ## 2j. Novedades en v10.2 — Preview 2.0 Sistema de Mockup Dinámico
 
-> **v10.2.1 — Hotfix:** Tres desconexiones críticas corregidas tras análisis post-entrega.
-> Ver subsección "Correcciones v10.2.1" al final de esta sección.
+> **v10.2.2 — Hotfix:** Dos errores CSS de dimensionado causaban colapso visual del mockup a 0×0 px.
+> Un tercer hardening JS para la resolución de ID. Ver subsección "Correcciones v10.2.2".
 
 ### Resumen
 
@@ -885,15 +885,48 @@ openPreviewModal('5');            // ID como string (atributo HTML)
 
 ---
 
-### Correcciones v10.2.1
+### Correcciones v10.2.2
 
-Tres desconexiones identificadas post-entrega y corregidas en esta revisión:
+**Causa raíz del mockup invisible:** dos errores de dimensionado CSS hacían que los contenedores se colapsaran a 0×0 px antes de que el JavaScript pudiera dibujar nada.
 
-| # | Problema | Causa raíz | Solución |
-|---|---|---|---|
-| 1 | `openPreviewModal` no accesible desde `onclick=""` | Función declarada como `function` local, no asignada a `window` | `window.openPreviewModal = openPreviewModal` añadido tras la definición |
-| 2 | Fallo silencioso si se pasa un ID numérico en lugar del objeto | Función solo aceptaba `object`, no resolvía por ID | Guarda de tipo añadida: si `typeof itemOrId === 'number'`, busca en `allItems.find()` |
-| 3 | `_closePreviewModal` privada, requería refs explícitas como argumentos | Diseño interno expuesto a callers externos | Renombrada a `closePreviewModal` pública; args opcionales con fallback a `getElementById` |
+| # | Archivo | Síntoma | Causa raíz | Solución |
+|---|---|---|---|---|
+| 1 | `styles.css` | Mockup invisible en todos los tags | `#mockup-slot` sin `width` → colapso a 0 | Añadido `width: 100%` a `#mockup-slot` |
+| 2 | `styles.css` | Frame Mobile (9:20) colapsado | `max-height` no puede inicializar `aspect-ratio`; se necesita una dimensión explícita | Cambiado a `height: min(58vh, 480px)` — el ancho deriva de la altura via `aspect-ratio` |
+| 3 | `shop-logic.js` | Fallo silencioso con IDs como string `"5"` | Comparación `parseInt(str, 10)` puede fallar si el JSON tiene IDs como float o hay coerción inesperada | Simplificado a `Number(itemOrId)` — convierte cualquier tipo de ID a número de forma fiable |
+
+---
+
+**Por qué `max-height` ≠ `height` para `aspect-ratio` (CSS spec §10.4):**
+
+```css
+/* ❌ ROTO — max-height es una restricción, no un valor de tamaño.
+   No puede "sembrar" el cálculo cuando todos los hijos son position:absolute
+   (cero tamaño intrínseco). Resultado: 0×0 px. */
+.mockup-mobile {
+    aspect-ratio: 9 / 20;
+    max-height: 58vh;
+    width: auto;
+}
+
+/* ✅ CORRECTO — height explícito → aspect-ratio calcula width = height × (9/20) */
+.mockup-mobile {
+    aspect-ratio: 9 / 20;
+    height: min(58vh, 480px);
+    width: auto;
+}
+```
+
+**Por qué `#mockup-slot` necesita `width: 100%`:**
+
+```
+.preview-mockup-stage  ← display:flex; align-items:center; width:100%
+  └── #mockup-slot     ← flex item, align-items:center → auto-size al contenido
+        └── .mockup-mobile (position:relative, todos los hijos position:absolute)
+                         ← cero contenido intrínseco → colapso a 0
+```
+
+Con `align-items: center` en el padre, el flex item NO se estira. Sin `width:100%` explícito en `#mockup-slot`, `.mockup-pc { width: 100% }` resulta en `100% de 0 = 0`.
 
 ---
 
@@ -901,10 +934,10 @@ Tres desconexiones identificadas post-entrega y corregidas en esta revisión:
 
 | Archivo | Versión | Cambio |
 |---|---|---|
-| `shop-logic.js` | v9.1 → v10.2.1 | `openPreviewModal` refactorizado. Funciones públicas en `window`. |
+| `shop-logic.js` | v9.1 → v10.2.2 | `openPreviewModal` refactorizado. Resolución de ID con `Number()`. Funciones públicas en `window`. |
 | `index.html` | — | Preview modal reemplazado con `#preview-mockup-stage` + `#mockup-slot`. |
-| `styles.css` | v3.1 → v3.2 | +130 líneas del sistema de mockup. `backdrop-filter` como opt-in. |
-| `DOCUMENTACION.md` | — | Sección 2j añadida con hotfix 10.2.1. |
+| `styles.css` | v3.1 → v3.2.2 | +130 líneas sistema mockup. `#mockup-slot { width:100% }`. `.mockup-mobile { height: min(...) }`. |
+| `DOCUMENTACION.md` | — | Sección 2j con hotfix v10.2.2. |
 
 Dentro de `#mockup-slot`, JS inyecta un `div.mockup-container` con tres capas superpuestas via `position: absolute; inset: 0`:
 
