@@ -674,7 +674,12 @@
 
 </div><!-- #LAS_app -->
 
-<!-- ─── MODULES ─── -->
+<!-- ─── LOVE ARCADE CORE (must load first — provides window.GameCenter) ─── -->
+<!-- app.js sets window.GameCenter before any snake module runs.            -->
+<!-- The standalone stub below only activates when this tag is absent.      -->
+<script src="../../js/app.js"></script>
+
+<!-- ─── SNAKE MODULES ─── -->
 <script src="snake-audio.js"></script>
 <script src="snake-economy.js"></script>
 <script src="snake-renderer.js"></script>
@@ -682,9 +687,13 @@
 
 <script>
 /* ─────────────────────────────────────────────
-   MAIN ORCHESTRATOR v1.2
+   MAIN ORCHESTRATOR v1.3
    Wires all 4 modules together.
-   Changes:
+   Changes v1.3:
+     - <script src="../../js/app.js"> added BEFORE game modules
+       so window.GameCenter is the real Love Arcade instance, not the stub.
+     - Stub remains guarded by if(!window.GameCenter) for standalone use.
+   Changes v1.2:
      - onInvalidDirection → sfxInvalidTurn
      - onTurn → sfxTurn (turn confirmation audio)
      - 100ms delay before LAS_Economy.endSession() (GameCenter DOM ready)
