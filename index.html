@@ -817,18 +817,26 @@
         </div>
     </div>
 
-    <!-- ── WALLPAPER PREVIEW MODAL ── -->
+    <!-- ── WALLPAPER PREVIEW MODAL (Preview 2.0 — Dynamic Mockup) ── -->
     <div id="preview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Vista previa de wallpaper">
-        <div class="modal-box" style="max-width:500px; padding:0; overflow:hidden; background:#070710;">
-            <div id="preview-img-wrap" style="width:100%; aspect-ratio:16/9; position:relative; overflow:hidden; background:var(--bg-surface);">
-                <img id="preview-img" src="" alt="" style="width:100%; height:100%; object-fit:cover;">
-                <button id="preview-close" aria-label="Cerrar" style="position:absolute; top:10px; right:10px; background:rgba(7,7,13,0.8); border:1px solid rgba(255,255,255,0.15); color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(8px); transition:0.2s;">
-                    <i data-lucide="x" size="16"></i>
+        <div class="modal-box preview-modal-box">
+            <!--
+                #preview-mockup-stage: contenedor del mockup dinámico.
+                JS inyecta aquí el frame correcto (Mobile 9:20 / PC 16:9)
+                basándose en los tags del item desde shop.json.
+                El botón de cierre vive fuera del slot para sobrevivir al innerHTML.
+            -->
+            <div id="preview-mockup-stage" class="preview-mockup-stage">
+                <div id="mockup-slot"></div>
+                <button id="preview-close" class="preview-close-btn" aria-label="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                        <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
+                    </svg>
                 </button>
             </div>
-            <div style="padding:18px 20px;">
-                <h3 id="preview-name" style="font-family:var(--font-display); font-size:1.05rem; font-weight:900; margin-bottom:6px;"></h3>
-                <div id="preview-actions" style="display:flex; gap:8px; margin-top:14px;"></div>
+            <div class="preview-info-row">
+                <h3 id="preview-name" class="preview-name"></h3>
+                <div id="preview-actions" class="preview-actions"></div>
             </div>
         </div>
     </div>
