@@ -208,15 +208,26 @@ function _buildMockupHTML(item) {
  * or a numeric item ID (from dynamically generated onclick="" strings).
  * When an ID is passed, the item is resolved from allItems[].
  *
- * @param {object|number} itemOrId  Full item object OR numeric item ID.
+ * @param {object|number|string} itemOrId  Full item object OR item ID (any type).
  */
 function openPreviewModal(itemOrId) {
-    // ── Resolve item from ID if necessary ────────────────────────────────────
-    const item = (typeof itemOrId === 'number' || typeof itemOrId === 'string')
-        ? allItems.find(i => i.id === parseInt(itemOrId, 10))
-        : itemOrId;
+    // ── Resolve item ──────────────────────────────────────────────────────────
+    // Number() safely converts strings like "5" → 5; leaves NaN for non-numeric.
+    // We treat non-object input as an ID regardless of JS type, so there is no
+    // silent failure from strict === comparison between String("5") and Number(5).
+    let item;
+    if (itemOrId !== null && typeof itemOrId === 'object') {
+        item = itemOrId;                                   // Already a full object
+    } else {
+        const numId = Number(itemOrId);                    // "5" → 5, 5 → 5
+        item = allItems.find(i => i.id === numId);
+    }
 
-    if (!item) { console.warn('[Preview 2.0] openPreviewModal: item not found', itemOrId); return; }
+    if (!item) {
+        console.warn('[Preview 2.0] openPreviewModal: item not found for', itemOrId,
+            '| allItems loaded:', allItems.length);
+        return;
+    }
 
     const modal     = document.getElementById('preview-modal');
     const slot      = document.getElementById('mockup-slot');
