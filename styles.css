@@ -2488,16 +2488,25 @@ svg { stroke-width: 2; }
 .mockup-app-icon {
     aspect-ratio: 1;
     border-radius: clamp(4px, 2cqw, 9px);
-    /* Default: solid dark — no GPU cost, works on all devices */
-    background: rgba(12, 12, 24, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    /* Default: solid dark per-icon bg set inline; border as subtle separator */
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    /* Center the SVG glyph */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-/* Glassmorphism opt-in: only on devices that support AND perform backdrop-filter.
-   @supports checks API availability; low-end GPUs skip this block entirely. */
+.mockup-app-icon svg {
+    width: 55%;
+    height: 55%;
+    display: block;
+    flex-shrink: 0;
+}
+
+/* Glassmorphism opt-in: only on devices that support AND perform backdrop-filter. */
 @supports (backdrop-filter: blur(4px)) {
     .mockup-app-icon {
-        background: rgba(10, 10, 22, 0.62);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
     }
@@ -2564,8 +2573,18 @@ svg { stroke-width: 2; }
     width: clamp(10px, 3.5cqw, 18px);
     height: clamp(10px, 3.5cqw, 18px);
     border-radius: 3px;
-    background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.mockup-taskbar-app svg {
+    width: 60%;
+    height: 60%;
+    display: block;
 }
 
 .mockup-taskbar-right {
