@@ -1,19 +1,21 @@
 # Snake — Documentación de Economía
-### LA-Snake Classic v1.2 | Sistema Económico
+### LA-Snake Classic v1.3 | Sistema Económico
 
 ---
 
 ## Tabla de Contenidos
 
 1. [Principios del Sistema Económico](#1-principios-del-sistema-económico)
-2. [Flujo de Puntuación](#2-flujo-de-puntuación)
-3. [Sistema de Combo](#3-sistema-de-combo)
-4. [Sistema de Recompensas (Coins)](#4-sistema-de-recompensas-coins)
-5. [Sistema de Skins y Progresión](#5-sistema-de-skins-y-progresión)
-6. [Persistencia y Almacenamiento](#6-persistencia-y-almacenamiento)
-7. [Integración GameCenter — Correcciones v1.2](#7-integración-gamecenter--correcciones-v12)
-8. [Balanceo Económico](#8-balanceo-económico)
-9. [Referencia de API (snake-economy.js)](#9-referencia-de-api-snake-economyjs)
+2. [Changelog](#2-changelog)
+3. [Diagnóstico: Por Qué Fallaban las Recompensas](#3-diagnóstico-por-qué-fallaban-las-recompensas)
+4. [Flujo de Puntuación](#4-flujo-de-puntuación)
+5. [Sistema de Combo](#5-sistema-de-combo)
+6. [Sistema de Recompensas (Coins)](#6-sistema-de-recompensas-coins)
+7. [Sistema de Skins y Progresión](#7-sistema-de-skins-y-progresión)
+8. [Persistencia y Almacenamiento](#8-persistencia-y-almacenamiento)
+9. [Integración GameCenter — Contrato Completo](#9-integración-gamecenter--contrato-completo)
+10. [Balanceo Económico](#10-balanceo-económico)
+11. [Referencia de API (snake-economy.js)](#11-referencia-de-api-snake-economyjs)
 
 ---
 
@@ -25,335 +27,345 @@ Los coins se calculan y entregan únicamente cuando la serpiente muere. No exist
 **2. Progresión por alto puntaje histórico**
 Las skins se desbloquean basándose en el `highScore` histórico, no en el score de la sesión actual.
 
-**3. Multiplicador capturado en el momento de muerte (v1.2)**
-A diferencia de la v1.0 donde el combo se reseteaba antes del cálculo, la v1.2 captura el `comboMultiplier` en el instante previo al reset, recompensando sesiones de alto ritmo que terminan abruptamente.
+**3. `levelId` único por sesión — Regla crítica de integración**
+La API `completeLevel()` de Love Arcade es idempotente: registra cada `levelId` que ha pagado y rechaza silenciosamente cualquier repetición. Por ello, cada sesión genera su propio `LAS_sessionId` único. Ver §3 para el análisis completo.
+
+**4. Multiplicador capturado en el momento de muerte (v1.2+)**
+El `comboMultiplier` se captura antes del reset para recompensar sesiones de alto ritmo que terminan abruptamente.
 
 ---
 
-## 2. Flujo de Puntuación
+## 2. Changelog
 
-### 2.1 Fuentes de Puntos
+### v1.3 — Corrección de integración GameCenter
+
+**Bugs corregidos:**
+
+| Bug | Síntoma | Causa | Fix |
+|-----|---------|-------|-----|
+| Script ausente | `window.GameCenter` siempre era el stub de desarrollo | `<script src="../../js/app.js">` faltaba en `snake.html` | Añadido como primera etiqueta script, antes de todos los módulos |
+| Idempotencia | Solo la primera sesión de vida recibía monedas | `levelId = 'standard_mode'` era estático | `LAS_sessionId` único generado en `startSession()` |
+
+### v1.2
+
+- `LAS_GAME_ID`: `'snake'` → `'la_snake_classic'`
+- Fórmula de reward: `Math.floor(score × comboAtDeath)`
+- `Math.floor()` + `Math.max(1, …)` garantizan entero positivo
+- `try/catch` + verificación de existencia alrededor de `completeLevel`
+
+---
+
+## 3. Diagnóstico: Por Qué Fallaban las Recompensas
+
+### Bug A — `app.js` no cargado
+
+`snake.html` no incluía `<script src="../../js/app.js">`. Al no cargarse, `window.GameCenter` nunca era el sistema real de Love Arcade. En su lugar, el stub de desarrollo dentro del orquestador siempre se activaba:
+
+```javascript
+// Este bloque corría SIEMPRE porque app.js nunca definía window.GameCenter
+if (!window.GameCenter) {
+    window.GameCenter = {
+        completeLevel: (gameId, levelId, reward) =>
+            console.log(...) // Solo imprimía en consola, no acreditaba coins
+    };
+}
+```
+
+**Fix:** `app.js` se carga como primera etiqueta script. El stub permanece pero ya no se activa mientras app.js esté presente.
+
+```html
+<!-- CORRECTO — app.js primero, luego los módulos del juego -->
+<script src="../../js/app.js"></script>
+<script src="snake-audio.js"></script>
+<script src="snake-economy.js"></script>
+...
+```
+
+---
+
+### Bug B — Idempotencia de `completeLevel()`
+
+`completeLevel()` en app.js implementa protección anti-duplicados:
+
+```javascript
+// Fragmento de app.js
+completeLevel: (gameId, levelId, rewardAmount) => {
+    if (!store.progress[gameId]) store.progress[gameId] = [];
+    if (store.progress[gameId].includes(levelId)) {
+        return { paid: false, coins: store.coins }; // ← RECHAZA SILENCIOSAMENTE
+    }
+    store.progress[gameId].push(levelId);
+    store.coins += rewardAmount;
+    // ...
+}
+```
+
+Con `levelId = 'standard_mode'` fijo (v1.2):
+
+```
+Sesión 1: completeLevel('la_snake_classic', 'standard_mode', 80)
+    → store.progress['la_snake_classic'] = ['standard_mode']
+    → paid: true ✅ — 80 coins acreditados
+
+Sesión 2: completeLevel('la_snake_classic', 'standard_mode', 120)
+    → 'standard_mode' ya está en el array
+    → paid: false ❌ — 0 coins, silenciosamente ignorado
+
+Sesión N: Siempre rechazado ❌
+```
+
+**Fix (v1.3):** `LAS_sessionId` se genera en `startSession()` combinando timestamp y sufijo hexadecimal aleatorio:
+
+```javascript
+function LAS_generateSessionId() {
+    const ts   = Date.now();
+    const rand = Math.floor(Math.random() * 0xffff)
+                     .toString(16).padStart(4, '0');
+    return `session_${ts}_${rand}`;  // ej: "session_1719432800123_a7f3"
+}
+```
+
+Cada sesión produce un `levelId` que app.js nunca ha visto:
+
+```
+Sesión 1: completeLevel('la_snake_classic', 'session_1719432800123_a7f3', 80)
+    → paid: true ✅
+
+Sesión 2: completeLevel('la_snake_classic', 'session_1719432800456_b2c1', 120)
+    → paid: true ✅
+
+Sesión N: Siempre un nuevo ID → siempre pagado ✅
+```
+
+> **Nota sobre crecimiento del store:** `store.progress['la_snake_classic']` acumula una entrada por sesión (~28 chars). Con 100 sesiones/día eso es ~2.8 KB/día. El localStorage soporta ~5 MB, equivalente a ~178 000 sesiones. Sin impacto práctico.
+
+---
+
+## 4. Flujo de Puntuación
+
+### 4.1 Fuentes de Puntos
 
 | Evento            | Puntos Base | Con Multiplicador         |
 |-------------------|-------------|---------------------------|
 | Comer comida      | 10          | 10 × combo_multiplier     |
 | Comer power-up    | 25          | 25 × combo_multiplier     |
 
-### 2.2 Ejemplo de Sesión
+### 4.2 Ejemplo de Sesión
 
 ```
-Ítem 1 comido (t=0s)          x1  →  10 pts  | Total: 10
-Ítem 2 comido (t=1.2s)        x2  →  20 pts  | Total: 30
-Ítem 3 comido (t=2.5s)        x3  →  30 pts  | Total: 60
-Power-up comido (t=1.0s)      x4  →  100 pts | Total: 160
-Ítem 5 comido (t=2.9s)        x5  →  50 pts  | Total: 210
-[Muerte mientras combo=5]
+Ítem 1 comido (t=0s)     x1  →  10 pts  | Total: 10
+Ítem 2 comido (t=1.2s)   x2  →  20 pts  | Total: 30
+Ítem 3 comido (t=2.5s)   x3  →  30 pts  | Total: 60
+Power-up (t=1.0s)        x4  → 100 pts  | Total: 160
+Ítem 5 comido (t=2.9s)   x5  →  50 pts  | Total: 210
+[Muerte con combo=5]
 ────────────────────────────────────────────
-finalReward = floor(210 × 5) = 1050 coins
+rewardAmount = floor(210 × 5) = 1 050 coins
 ```
 
 ---
 
-## 3. Sistema de Combo
+## 5. Sistema de Combo
 
-### 3.1 Mecánica Central
+### 5.1 Mecánica
 
-Cada ítem comido en menos de **3 segundos** del anterior incrementa el multiplicador en +1, hasta un máximo de x8.
+Cada ítem comido en menos de **3 segundos** del anterior incrementa el multiplicador en +1, hasta x8. Sin comer durante 3 segundos: reset a x1.
 
-```
-Estado inicial:      x1
-Comer en < 3s:       +1 (hasta x8)
-Sin comer en 3s:     reset a x1
-Muerte:              reset a x1 DESPUÉS de capturar para reward (v1.2)
-```
+### 5.2 Tabla de Multiplicadores
 
-### 3.2 Tabla de Multiplicadores
-
-| x | Ítems consecutivos | Pts/comida | Pts/power-up |
-|---|---------------------|------------|--------------|
-| 1 | 0–1                 | 10         | 25           |
-| 2 | 2                   | 20         | 50           |
-| 3 | 3                   | 30         | 75           |
-| 4 | 4                   | 40         | 100          |
-| 5 | 5                   | 50         | 125          |
-| 6 | 6                   | 60         | 150          |
-| 7 | 7                   | 70         | 175          |
-| 8 | 8+                  | 80         | 200          |
-
-### 3.3 Ventana de 3 Segundos
-
-```
-eat() ────────────────────────────────────────────────►
-       │←────── 3000ms ──────►│
-       │                       │
-       │  Si come aquí:        │  Si no come aquí:
-       │  combo++              │  combo RESET a x1
-       └───────────────────────┘
-```
-
-El timer se reinicia con cada comida exitosa.
-
-### 3.4 Visualización
-
-**Barra de combo (sólida, sin transparencias):**
-- Ancho = `((multiplier - 1) / 7) × 100%`
-- Color fijo: `#ff9f0a`
-
-**Borde del canvas (outline sólido CSS, sin blur/glow):**
-
-| Multiplicador | Color del outline |
-|---------------|-------------------|
-| x2 – x4       | `#ff9f0a`         |
-| x5 – x7       | `#ff6b00`         |
-| x8            | `#ff3b30`         |
+| x | Pts/comida | Pts/power-up |
+|---|------------|--------------|
+| 1 | 10         | 25           |
+| 2 | 20         | 50           |
+| 3 | 30         | 75           |
+| 4 | 40         | 100          |
+| 5 | 50         | 125          |
+| 6 | 60         | 150          |
+| 7 | 70         | 175          |
+| 8 | 80         | 200          |
 
 ---
 
-## 4. Sistema de Recompensas (Coins)
+## 6. Sistema de Recompensas (Coins)
 
-### 4.1 Fórmula v1.2
+### 6.1 Fórmula (v1.2+)
 
 ```javascript
-// Captura ANTES del reset del combo
-const multiplierAtDeath = LAS_comboMultiplier;
-
-// Siempre entero >= 1
+const multiplierAtDeath = LAS_comboMultiplier; // capturar ANTES del reset
 const rewardAmount = Math.max(1, Math.floor(finalScore * multiplierAtDeath));
 ```
 
-**Diferencia respecto a v1.0:**
-- v1.0: `max(1, floor(score / 10))` — reward fija, independiente del combo
-- v1.2: `max(1, floor(score × comboAtDeath))` — reward amplificada por el combo
+### 6.2 Tabla de Ejemplos
 
-### 4.2 Tabla de Ejemplos (v1.2)
+| Score Final | Combo al morir | Reward  |
+|-------------|----------------|---------|
+| 10          | x1             | 10      |
+| 100         | x5             | 500     |
+| 500         | x2             | 1 000   |
+| 500         | x8             | 4 000   |
+| 0           | x1             | 1 (mín) |
 
-| Score Final | Combo al morir | Reward            |
-|-------------|----------------|-------------------|
-| 10          | x1             | 10                |
-| 10          | x3             | 30                |
-| 100         | x1             | 100               |
-| 100         | x5             | 500               |
-| 500         | x2             | 1,000             |
-| 500         | x8             | 4,000             |
-| 1,000       | x1             | 1,000             |
-| 0           | x1             | 1 (mínimo)        |
-
-### 4.3 Timing de Entrega
+### 6.3 Secuencia de Entrega (v1.3)
 
 ```
-Evento de muerte
+Muerte de serpiente
     │
-    ▼ sfxDeath() + render overlay
+    ▼ sfxDeath() + render overlay final
     │
-    ▼ [100ms delay — app.js v9.4 DOM listo]
+    ▼ [100ms delay — DOM de app.js estable]
     │
     ▼ LAS_Economy.endSession(finalScore, snakeLength)
-        ├── captureMultiplier = LAS_comboMultiplier  ← ANTES del reset
+        ├── captureMultiplier = LAS_comboMultiplier   ← ANTES del reset
         ├── LAS_comboMultiplier = 1                   ← reset
         ├── saveHighScore()
-        ├── rewardAmount = max(1, floor(score × capturedMultiplier))
-        └── GameCenter.completeLevel(...)              ← ÚNICA llamada
+        ├── rewardAmount = max(1, floor(score × captured))
+        └── GameCenter.completeLevel(
+                'la_snake_classic',       ← gameId estable
+                'session_1719…_a7f3',     ← levelId ÚNICO ← FIX v1.3
+                rewardAmount              ← integer >= 1
+            )
     │
-    ▼ [700ms — tiempo de lectura de overlay]
+    ▼ [700ms — pausa para leer overlay]
     │
     ▼ Pantalla Game Over → muestra reward
 ```
 
-### 4.4 Garantías del Sistema
+---
 
-- **Exactamente una llamada** a `completeLevel` por sesión.
-- **Siempre entero >= 1** (Math.floor + Math.max).
-- **try/catch**: un fallo de GameCenter no rompe el flujo del juego.
-- **Existencia verificada**: `window.GameCenter && typeof .completeLevel === 'function'`.
+## 7. Sistema de Skins y Progresión
+
+| Score mínimo | Skin ID   | Nombre         |
+|--------------|-----------|----------------|
+| 0            | `classic` | Classic Green  |
+| 500          | `neon`    | Neon Pulse     |
+| 1500         | `cyber`   | Cyber Scale    |
+| 3000         | `gold`    | Gold Edition   |
+
+Condición de selección: `LAS_Economy.getHighScore() >= skin.unlockScore`. El botón SELECT está desactivado si no se cumple.
 
 ---
 
-## 5. Sistema de Skins y Progresión
+## 8. Persistencia y Almacenamiento
 
-### 5.1 Árbol de Progresión
+Claves exclusivas con prefijo `LAS_` (no interfieren con claves de Love Arcade):
 
-```
-0 pts ────────────── Classic Green  (desbloqueada por defecto)
-500 pts ──────────── Neon Pulse
-1500 pts ─────────── Cyber Scale
-3000 pts ─────────── Gold Edition
-```
+| Clave               | Tipo       |
+|---------------------|------------|
+| `LAS_highScore`     | `number`   |
+| `LAS_unlockedSkins` | `string[]` |
+| `LAS_selectedSkin`  | `string`   |
 
-### 5.2 Condición de Selección (v1.2)
-
-El botón SELECT en el menú está **desactivado** si `highScore < skin.unlockScore`:
-
-```javascript
-selectBtn.disabled = (LAS_Economy.getHighScore() < skin.unlockScore);
-```
-
-No se puede hacer click en skins bloqueadas aunque sean visibles en el selector.
-
-### 5.3 Estados de una Skin
-
-| Estado      | Condición                    | UI                                           |
-|-------------|------------------------------|----------------------------------------------|
-| Disponible  | `highScore >= unlockScore`   | Preview en color, botón SELECT activo        |
-| Activa      | Disponible + seleccionada    | Borde verde, botón muestra "ACTIVE"          |
-| Bloqueada   | `highScore < unlockScore`    | Preview grayscale 40% opacidad, btn LOCKED   |
+> **Separación de stores:** Snake usa claves `LAS_*` mientras Love Arcade usa `gamecenter_v6_promos`. No hay colisión posible.
 
 ---
 
-## 6. Persistencia y Almacenamiento
+## 9. Integración GameCenter — Contrato Completo
 
-### 6.1 Claves de localStorage
-
-| Clave               | Tipo       | Descripción                         |
-|---------------------|------------|-------------------------------------|
-| `LAS_highScore`     | `number`   | Puntuación histórica máxima         |
-| `LAS_unlockedSkins` | `string[]` | IDs de skins desbloqueadas          |
-| `LAS_selectedSkin`  | `string`   | ID de la skin activa                |
-
-### 6.2 Manejo de Errores
-
-`try/catch` en lectura y escritura. Sin `localStorage` (modo privado, cuota llena): el juego funciona con datos en memoria sin persistencia.
-
----
-
-## 7. Integración GameCenter — Correcciones v1.2
-
-### 7.1 IDs Corregidos
-
-| Campo    | v1.0 (incorrecto)  | v1.2 (correcto)      | Motivo                                  |
-|----------|--------------------|----------------------|-----------------------------------------|
-| `gameId` | `'snake'`          | `'la_snake_classic'` | app.js v9.4 rechaza IDs genéricos       |
-| `levelId`| `'session'`        | `'standard_mode'`    | app.js v9.4 rechaza IDs no registrados  |
-
-### 7.2 Contrato de API
+### 9.1 Firma de la API (per Love Arcade docs §5.2)
 
 ```typescript
 window.GameCenter.completeLevel(
-    gameId:       'la_snake_classic',   // string — ID registrado en app.js
-    levelId:      'standard_mode',      // string — modo de juego
-    rewardAmount: number                // integer >= 1
-): void
+    gameId:       string,  // 'la_snake_classic' — estable, registrado en app.js
+    levelId:      string,  // 'session_{ts}_{rand}' — único por sesión
+    rewardAmount: number   // integer >= 1
+): { paid: boolean, coins: number }
 ```
 
-### 7.3 Stub de Desarrollo
+### 9.2 Código de producción (snake-economy.js)
 
 ```javascript
-// Inyectado automáticamente si window.GameCenter no existe
-window.GameCenter = {
-    completeLevel: (gameId, levelId, reward) =>
-        console.log(`[GameCenter] ${gameId} / ${levelId} / ${reward} coins`)
-};
+if (window.GameCenter &&
+    typeof window.GameCenter.completeLevel === 'function') {
+    try {
+        window.GameCenter.completeLevel(
+            LAS_GAME_ID,   // 'la_snake_classic'
+            LAS_sessionId, // 'session_1719432800123_a7f3' — único
+            rewardAmount
+        );
+    } catch (err) {
+        console.warn('[LAS_Economy] completeLevel failed:', err);
+    }
+}
 ```
 
-### 7.4 Delay de 100ms
-
-El orquestador espera 100ms entre el evento de muerte y la llamada a `endSession`:
+### 9.3 Stub de desarrollo (snake.html orquestador)
 
 ```javascript
-// En el callback onDeath del orquestador
-setTimeout(() => {
-    const result = LAS_Economy.endSession(score, state.length);
-    // ... mostrar resultados
-}, 100); // Garantiza que el DOM de app.js v9.4 está listo
+// Solo activo cuando app.js NO está cargado (modo standalone/pruebas)
+if (!window.GameCenter) {
+    window.GameCenter = {
+        completeLevel: (gameId, levelId, reward) =>
+            console.log(`[GameCenter STUB] ${gameId} / ${levelId} / ${reward} coins`)
+    };
+}
+```
+
+### 9.4 Checklist de integración Love Arcade (§11 de los docs oficiales)
+
+| Item | Estado |
+|------|--------|
+| El juego importa `app.js` | ✅ v1.3 — `<script src="../../js/app.js">` añadido primero |
+| Recompensas calculadas internamente antes del evento | ✅ |
+| `completeLevel()` llamado en el momento de victoria | ✅ |
+| Parámetros respetan tipos (`String`, `String`, `Int`) | ✅ |
+| El juego NO escribe claves reservadas en `localStorage` | ✅ prefijo `LAS_` |
+| Funciona sin `window.GameCenter` (modo standalone) | ✅ stub guardado con `if` |
+| El contador de Navbar incrementa al ganar | ✅ — con todos los fixes aplicados |
+
+---
+
+## 10. Balanceo Económico
+
+| Habilidad    | Score/sesión | Combo típico | Reward   |
+|--------------|-------------|--------------|----------|
+| Principiante | 80          | x1           | 80       |
+| Intermedio   | 300         | x2           | 600      |
+| Avanzado     | 1 000       | x4           | 4 000    |
+| Experto      | 3 000       | x6           | 18 000   |
+
+Ajustar en `snake-economy.js`:
+
+```javascript
+const LAS_COMBO_WINDOW_MS = 3000;   // ms — ventana de combo
+const LAS_MAX_MULTIPLIER  = 8;      // techo del multiplicador
+const LAS_BASE_POINT_FOOD = 10;     // puntos base por comida
 ```
 
 ---
 
-## 8. Balanceo Económico
-
-### 8.1 Impacto de la Nueva Fórmula (v1.2)
-
-La multiplicación del score por el combo al morir **eleva significativamente** las recompensas para jugadores avanzados:
-
-| Habilidad    | Score/sesión | Combo típico | Reward v1.0 | Reward v1.2 |
-|--------------|-------------|--------------|-------------|-------------|
-| Principiante | 80          | x1           | 8           | 80          |
-| Intermedio   | 300         | x2           | 30          | 600         |
-| Avanzado     | 1,000       | x4           | 100         | 4,000       |
-| Experto      | 3,000       | x6           | 300         | 18,000      |
-
-### 8.2 Sesiones para Desbloqueo de Skins
-
-Con la nueva fórmula de rewards, las skins se desbloquean por **skill acumulado (high score)** independientemente de los coins:
-
-| Skin         | Score requerido | Sesiones (principiante) | Sesiones (intermedio) |
-|--------------|-----------------|-------------------------|-----------------------|
-| Neon Pulse   | 500             | 4 – 7                   | 1 – 2                 |
-| Cyber Scale  | 1,500           | 10 – 20                 | 3 – 5                 |
-| Gold Edition | 3,000           | 20 – 38                 | 5 – 10                |
-
-### 8.3 Ajustes Recomendados
+## 11. Referencia de API (snake-economy.js)
 
 ```javascript
-// snake-economy.js — para recalibrar
-const LAS_COMBO_WINDOW_MS    = 3000;  // aumentar = más fácil mantener combo
-const LAS_MAX_MULTIPLIER     = 8;     // reducir para menos amplificación
-const LAS_BASE_POINT_FOOD    = 10;    // ajusta base de puntuación
-const LAS_BASE_POINT_POWERUP = 25;    // incentivo para recoger power-ups
+// Sesión
+LAS_Economy.startSession()           // genera nuevo sessionId único; resetea todo
+LAS_Economy.endSession(score, len)   // → { finalScore, rewardAmount, multiplierAtDeath,
+                                     //     isNewRecord, allTimeHigh, sessionId }
+
+// Puntuación
+LAS_Economy.onItemEaten(isPowerup)   // → number (pts otorgados)
+LAS_Economy.getSessionScore()        // → number
+LAS_Economy.getComboMultiplier()     // → number (1–8)
+LAS_Economy.getComboBarData()        // → { multiplier, multiplierPercent, timePercent, isActive }
+
+// Skins
+LAS_Economy.getSkinDefinitions()     // → [{ id, name, unlockScore, description }]
+LAS_Economy.isSkinAvailable(id)      // → bool (highScore >= unlockScore)
+LAS_Economy.getSelectedSkin()        // → string
+LAS_Economy.setSelectedSkin(id)      // persiste en localStorage
+LAS_Economy.getHighScore()           // → number
+
+// Callbacks
+LAS_Economy.onComboChange(fn)        // fn(multiplier: number)
+LAS_Economy.onScoreChange(fn)        // fn(score: number)
+LAS_Economy.onSkinUnlock(fn)         // fn(skinId: string)
+
+// Constantes
+LAS_Economy.GAME_ID                  // 'la_snake_classic'
+LAS_Economy.COMBO_WINDOW_MS          // 3000
+LAS_Economy.MAX_MULTIPLIER           // 8
 ```
 
 ---
 
-## 9. Referencia de API (snake-economy.js)
-
-### Sesión
-
-```javascript
-LAS_Economy.startSession()
-// Resetea score, combo, timer. Llamar antes de startGame().
-
-LAS_Economy.endSession(finalScore, snakeLength)
-// → { finalScore, rewardAmount, multiplierAtDeath, isNewRecord, allTimeHigh }
-// Guarda high score, llama GameCenter, resetea combo.
-// Llamar con 100ms de delay tras el evento de muerte.
-```
-
-### Puntuación y Combo
-
-```javascript
-LAS_Economy.onItemEaten(isPowerup)
-// → number — puntos otorgados. Actualiza combo, score, y dispara callbacks.
-
-LAS_Economy.getSessionScore()     // → number
-LAS_Economy.getComboMultiplier()  // → number (1–8)
-LAS_Economy.getComboBarData()
-// → { multiplier, multiplierPercent, timePercent, isActive }
-```
-
-### Skins
-
-```javascript
-LAS_Economy.getSkinDefinitions()  // → [{ id, name, unlockScore, description }]
-LAS_Economy.getUnlockedSkins()    // → string[]
-LAS_Economy.isSkinUnlocked(id)    // → bool
-LAS_Economy.isSkinAvailable(id)   // → bool (highScore >= unlockScore)
-LAS_Economy.getSelectedSkin()     // → string
-LAS_Economy.setSelectedSkin(id)   // persiste en localStorage
-```
-
-### Persistencia
-
-```javascript
-LAS_Economy.getHighScore()        // → number
-```
-
-### Constantes Exportadas
-
-```javascript
-LAS_Economy.GAME_ID           // 'la_snake_classic'
-LAS_Economy.LEVEL_ID          // 'standard_mode'
-LAS_Economy.COMBO_WINDOW_MS   // 3000
-LAS_Economy.MAX_MULTIPLIER    // 8
-```
-
-### Callbacks
-
-```javascript
-LAS_Economy.onComboChange(fn)   // fn(multiplier: number)
-LAS_Economy.onScoreChange(fn)   // fn(score: number)
-LAS_Economy.onSkinUnlock(fn)    // fn(skinId: string)
-```
-
----
-
-*Documentación de Economía — LA-Snake Classic v1.2.0*
-*Módulo: snake-economy.js | Prefijo: LAS_ | Game ID: la_snake_classic*
+*Documentación de Economía — LA-Snake Classic v1.3.0*
+*Módulo: snake-economy.js | Game ID: la_snake_classic | Prefijo: LAS_*
