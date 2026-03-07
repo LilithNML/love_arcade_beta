@@ -2367,11 +2367,17 @@ svg { stroke-width: 2; }
 /* ── Mobile mockup: 9:20 ratio (tall portrait phone) ── */
 .mockup-mobile {
     aspect-ratio: 9 / 20;
-    /* Constrain height so it fits in viewport; width derives from ratio */
-    max-height: 58vh;
+    /*
+     * EXPLICIT height required — aspect-ratio only computes a missing dimension
+     * when the other dimension is explicitly set (CSS spec §10.4).
+     * max-height is a constraint, not a sizing value: it cannot seed the
+     * calculation when all children are position:absolute (zero intrinsic size).
+     * With height set, the browser derives: width = height × (9/20).
+     * min() keeps it inside the viewport on small screens.
+     */
+    height: min(58vh, 480px);
     width: auto;
     border-radius: 24px;
-    /* Subtle device border */
     box-shadow:
         0 0 0 2px rgba(255, 255, 255, 0.10),
         0 0 0 4px rgba(0, 0, 0, 0.6),
@@ -2392,7 +2398,7 @@ svg { stroke-width: 2; }
 /* ── Fallback (no tag): 4:3 neutral ── */
 .mockup-fallback {
     aspect-ratio: 4 / 3;
-    width: 100%;
+    width: 100%;  /* height derives from width × (3/4) */
     border-radius: 10px;
     box-shadow: 0 0 0 2px rgba(255,255,255,0.08), 0 12px 40px rgba(0,0,0,0.65);
 }
@@ -2627,4 +2633,13 @@ svg { stroke-width: 2; }
     display: flex;
     align-items: center;
     justify-content: center;
+    /*
+     * width: 100% is REQUIRED.
+     * #mockup-slot is a flex child of .preview-mockup-stage (align-items: center).
+     * Without an explicit width it auto-sizes to its content. But all mockup
+     * children use position:absolute → zero intrinsic content → slot collapses to 0.
+     * Setting width:100% makes .mockup-pc's "width:100%" resolve correctly and
+     * gives .mockup-mobile a bounded inline-size for the container query.
+     */
+    width: 100%;
 }
