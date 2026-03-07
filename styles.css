@@ -1,10 +1,10 @@
 /* ================================================================
-   LOVE ARCADE — Design System v3.0 "Arcade Solid"
+   LOVE ARCADE — Design System v3.1 "Arcade Solid"
    Aesthetic: Solid Premium / Tactical Arcade Hardware
    Typography: Exo 2 (display/numbers) + DM Sans (body)
    Ratio: 90% Solid / 10% Glass (toasts, modals, coin badge only)
-   Performance: backdrop-filter eliminated from all panel elements.
-               Depth via hard-edge borders + short solid shadows.
+   v3.1: Corner accents removed. View transitions anti-golpe added.
+         GPU-only animations: opacity + transform exclusively.
    ================================================================ */
 
 /* ── Google Fonts: display=swap ya está incluido en la URL para reducir FOIT ── */
@@ -165,6 +165,26 @@ ul { list-style: none; }
 .hidden { display: none !important; }
 button { font-family: var(--font-body); }
 
+/* ================================================================
+   VIEW TRANSITIONS — Anti-Golpe (v10.1)
+   GPU-only: opacity + translateY. No height/width/margin animations.
+   Regla de los 300ms: duración máx 0.25s para que la app se sienta
+   reactiva. contain:paint limita el área de repaint al propio nodo.
+   El scroll reset se ejecuta ANTES de que empiece la transición
+   de entrada (ver spa-router.js _applyView).
+   ================================================================ */
+.view-section {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    will-change: opacity, transform;
+    contain: paint;
+}
+.view-section:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* Fine scanline texture overlay for depth */
 body::before {
     content: '';
@@ -192,17 +212,6 @@ body::before {
     border: 1px solid var(--border-subtle);
     position: relative;
     z-index: 1;
-    /* Tech corner accent — top-left notch */
-}
-.glass-panel::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 24px; height: 2px;
-    background: var(--accent);
-    opacity: 0.4;
-    border-radius: 0 0 2px 0;
-    pointer-events: none;
 }
 
 .glass-float {
@@ -493,26 +502,6 @@ body::before {
 /* Clase añadida por revealUI() en app.js tras el init síncrono completo */
 .player-hud.is-ready {
     opacity: 1;
-}
-
-/* Tech corner accent lines */
-.player-hud::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 48px; height: 2px;
-    background: linear-gradient(90deg, var(--accent), transparent);
-    border-radius: 0 0 2px 0;
-    pointer-events: none;
-}
-.player-hud::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 2px; height: 48px;
-    background: linear-gradient(180deg, var(--accent), transparent);
-    border-radius: 0 0 2px 0;
-    pointer-events: none;
 }
 
 .hud-top {
