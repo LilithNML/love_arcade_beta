@@ -203,14 +203,32 @@ function _buildMockupHTML(item) {
 /**
  * Opens the preview modal with the dynamic mockup for the given item.
  * Handles clock updates, context-menu blocking, and action buttons.
- * @param {object} item
+ *
+ * Accepts either the full item object (from renderShop event listeners)
+ * or a numeric item ID (from dynamically generated onclick="" strings).
+ * When an ID is passed, the item is resolved from allItems[].
+ *
+ * @param {object|number} itemOrId  Full item object OR numeric item ID.
  */
-function openPreviewModal(item) {
+function openPreviewModal(itemOrId) {
+    // ── Resolve item from ID if necessary ────────────────────────────────────
+    const item = (typeof itemOrId === 'number' || typeof itemOrId === 'string')
+        ? allItems.find(i => i.id === parseInt(itemOrId, 10))
+        : itemOrId;
+
+    if (!item) { console.warn('[Preview 2.0] openPreviewModal: item not found', itemOrId); return; }
+
     const modal     = document.getElementById('preview-modal');
     const slot      = document.getElementById('mockup-slot');
     const nameEl    = document.getElementById('preview-name');
     const actionsEl = document.getElementById('preview-actions');
     const eco       = window.ECONOMY;
+
+    // Null-guard: modal must exist in the DOM (index.html #preview-mockup-stage)
+    if (!modal || !slot) {
+        console.error('[Preview 2.0] Required DOM elements not found: #preview-modal or #mockup-slot');
+        return;
+    }
 
     // ── Inject mockup ─────────────────────────────────────────────────────────
     slot.innerHTML     = _buildMockupHTML(item);
@@ -255,7 +273,7 @@ function openPreviewModal(item) {
     if (window.lucide) lucide.createIcons({ nodes: [actionsEl] });
 
     actionsEl.querySelector('.preview-buy-btn')?.addEventListener('click', async () => {
-        _closePreviewModal(modal, stage);
+        closePreviewModal();
         const parsed = JSON.parse(
             actionsEl.querySelector('.preview-buy-btn').dataset.item.replace(/&#39;/g, "'")
         );
@@ -263,20 +281,36 @@ function openPreviewModal(item) {
     });
 
     document.getElementById('preview-close-btn')?.addEventListener('click', () => {
-        _closePreviewModal(modal, stage);
+        closePreviewModal();
     });
 }
 
 /**
  * Closes the preview modal and cleans up clock interval + context-menu listener.
- * @param {HTMLElement} modal
- * @param {HTMLElement} stage
+ * Public overload: can be called with no arguments (for onclick="closePreviewModal()")
+ * or with explicit DOM refs (internal callers).
+ *
+ * @param {HTMLElement} [modal]  Defaults to #preview-modal.
+ * @param {HTMLElement} [stage]  Defaults to #preview-mockup-stage.
  */
-function _closePreviewModal(modal, stage) {
-    modal.classList.add('hidden');
+function closePreviewModal(modal, stage) {
+    const m = modal || document.getElementById('preview-modal');
+    const s = stage || document.getElementById('preview-mockup-stage');
+    if (m) m.classList.add('hidden');
     if (_mockupClockInterval) { clearInterval(_mockupClockInterval); _mockupClockInterval = null; }
-    if (stage?._noCtxHandler) stage.removeEventListener('contextmenu', stage._noCtxHandler);
+    if (s?._noCtxHandler) s.removeEventListener('contextmenu', s._noCtxHandler);
 }
+
+// Private alias kept for internal callers that pass explicit refs (unchanged API)
+const _closePreviewModal = closePreviewModal;
+
+// ── Global exposure ───────────────────────────────────────────────────────────
+// Required for:
+//   (a) onclick="openPreviewModal(...)" in dynamically generated HTML strings
+//   (b) onclick="closePreviewModal()" in modal action buttons
+//   (c) any game module or external script calling the preview API
+window.openPreviewModal  = openPreviewModal;
+window.closePreviewModal = closePreviewModal;
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -1076,16 +1110,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === e.currentTarget) _closeModal(false);
     });
 
-    // Preview modal (Preview 2.0 — uses _closePreviewModal for cleanup)
-    document.getElementById('preview-close').addEventListener('click', () => {
-        const modal = document.getElementById('preview-modal');
-        const stage = document.getElementById('preview-mockup-stage');
-        _closePreviewModal(modal, stage);
-    });
+    // Preview modal (Preview 2.0)
+    // The static #preview-close button (X in corner) and backdrop click both
+    // call the public closePreviewModal() so DOM refs are resolved inside the function.
+    document.getElementById('preview-close').addEventListener('click', () => closePreviewModal());
     document.getElementById('preview-modal').addEventListener('click', e => {
-        if (e.target === e.currentTarget) {
-            _closePreviewModal(e.currentTarget, document.getElementById('preview-mockup-stage'));
-        }
+        if (e.target === e.currentTarget) closePreviewModal();
     });
 
     // Email modal
@@ -1105,10 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
             document.getElementById('confirm-modal').classList.add('hidden');
-            _closePreviewModal(
-                document.getElementById('preview-modal'),
-                document.getElementById('preview-mockup-stage')
-            );
+            closePreviewModal();
             _closeEmailModal();
         }
     });
