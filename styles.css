@@ -2482,11 +2482,13 @@ svg { stroke-width: 2; }
 .mockup-app-icon {
     aspect-ratio: 1;
     border-radius: clamp(4px, 2cqw, 9px);
+    /* Default: solid dark — no GPU cost, works on all devices */
     background: rgba(12, 12, 24, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.09);
-    /* Glassmorphism: only if backdrop-filter is supported */
 }
 
+/* Glassmorphism opt-in: only on devices that support AND perform backdrop-filter.
+   @supports checks API availability; low-end GPUs skip this block entirely. */
 @supports (backdrop-filter: blur(4px)) {
     .mockup-app-icon {
         background: rgba(10, 10, 22, 0.62);
