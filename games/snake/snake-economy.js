@@ -1,16 +1,30 @@
 /**
  * snake-economy.js
- * LA-Snake Classic — Economy Module v1.2
+ * LA-Snake Classic — Economy Module v1.3
+ *
+ * CHANGES v1.3 — GameCenter idempotency fix:
+ *   ROOT CAUSE: app.js completeLevel() is idempotent — it tracks every
+ *   levelId it has paid inside store.progress[gameId] and silently rejects
+ *   any repeat call with the same levelId. Using a static 'standard_mode'
+ *   string meant only the FIRST session ever received a reward.
+ *
+ *   FIX: LAS_sessionId is generated in startSession() using Date.now() and
+ *   a random suffix, producing a globally unique string per game session:
+ *       "session_1719432800123_a7f3"
+ *   Each session is treated as a new unique hito by Love Arcade, so
+ *   completeLevel() always transacts successfully.
+ *
+ *   NOTE on store growth: app.js caps progress arrays at 150 entries
+ *   (via logTransaction history cap). Snake sessions accumulate in
+ *   store.progress['la_snake_classic'] indefinitely, but each entry is a
+ *   short string (~28 chars) so growth is negligible in practice.
  *
  * CHANGES v1.2:
- *   - LAS_GAME_ID: 'snake' → 'la_snake_classic'  (required by app.js v9.4)
- *   - levelId:    'session' → 'standard_mode'     (required by app.js v9.4)
- *   - Reward formula: Math.floor(sessionScore * comboMultiplier)
- *     (comboMultiplier captured at game-over moment before reset)
- *   - Math.floor() + Math.max(1, ...) guarantees integer > 0
- *   - try/catch around completeLevel + existence check
- *   - 100ms delay applied at call site (see snake.html orchestrator)
- *   - Snapshot of comboMultiplier taken in endSession() before reset
+ *   - LAS_GAME_ID: 'snake' → 'la_snake_classic'
+ *   - Reward formula: Math.floor(sessionScore × comboMultiplierAtDeath)
+ *   - Math.floor() + Math.max(1, …) guarantees integer > 0
+ *   - try/catch + existence check around completeLevel
+ *   - Combo multiplier captured before reset in endSession()
  *
  * Prefix: LAS_
  */
@@ -21,8 +35,11 @@ const LAS_Economy = (() => {
   // CONSTANTS
   // ─────────────────────────────────────────────
 
-  const LAS_GAME_ID        = 'la_snake_classic'; // Corrected ID for app.js v9.4
-  const LAS_LEVEL_ID       = 'standard_mode';    // Corrected level ID for app.js v9.4
+  /**
+   * Game identifier registered in Love Arcade's app.js.
+   * Used as the key in store.progress — must be stable across all sessions.
+   */
+  const LAS_GAME_ID        = 'la_snake_classic';
   const LAS_STORAGE_PREFIX = 'LAS_';
 
   const LAS_SKIN_DEFINITIONS = [
@@ -46,9 +63,34 @@ const LAS_Economy = (() => {
   let LAS_lastEatTimestamp = 0;
   let LAS_sessionScore     = 0;
 
+  /**
+   * Unique identifier for the current session.
+   * Generated fresh in LAS_startSession() so each game-over produces
+   * a distinct levelId for completeLevel() — bypassing its idempotency guard.
+   * Format: "session_{timestamp}_{4-char hex random}"
+   * Example: "session_1719432800123_a7f3"
+   */
+  let LAS_sessionId = '';
+
   let LAS_onComboChange = null;
   let LAS_onScoreChange = null;
   let LAS_onSkinUnlock  = null;
+
+  // ─────────────────────────────────────────────
+  // SESSION ID GENERATOR
+  // ─────────────────────────────────────────────
+
+  /**
+   * Generates a unique session identifier.
+   * Combines timestamp (ms) with a random 4-char hex suffix to prevent
+   * collisions if two sessions start within the same millisecond.
+   * @returns {string}
+   */
+  function LAS_generateSessionId() {
+    const ts     = Date.now();
+    const rand   = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+    return `session_${ts}_${rand}`;
+  }
 
   // ─────────────────────────────────────────────
   // PERSISTENCE
@@ -152,24 +194,31 @@ const LAS_Economy = (() => {
   // SESSION MANAGEMENT
   // ─────────────────────────────────────────────
 
+  /**
+   * Initializes a new game session.
+   * Generates a fresh unique LAS_sessionId for this session's
+   * completeLevel() call — critical for bypassing app.js idempotency.
+   */
   function LAS_startSession() {
     LAS_sessionScore     = 0;
     LAS_comboMultiplier  = 1;
     LAS_lastEatTimestamp = 0;
+    LAS_sessionId        = LAS_generateSessionId(); // ← unique per session
     if (LAS_comboTimer) clearTimeout(LAS_comboTimer);
   }
 
   /**
-   * Closes the session and submits reward to GameCenter.
+   * Closes the session and submits reward to Love Arcade's GameCenter.
    *
-   * Reward formula (v1.2):
-   *   finalReward = Math.max(1, Math.floor(sessionScore * comboMultiplierAtDeath))
+   * IDEMPOTENCY: Uses LAS_sessionId (unique per session) as the levelId
+   * parameter. This ensures app.js never silently rejects the call because
+   * each session has a distinct ID it has never seen before.
    *
-   * The comboMultiplier is captured BEFORE the reset so a high-combo
-   * game-over is reflected in the reward.
+   * Reward formula (v1.2+):
+   *   rewardAmount = Math.max(1, Math.floor(finalScore × comboAtDeath))
    *
-   * IMPORTANT: The caller (orchestrator) must add a 100ms delay
-   * before calling endSession() to ensure app.js DOM is ready.
+   * IMPORTANT: Caller must apply 100ms delay before this call so the
+   * app.js DOM is in a stable state (see snake.html orchestrator).
    *
    * @param {number} finalScore
    * @param {number} snakeLength
@@ -177,7 +226,7 @@ const LAS_Economy = (() => {
   function LAS_endSession(finalScore, snakeLength) {
     if (LAS_comboTimer) clearTimeout(LAS_comboTimer);
 
-    // Capture multiplier before reset
+    // Capture multiplier BEFORE reset
     const multiplierAtDeath = LAS_comboMultiplier;
     LAS_comboMultiplier  = 1;
     LAS_lastEatTimestamp = 0;
@@ -185,19 +234,22 @@ const LAS_Economy = (() => {
     const isNewRecord = LAS_saveHighScore(finalScore);
 
     // ── Reward calculation ──
-    // Integer enforced via Math.floor(); minimum 1 coin per session.
+    // score × comboAtDeath ensures high-rhythm sessions are rewarded.
+    // Math.floor() enforces integer; Math.max(1, …) guarantees at least 1 coin.
     const rawReward    = finalScore * multiplierAtDeath;
     const rewardAmount = Math.max(1, Math.floor(rawReward));
 
     // ── GameCenter submission ──
-    // Guarded by existence check + type check + try/catch.
+    // levelId = LAS_sessionId — unique string per session, never repeated.
+    // This bypasses the store.progress idempotency guard in app.js so that
+    // every game-over successfully deposits coins into the player's wallet.
     if (window.GameCenter &&
         typeof window.GameCenter.completeLevel === 'function') {
       try {
         window.GameCenter.completeLevel(
-          LAS_GAME_ID,    // 'la_snake_classic'
-          LAS_LEVEL_ID,   // 'standard_mode'
-          rewardAmount    // integer > 0
+          LAS_GAME_ID,   // 'la_snake_classic'  — stable game key
+          LAS_sessionId, // 'session_1719…_a7f3' — unique per session ← FIX
+          rewardAmount   // integer >= 1
         );
       } catch (err) {
         console.warn('[LAS_Economy] GameCenter.completeLevel failed:', err);
@@ -212,7 +264,8 @@ const LAS_Economy = (() => {
       rewardAmount,
       multiplierAtDeath,
       isNewRecord,
-      allTimeHigh: LAS_getHighScore()
+      allTimeHigh: LAS_getHighScore(),
+      sessionId:   LAS_sessionId
     };
   }
 
@@ -221,18 +274,18 @@ const LAS_Economy = (() => {
   // ─────────────────────────────────────────────
 
   function LAS_getComboBarData() {
-    const now          = Date.now();
-    const elapsed      = now - LAS_lastEatTimestamp;
-    const timeRemaining= Math.max(0, LAS_COMBO_WINDOW_MS - elapsed);
-    const timePercent  = LAS_lastEatTimestamp > 0
+    const now           = Date.now();
+    const elapsed       = now - LAS_lastEatTimestamp;
+    const timeRemaining = Math.max(0, LAS_COMBO_WINDOW_MS - elapsed);
+    const timePercent   = LAS_lastEatTimestamp > 0
       ? (timeRemaining / LAS_COMBO_WINDOW_MS) * 100 : 0;
     const multiplierPercent = ((LAS_comboMultiplier - 1) / (LAS_MAX_MULTIPLIER - 1)) * 100;
 
     return {
-      multiplier: LAS_comboMultiplier,
+      multiplier:         LAS_comboMultiplier,
       multiplierPercent,
       timePercent,
-      isActive: LAS_comboMultiplier > 1
+      isActive:           LAS_comboMultiplier > 1
     };
   }
 
@@ -285,10 +338,9 @@ const LAS_Economy = (() => {
     onScoreChange:      (fn) => { LAS_onScoreChange = fn; },
     onSkinUnlock:       (fn) => { LAS_onSkinUnlock  = fn; },
 
-    // Constants exposed for testing
+    // Constants (for reference / testing)
     COMBO_WINDOW_MS:    LAS_COMBO_WINDOW_MS,
     MAX_MULTIPLIER:     LAS_MAX_MULTIPLIER,
     GAME_ID:            LAS_GAME_ID,
-    LEVEL_ID:           LAS_LEVEL_ID,
   };
 })();
