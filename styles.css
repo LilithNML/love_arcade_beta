@@ -1,15 +1,20 @@
 /* ================================================================
-   LOVE ARCADE — Design System v3.0
-   Aesthetic: Dark Solid Premium / Precision Arcade
+   LOVE ARCADE — Design System v3.0 "Arcade Solid"
+   Aesthetic: Solid Premium / Tactical Arcade Hardware
    Typography: Exo 2 (display/numbers) + DM Sans (body)
-   Philosophy: 90% Solid Surfaces · 10% Strategic Glassmorphism
-   Performance: No backdrop-filter except modals & toasts
+   Ratio: 90% Solid / 10% Glass (toasts, modals, coin badge only)
+   Performance: backdrop-filter eliminated from all panel elements.
+               Depth via hard-edge borders + short solid shadows.
    ================================================================ */
 
+/* ── Google Fonts: display=swap ya está incluido en la URL para reducir FOIT ── */
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 /*
- * Fallback fonts con métricas ajustadas para reducir reflow (FOIT/FOUT).
+ * Fuentes de sistema con métricas ajustadas para reducir el "salto" visible
+ * mientras Google Fonts carga (técnica "size-adjust fallback").
+ * size-adjust escala la fuente de sistema al mismo tamaño óptico que Exo 2/DM Sans,
+ * minimizando el reflow entre la fuente fallback y la web font final.
  */
 @font-face {
     font-family: 'Exo 2';
@@ -32,6 +37,7 @@
     line-gap-override: 0%;
 }
 
+/* ── Prevent text autosizing & horizontal overflow ── */
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -40,39 +46,43 @@ html {
 }
 
 /* ================================================================
-   DESIGN TOKENS — Solid Surface System
+   DESIGN TOKENS
    ================================================================ */
 :root {
-    /* ── Solid Surface Hierarchy ── */
-    --bg-main:      #07070d;   /* Base — body background         */
-    --bg-surface:   #0c0d18;   /* Navbar, panels, footers        */
-    --bg-elevated:  #111320;   /* Cards, inputs, HUD             */
-    --bg-raised:    #181b2a;   /* Hover states, active elements  */
-    --bg-card:      #1d2033;   /* Prominent cards, modal inner   */
-    --bg-overlay:   rgba(4, 4, 10, 0.96);
+    /* ── Backgrounds ── */
+    --bg-main:       #07070d;
+    --bg-surface:    #0f1018;
+    --bg-elevated:   #161924;
+    --bg-overlay:    rgba(7, 7, 13, 0.95);
 
-    /* ── Backward-compatible glass aliases → now solid ── */
-    --glass-base-bg:      #111320;
-    --glass-base-border:  rgba(255, 255, 255, 0.10);
-    --glass-float-bg:     #181b2a;
-    --glass-float-border: rgba(255, 255, 255, 0.14);
-    --glass-hi-bg:        #1d2033;
-    --glass-hi-border:    rgba(255, 255, 255, 0.19);
-    /* blur vars kept for the 10% strategic glass */
-    --glass-base-blur:    blur(14px);
-    --glass-float-blur:   blur(20px);
-    --glass-hi-blur:      blur(24px);
+    /* ── Solid Surface System (Arcade Solid 3.0) ── */
+    /* Base: subtle panels — solid dark */
+    --solid-surface-base:    #0f1018;
+    --solid-surface-float:   #141620;
+    --solid-surface-hi:      #1a1d2e;
+    --solid-surface-deep:    #0a0b12;
 
-    /* ── Border Scale ── */
-    --border-subtle:  rgba(255, 255, 255, 0.07);
-    --border-base:    rgba(255, 255, 255, 0.11);
-    --border-raised:  rgba(255, 255, 255, 0.18);
+    /* Hard-Edge borders — replaces glass borders */
+    --border-subtle:   rgba(255, 255, 255, 0.06);
+    --border-mid:      rgba(255, 255, 255, 0.1);
+    --border-bright:   rgba(255, 255, 255, 0.18);
+
+    /* ── Legacy aliases kept for backward-compat with JS that may read them ── */
+    --glass-base-bg:      #0f1018;
+    --glass-base-border:  rgba(255, 255, 255, 0.06);
+    --glass-base-blur:    none;
+    --glass-float-bg:     #141620;
+    --glass-float-border: rgba(255, 255, 255, 0.1);
+    --glass-float-blur:   none;
+    --glass-hi-bg:        #1a1d2e;
+    --glass-hi-border:    rgba(255, 255, 255, 0.18);
+    --glass-hi-blur:      none;
 
     /* ── Accent (overridden by applyTheme) ── */
-    --accent:        #9b59ff;
-    --accent-dim:    rgba(155, 89, 255, 0.55);
-    --accent-glow:   rgba(155, 89, 255, 0.35);
-    --accent-soft:   rgba(155, 89, 255, 0.12);
+    --accent:       #9b59ff;
+    --accent-dim:   rgba(155, 89, 255, 0.55);
+    --accent-glow:  rgba(155, 89, 255, 0.35);
+    --accent-soft:  rgba(155, 89, 255, 0.12);
     --accent-border: rgba(155, 89, 255, 0.35);
 
     /* ── Text Scale ── */
@@ -107,10 +117,10 @@ html {
     --font-body:    'DM Sans', Arial, system-ui, sans-serif;
     --font-mono:    'JetBrains Mono', 'Courier New', monospace;
 
-    /* ── Shadows — stronger for solid elevation cues ── */
-    --shadow-sm:   0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md:   0 8px 24px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
-    --shadow-lg:   0 16px 48px rgba(0,0,0,0.75), 0 4px 12px rgba(0,0,0,0.5);
+    /* ── Shadows ── */
+    --shadow-sm:  0 2px 12px rgba(0,0,0,0.4);
+    --shadow-md:  0 8px 30px rgba(0,0,0,0.5);
+    --shadow-lg:  0 16px 50px rgba(0,0,0,0.65);
     --shadow-glow: 0 0 20px var(--accent-glow);
 }
 
@@ -132,10 +142,9 @@ html {
 
 body {
     background-color: var(--bg-main);
-    /* Subtle dot grid texture — lightweight, no filter cost */
     background-image:
-        radial-gradient(ellipse 90% 55% at 50% -10%, rgba(155, 89, 255, 0.07), transparent),
-        radial-gradient(ellipse 50% 35% at 85% 85%, rgba(0, 80, 180, 0.05), transparent);
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(155, 89, 255, 0.06), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0, 100, 200, 0.04), transparent);
     color: var(--text-high);
     font-family: var(--font-body);
     font-size: 16px;
@@ -156,7 +165,7 @@ ul { list-style: none; }
 .hidden { display: none !important; }
 button { font-family: var(--font-body); }
 
-/* Fine scanline texture — keeps the arcade feel, no GPU cost */
+/* Fine scanline texture overlay for depth */
 body::before {
     content: '';
     position: fixed;
@@ -165,34 +174,47 @@ body::before {
         0deg,
         transparent,
         transparent 2px,
-        rgba(0, 0, 0, 0.025) 2px,
-        rgba(0, 0, 0, 0.025) 4px
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
     );
     pointer-events: none;
     z-index: 0;
 }
 
 /* ================================================================
-   SOLID PANEL SYSTEM (replaces glass elevation)
-   Classes kept identical for HTML compatibility.
+   SOLID SURFACE ELEVATION SYSTEM (Arcade Solid 3.0)
+   90% solid / 10% glass — backdrop-filter banned from panel classes.
+   Depth is achieved through hard-edge borders & layered box-shadows,
+   not transparency and blur. GPU overdraw eliminated.
    ================================================================ */
 .glass-panel {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     position: relative;
     z-index: 1;
+    /* Tech corner accent — top-left notch */
+}
+.glass-panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 24px; height: 2px;
+    background: var(--accent);
+    opacity: 0.4;
+    border-radius: 0 0 2px 0;
+    pointer-events: none;
 }
 
 .glass-float {
-    background: var(--bg-raised);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-float);
+    border: 1px solid var(--border-mid);
     position: relative;
     z-index: 1;
 }
 
 .glass-highlight {
-    background: var(--bg-card);
-    border: 1px solid var(--border-raised);
+    background: var(--solid-surface-hi);
+    border: 1px solid var(--border-bright);
     position: relative;
     z-index: 1;
 }
@@ -201,7 +223,7 @@ body::before {
    BUTTONS
    ================================================================ */
 .btn-primary {
-    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000));
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
     color: white;
     border: none;
     padding: 11px 22px;
@@ -213,29 +235,24 @@ body::before {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-                box-shadow 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
     overflow: hidden;
     letter-spacing: 0.01em;
-    /* Inset highlight — simulates solid material */
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 14px var(--accent-glow);
 }
 
 .btn-primary::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 55%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 60%);
     opacity: 0;
     transition: opacity 0.2s;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15),
-                0 8px 28px var(--accent-glow),
-                0 0 0 1px var(--accent-border);
+    box-shadow: 0 8px 24px var(--accent-glow), 0 0 0 1px var(--accent-border);
 }
 .btn-primary:hover::before { opacity: 1; }
 .btn-primary:active { transform: translateY(0); }
@@ -243,7 +260,7 @@ body::before {
 .btn-ghost {
     background: transparent;
     color: var(--text-med);
-    border: 1px solid var(--border-base);
+    border: 1px solid var(--border-subtle);
     padding: 9px 16px;
     border-radius: var(--radius-sm);
     font-size: 0.88rem;
@@ -252,16 +269,16 @@ body::before {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: background 0.18s, color 0.18s, border-color 0.18s;
+    transition: all 0.18s;
 }
 .btn-ghost:hover {
-    background: var(--bg-raised);
+    background: var(--solid-surface-float);
     color: var(--text-high);
-    border-color: var(--border-raised);
+    border-color: var(--border-mid);
 }
 
 /* ================================================================
-   NAVBAR SUPERIOR — Solid, strong identity
+   NAVBAR SUPERIOR
    ================================================================ */
 .navbar {
     position: fixed; top: 0; left: 0; width: 100%;
@@ -269,20 +286,19 @@ body::before {
     display: flex; justify-content: space-between; align-items: center;
     padding: 0 18px;
     z-index: 1000;
-    background: var(--bg-surface);
-    /* No backdrop-filter — solid bar instead */
-    border-bottom: 1px solid var(--border-base);
-    box-shadow: 0 1px 0 var(--border-subtle), 0 4px 20px rgba(0,0,0,0.4);
+    /* Solid 3.0: no backdrop-filter, deep solid panel with hard-edge border */
+    background: #0d0e15;
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.6);
 }
 
-/* Accent gradient underline — the signature nav flourish */
 .navbar::after {
     content: '';
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, var(--accent) 35%, var(--accent-dim) 65%, transparent 100%);
-    opacity: 0.7;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+    opacity: 0.6;
 }
 
 .nav-brand {
@@ -298,7 +314,7 @@ body::before {
 .nav-brand span {
     color: var(--accent);
     display: inline;
-    text-shadow: 0 0 24px var(--accent-glow);
+    text-shadow: 0 0 20px var(--accent-glow);
 }
 
 .nav-links { display: none; gap: 28px; }
@@ -306,7 +322,7 @@ body::before {
     color: var(--text-low);
     font-weight: 500;
     font-size: 0.9rem;
-    transition: color 0.2s;
+    transition: 0.2s;
     position: relative;
 }
 .nav-link:hover, .nav-link.active { color: var(--text-high); }
@@ -321,9 +337,9 @@ body::before {
 }
 .nav-user { display: flex; align-items: center; gap: 12px; }
 
-/* ── Coin Badge — solid with accent border ── */
+/* ── Coin Badge — 10% Glass exception: subtle translucent crystal on solid metal ── */
 .coin-badge {
-    background: var(--bg-elevated);
+    background: rgba(20, 22, 32, 0.85);
     border: 1px solid var(--accent-border);
     padding: 6px 13px;
     border-radius: 20px;
@@ -334,17 +350,21 @@ body::before {
     display: flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 0 14px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: 0 0 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+    /* v9.2: oculto hasta que GameCenter sincroniza el saldo formateado */
     opacity: 0;
     transition: opacity 150ms ease;
 }
-.coin-badge--visible { opacity: 1; }
+/* Clase añadida por app.js tras la sincronización inicial */
+.coin-badge--visible {
+    opacity: 1;
+}
 
-/* ── Avatar ── */
+/* ── Avatar — Power Ring (Arcade Solid 3.0) ── */
 .avatar-container { position: relative; cursor: pointer; }
 .avatar {
     width: 38px; height: 38px; border-radius: 50%;
-    background-color: var(--bg-card);
+    background-color: var(--bg-elevated);
     background-size: cover; background-position: center;
     border: 2px solid var(--accent-border);
     transition: border-color 0.2s, transform 0.2s;
@@ -361,7 +381,7 @@ body::before {
     width: 14px; height: 14px;
     display: flex; align-items: center; justify-content: center;
     font-size: 8px; pointer-events: none;
-    box-shadow: 0 2px 8px var(--accent-glow);
+    box-shadow: 0 0 6px var(--accent-glow);
 }
 
 /* ── Moon blessing badge ── */
@@ -376,28 +396,28 @@ body::before {
 }
 
 /* ================================================================
-   BOTTOM NAV (mobile) — Solid, crisp
+   BOTTOM NAV (mobile)
    ================================================================ */
 .bottom-nav {
     display: flex;
     position: fixed; bottom: 0; left: 0; width: 100%;
     height: var(--bottom-nav-height);
-    background: var(--bg-surface);
-    border-top: 1px solid var(--border-base);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    /* Solid 3.0: deepest surface layer, no blur */
+    background: #050508;
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.04), 0 -4px 20px rgba(0,0,0,0.7);
     z-index: 1000;
     justify-content: space-around; align-items: center;
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Accent top line */
 .bottom-nav::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, var(--accent-dim) 50%, transparent 100%);
-    opacity: 0.6;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+    opacity: 0.5;
 }
 
 .b-nav-item {
@@ -407,15 +427,15 @@ body::before {
     font-weight: 600;
     gap: 4px;
     flex: 1; height: 100%;
-    transition: color 0.2s;
+    transition: 0.2s;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 .b-nav-item.active { color: var(--accent); }
-.b-nav-item i { transition: transform 0.2s; }
+.b-nav-item i { transition: 0.2s; }
 .b-nav-item.active i {
     transform: translateY(-2px);
-    filter: drop-shadow(0 0 5px var(--accent));
+    filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
 /* ================================================================
@@ -451,13 +471,10 @@ body::before {
 
 /* ================================================================
    PLAYER HUD — Dashboard Header
-   Solid card with rich depth via shadow + accent accent bar
    ================================================================ */
 .player-hud {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
-    /* Accent tinted top border for personality */
-    border-top: 1px solid var(--accent-border);
+    background: var(--solid-surface-float);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
     padding: 18px;
     margin-bottom: 24px;
@@ -466,31 +483,35 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: var(--shadow-md), 0 0 0 1px rgba(155,89,255,0.06);
+    box-shadow: 0 2px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.5);
+    /*
+     * v9.3: oculto durante el setup síncrono.
+     */
     opacity: 0;
     transition: opacity 150ms ease;
 }
-.player-hud.is-ready { opacity: 1; }
+/* Clase añadida por revealUI() en app.js tras el init síncrono completo */
+.player-hud.is-ready {
+    opacity: 1;
+}
 
-/* Ambient corner glow — solid compatible, no filter cost */
+/* Tech corner accent lines */
 .player-hud::before {
     content: '';
     position: absolute;
-    top: -60px; right: -60px;
-    width: 240px; height: 240px;
-    background: radial-gradient(circle at center, var(--accent-soft) 0%, transparent 65%);
+    top: 0; left: 0;
+    width: 48px; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    border-radius: 0 0 2px 0;
     pointer-events: none;
 }
-
-/* Subtle grid texture — circuit-board aesthetic */
 .player-hud::after {
     content: '';
     position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 28px 28px;
+    top: 0; left: 0;
+    width: 2px; height: 48px;
+    background: linear-gradient(180deg, var(--accent), transparent);
+    border-radius: 0 0 2px 0;
     pointer-events: none;
 }
 
@@ -498,72 +519,73 @@ body::before {
     display: flex;
     align-items: center;
     gap: 14px;
-    position: relative;
-    z-index: 1;
 }
 
 .hud-avatar-wrap {
     position: relative;
     flex-shrink: 0;
+    /* v9.3: oculto hasta que app.js haya aplicado el avatar real (o placeholder).
+       Evita el destello del avatar por defecto antes de que JS corrija la imagen. */
     opacity: 0;
     transition: opacity 100ms ease;
 }
-.hud-avatar-wrap.is-ready { opacity: 1; }
+/* Clase añadida por revealUI() en app.js tras el init síncrono */
+.hud-avatar-wrap.is-ready {
+    opacity: 1;
+}
 
 .hud-avatar {
     width: 56px; height: 56px;
     border-radius: 50%;
     border: 2px solid var(--accent-border);
     background-size: cover; background-position: center;
-    background-color: var(--bg-card);
-    /* Layered shadow: color glow + depth shadow */
-    box-shadow: 0 0 0 3px rgba(155,89,255,0.08),
-                0 0 18px var(--accent-glow),
-                0 4px 12px rgba(0,0,0,0.5);
+    background-color: var(--bg-elevated);
+    box-shadow: 0 0 20px var(--accent-glow);
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     color: var(--text-low);
-    transition: transform 0.25s, border-color 0.25s;
+    transition: 0.25s;
 }
-.hud-avatar:hover { transform: scale(1.06); border-color: var(--accent); }
+.hud-avatar:hover { transform: scale(1.05); border-color: var(--accent); }
 
-/* ── Enhanced Avatar Ring — dual layer animation ── */
+/* ── HUD Avatar — Power Ring (Arcade Solid 3.0)
+   Uses conic-gradient on a pseudo-element layer for a GPU-composited
+   energy ring. Hover triggers speed-up + stronger glow.
+   transform: rotate() runs on the GPU compositor thread — zero repaints.
+   ── */
 .hud-avatar-ring {
     position: absolute;
     inset: -5px;
     border-radius: 50%;
-    /* Conic gradient: full color wheel sweep */
     background: conic-gradient(
         from 0deg,
-        var(--accent),
-        transparent 40%,
-        var(--accent-dim) 70%,
-        transparent 100%
+        var(--accent) 0%,
+        var(--accent-dim) 30%,
+        transparent 50%,
+        transparent 70%,
+        var(--accent-dim) 85%,
+        var(--accent) 100%
     );
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), white calc(100% - 2.5px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), white calc(100% - 2.5px));
-    animation: ringRotate 3.5s linear infinite;
-    opacity: 0.85;
+    -webkit-mask:
+        radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+    mask:
+        radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+    animation: powerRingRotate 3s linear infinite;
+    opacity: 0.75;
+    transition: opacity 0.3s, animation-duration 0.3s;
+    /* GPU layer promotion */
     will-change: transform;
 }
-
-/* Inner glow ring — pulses independently */
-.hud-avatar-ring::after {
-    content: '';
-    position: absolute;
-    inset: 4px;
-    border-radius: 50%;
-    border: 1px solid var(--accent-border);
-    animation: ringPulse 2.5s ease-in-out infinite;
-    opacity: 0;
+/* Hover: ring accelerates + glows brighter */
+.hud-avatar-wrap:hover .hud-avatar-ring,
+.hud-avatar-wrap:focus-within .hud-avatar-ring {
+    animation-duration: 1s;
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--accent));
 }
-
-@keyframes ringRotate {
-    to { transform: rotate(360deg); }
-}
-@keyframes ringPulse {
-    0%, 100% { opacity: 0; transform: scale(0.92); }
-    50% { opacity: 0.6; transform: scale(1); }
+@keyframes powerRingRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
 .hud-info { flex: 1; min-width: 0; }
@@ -582,20 +604,26 @@ body::before {
     font-weight: 800;
     color: var(--text-high);
     letter-spacing: -0.2px;
+    /* v9.4: mínimo para que el contenedor no colapses cuando el nickname
+       todavía no está escrito (durante el init síncrono antes de revealUI) */
     min-height: 1.3em;
 }
+
+/* Fila que agrupa el nombre y el botón de edición */
 .hud-name-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 1.3em;
+    min-height: 1.3em;   /* mismo min-height que .hud-name para estabilidad de layout */
 }
+
+/* Botón lápiz de edición de identidad */
 .btn-edit-identity {
     flex-shrink: 0;
     width: 22px; height: 22px;
     border-radius: 50%;
-    border: 1px solid var(--border-base);
-    background: var(--bg-raised);
+    border: 1px solid var(--glass-float-border);
+    background: var(--glass-base-bg);
     color: var(--text-low);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
@@ -609,7 +637,6 @@ body::before {
     background: var(--accent-soft);
     transform: scale(1.12);
 }
-
 .hud-status {
     font-size: 0.72rem;
     color: var(--text-low);
@@ -627,20 +654,17 @@ body::before {
 }
 @keyframes blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+    50% { opacity: 0.4; }
 }
 
-/* ── HUD Balance Row ── */
 .hud-balance-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    position: relative;
-    z-index: 1;
 }
 
 .hud-balance {
-    background: var(--bg-raised);
+    background: var(--solid-surface-deep);
     border: 1px solid var(--accent-border);
     border-radius: var(--radius-md);
     padding: 12px 16px;
@@ -650,9 +674,7 @@ body::before {
     gap: 2px;
     position: relative;
     overflow: hidden;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
-/* Bold accent left stripe */
 .hud-balance::before {
     content: '';
     position: absolute;
@@ -661,15 +683,6 @@ body::before {
     background: linear-gradient(180deg, var(--accent), var(--accent-dim));
     border-radius: 3px 0 0 3px;
 }
-/* Inner shimmer — static, no animation cost */
-.hud-balance::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(155,89,255,0.06) 0%, transparent 50%);
-    pointer-events: none;
-}
-
 .hud-balance-label {
     font-size: 0.62rem;
     font-weight: 600;
@@ -687,17 +700,17 @@ body::before {
     display: flex;
     align-items: center;
     gap: 6px;
-    text-shadow: 0 0 24px var(--gold-glow);
+    text-shadow: 0 0 20px var(--gold-glow);
 }
 
-/* ── Daily Button — enhanced shine ── */
 .hud-daily-btn {
-    background: linear-gradient(160deg, #fbbf24 0%, #f59e0b 60%, #d97706 100%);
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
     color: #120900;
     border: none;
     border-radius: var(--radius-md);
+    /* Dimensiones fijas para evitar deformación cuando cambia el texto */
     width: 72px;
-    flex: 0 0 72px;
+    flex: 0 0 72px;      /* no crece ni se encoge */
     min-height: 64px;
     height: 100%;
     font-family: var(--font-display);
@@ -709,46 +722,31 @@ body::before {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-                box-shadow 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    box-shadow: 0 4px 16px rgba(251,191,36,0.35),
-                inset 0 1px 0 rgba(255,255,255,0.35),
-                inset 0 -2px 0 rgba(0,0,0,0.15);
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
     position: relative;
-    overflow: hidden;
+    overflow: hidden;   /* recorta texto que pueda desbordar */
 }
-/* Animated shimmer sweep on daily button */
 .hud-daily-btn::before {
     content: '';
     position: absolute;
-    top: 0; left: -80%;
-    width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
-    animation: dailyShimmer 3s ease-in-out infinite;
-    will-change: transform;
-}
-@keyframes dailyShimmer {
-    0% { left: -80%; }
-    40%, 100% { left: 160%; }
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 .hud-daily-btn:hover:not(:disabled) {
-    transform: translateY(-3px) scale(1.04);
-    box-shadow: 0 8px 28px rgba(251,191,36,0.55),
-                inset 0 1px 0 rgba(255,255,255,0.4),
-                inset 0 -2px 0 rgba(0,0,0,0.15);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 28px rgba(251, 191, 36, 0.5);
 }
-.hud-daily-btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
-}
+.hud-daily-btn:hover::before { opacity: 1; }
 .hud-daily-btn:disabled {
-    opacity: 0.45;
+    opacity: 0.5;
     cursor: not-allowed;
     transform: none;
-    animation: none;
 }
-.hud-daily-btn:disabled::before { animation: none; }
 .hud-daily-reward {
     font-size: 1.05rem;
     font-weight: 900;
@@ -768,14 +766,12 @@ body::before {
     max-width: 64px;
 }
 
-/* ── Streak bar ── */
+/* Streak bar */
 .hud-streak {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
-    position: relative;
-    z-index: 1;
 }
 .streak-label {
     font-size: 0.68rem;
@@ -785,13 +781,17 @@ body::before {
     letter-spacing: 0.07em;
     flex-shrink: 0;
 }
-.streak-days { display: flex; gap: 4px; flex: 1; }
+.streak-days {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
 .streak-day {
     flex: 1;
     height: 6px;
     border-radius: 3px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-deep);
+    border: 1px solid var(--border-subtle);
     transition: all 0.3s;
 }
 .streak-day.active {
@@ -800,12 +800,11 @@ body::before {
     box-shadow: 0 0 8px var(--accent-glow);
 }
 .streak-day.today {
-    animation: streakPulse 1.8s ease-in-out infinite;
-    will-change: box-shadow;
+    animation: streakPulse 1.5s ease-in-out infinite;
 }
 @keyframes streakPulse {
-    0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
-    50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 4px var(--accent); }
+    0%, 100% { box-shadow: 0 0 6px var(--accent-glow); }
+    50% { box-shadow: 0 0 14px var(--accent-glow); }
 }
 .streak-count {
     font-family: var(--font-display);
@@ -816,17 +815,28 @@ body::before {
 }
 
 /* Countdown */
-.hud-countdown { font-size: 0.7rem; color: var(--text-low); text-align: center; }
-#countdown-display { font-family: var(--font-mono); font-weight: 600; color: var(--text-med); }
+.hud-countdown {
+    font-size: 0.7rem;
+    color: var(--text-low);
+    text-align: center;
+}
+#countdown-display {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-med);
+}
 
 /* Daily msg */
 #daily-msg.daily-msg {
-    font-size: 0.76rem; font-weight: 600;
-    min-height: 1rem; transition: opacity 0.4s; opacity: 0;
+    font-size: 0.76rem;
+    font-weight: 600;
+    min-height: 1rem;
+    transition: opacity 0.4s;
+    opacity: 0;
 }
 
 /* ================================================================
-   GAME CARDS — Solid, clear depth with accent hover accent
+   GAME CARDS — Mobile: 1 col, Desktop: auto-fill
    ================================================================ */
 .games-grid {
     display: grid;
@@ -835,40 +845,21 @@ body::before {
 }
 
 .game-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: #141620;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-                box-shadow 0.3s ease,
-                border-color 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, border-color 0.3s;
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-sm);
 }
+/* Solid 3.0: hover brightens border with intense glow, no bg change */
 .game-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.6),
-                0 0 0 1px var(--accent-border),
-                0 0 24px rgba(155,89,255,0.12);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 15px var(--accent-glow);
     border-color: var(--accent-border);
 }
-
-/* Left accent stripe appears on hover */
-.game-card::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--accent);
-    transform: scaleY(0);
-    transform-origin: center;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 2;
-    border-radius: 3px 0 0 3px;
-}
-.game-card:hover::before { transform: scaleY(1); }
 
 .card-cover {
     height: 150px;
@@ -878,14 +869,15 @@ body::before {
     position: relative;
     overflow: hidden;
 }
+/* Gradient overlay on cover */
 .card-cover::after {
     content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(
         to bottom,
-        transparent 30%,
-        rgba(17, 19, 32, 0.9) 100%
+        transparent 40%,
+        rgba(22, 25, 36, 0.85) 100%
     );
 }
 
@@ -900,23 +892,18 @@ body::before {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: white;
+    /* Solid 3.0: no backdrop-filter */
     z-index: 2;
-    /* Solid badges — no backdrop-filter */
 }
-.badge-new {
-    background: var(--accent);
-    box-shadow: 0 2px 10px var(--accent-glow);
-}
-.badge-hot {
-    background: var(--error);
-    box-shadow: 0 2px 10px rgba(255,66,102,0.45);
-}
+.badge-new { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+.badge-hot { background: var(--error); box-shadow: 0 0 10px rgba(255,66,102,0.4); }
 
+/* Reward indicator on cover */
 .card-reward {
     position: absolute;
     bottom: 10px; right: 10px;
-    background: rgba(0,0,0,0.72);
-    border: 1px solid rgba(251,191,36,0.45);
+    background: rgba(0,0,0,0.8);
+    border: 1px solid rgba(251,191,36,0.4);
     border-radius: var(--radius-sm);
     padding: 3px 8px;
     font-family: var(--font-display);
@@ -926,12 +913,15 @@ body::before {
     display: flex;
     align-items: center;
     gap: 4px;
+    /* Solid 3.0: no backdrop-filter */
     z-index: 2;
 }
 
 .card-info {
-    padding: 14px; flex: 1;
-    display: flex; flex-direction: column;
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 .card-title {
     font-family: var(--font-display);
@@ -966,24 +956,23 @@ body::before {
 }
 
 .shop-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: #141620;
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s;
     position: relative;
     width: 100%;
-    box-shadow: var(--shadow-sm);
 }
+/* Solid 3.0: border illumination on hover, no bg change */
 .shop-card:hover {
-    background: var(--bg-raised);
     border-color: var(--accent-border);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px var(--accent-border);
+    box-shadow: 0 0 15px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.4);
 }
 
 .shop-card .card-name {
@@ -1003,7 +992,7 @@ body::before {
     margin-bottom: 8px;
     transition: transform 0.25s;
 }
-.shop-card:hover .shop-img { transform: scale(1.03); }
+.shop-card:hover .shop-img { transform: scale(1.02); }
 
 /* ================================================================
    SHAKE ANIMATION
@@ -1024,27 +1013,28 @@ body::before {
    ================================================================ */
 .wishlist-btn {
     position: absolute; top: 8px; left: 8px; z-index: 10;
-    background: rgba(7,7,13,0.82);
-    border: 1px solid var(--border-base);
+    background: rgba(7,7,13,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 50%;
     width: 28px; height: 28px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     color: var(--text-low);
-    transition: transform 0.18s, color 0.18s, background 0.18s, border-color 0.18s;
-    /* No backdrop-filter — solid dark bg instead */
+    transition: transform 0.18s, color 0.18s, background 0.18s;
+    /* Solid 3.0: no backdrop-filter */
 }
-.wishlist-btn:hover { transform: scale(1.2); color: #ff4f7a; border-color: rgba(255,79,122,0.4); }
-.wishlist-btn--active { color: #ff4f7a; background: rgba(255,79,122,0.18); border-color: rgba(255,79,122,0.4); }
+.wishlist-btn:hover { transform: scale(1.2); color: #ff4f7a; }
+.wishlist-btn--active { color: #ff4f7a; background: rgba(255,79,122,0.15); }
 .wishlist-btn--active svg path,
 .wishlist-btn--active svg circle { fill: currentColor !important; }
 
+/* Wishlist cost banner */
 .wishlist-cost-banner {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 14px;
     border-radius: var(--radius-md);
-    background: rgba(255,79,122,0.07);
-    border: 1px solid rgba(255,79,122,0.22);
+    background: rgba(255,79,122,0.06);
+    border: 1px solid rgba(255,79,122,0.2);
     font-size: 0.8rem;
     color: var(--text-med);
     margin-bottom: 12px;
@@ -1066,8 +1056,8 @@ body::before {
 .shop-tabs::-webkit-scrollbar { display: none; }
 
 .shop-tab {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     color: var(--text-low);
     padding: 8px 12px;
     border-radius: var(--radius-sm);
@@ -1076,15 +1066,15 @@ body::before {
     font-size: 0.78rem;
     font-weight: 600;
     display: flex; align-items: center; gap: 5px;
-    transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s;
+    transition: all 0.18s;
     white-space: nowrap;
 }
-.shop-tab:hover { border-color: var(--accent-border); color: var(--text-high); background: var(--bg-raised); }
+.shop-tab:hover { border-color: var(--accent-border); color: var(--text-high); }
 .shop-tab.active {
     background: var(--accent-soft);
     border-color: var(--accent-border);
     color: var(--accent);
-    box-shadow: 0 0 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: 0 0 12px var(--accent-glow);
 }
 
 /* ================================================================
@@ -1098,8 +1088,8 @@ body::before {
 }
 .search-input {
     width: 100%;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     color: var(--text-high);
     font-family: var(--font-body);
@@ -1115,12 +1105,12 @@ body::before {
 .search-input::placeholder { color: var(--text-low); }
 .search-clear {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    background: var(--bg-raised); border: none; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: none; border-radius: 50%;
     width: 20px; height: 20px;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--text-low); transition: background 0.18s, color 0.18s;
+    cursor: pointer; color: var(--text-low); transition: 0.18s;
 }
-.search-clear:hover { background: var(--bg-card); color: white; }
+.search-clear:hover { background: rgba(255,255,255,0.16); color: white; }
 .search-count { font-size: 0.78rem; color: var(--text-mute); margin-bottom: 4px; font-style: italic; }
 
 /* Filter pills */
@@ -1139,18 +1129,18 @@ body::before {
 .pill {
     padding: 5px 12px;
     border-radius: 20px;
-    border: 1px solid var(--border-base);
-    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    background: var(--solid-surface-base);
     color: var(--text-low);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    transition: 0.18s;
     display: flex; align-items: center; gap: 4px;
     font-family: var(--font-body);
     white-space: nowrap;
 }
-.pill:hover { border-color: var(--accent-border); color: var(--text-high); background: var(--bg-raised); }
+.pill:hover { border-color: var(--accent-border); color: var(--text-high); }
 .pill.active {
     background: var(--accent-soft);
     border-color: var(--accent-border);
@@ -1173,8 +1163,7 @@ body::before {
 .tab-panel { min-height: 280px; }
 
 /* ================================================================
-   SALE BANNER — Enhanced Ticket Design
-   Solid construction with powerful sweep animation
+   SALE BANNER — Flash Offer Ticket Design
    ================================================================ */
 .sale-banner {
     margin-bottom: 16px;
@@ -1184,15 +1173,8 @@ body::before {
 }
 
 .sale-banner__ticket {
-    /* Rich dark-warm solid background */
-    background: linear-gradient(135deg, #1c0e00, #261200, #1a0a00);
-    border: 1px solid rgba(251,191,36,0.55);
-    /* Stronger bottom shadow for ticket depth */
-    box-shadow:
-        inset 0 1px 0 rgba(251,191,36,0.2),
-        inset 0 -1px 0 rgba(0,0,0,0.3),
-        0 6px 24px rgba(0,0,0,0.5),
-        0 0 0 1px rgba(251,191,36,0.08);
+    background: linear-gradient(135deg, #1a0a00, #2a1000);
+    border: 1px solid rgba(251,191,36,0.5);
     border-radius: var(--radius-md);
     padding: 14px 18px;
     display: flex;
@@ -1202,66 +1184,72 @@ body::before {
     overflow: hidden;
 }
 
-/* Diagonal stripe texture */
+/* ── Sale Banner Ticket — Laser Scan Effect (Arcade Solid 3.0)
+   The golden shimmer sweep is replaced by a precise laser scan:
+   a narrow oblique line of intense light that travels left-to-right
+   every 3.5 s. Uses transform: translate3d() on ::after — GPU only,
+   zero repaints. The ticket itself is fully solid with a dot texture.
+   ── */
+
+/* Dot-pattern texture overlay — replaces repeating diagonal gradient */
 .sale-banner__ticket::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 12px,
-        rgba(251,191,36,0.025) 12px,
-        rgba(251,191,36,0.025) 24px
-    );
+    background-image: radial-gradient(circle, rgba(251,191,36,0.08) 1px, transparent 1px);
+    background-size: 14px 14px;
     pointer-events: none;
+    border-radius: inherit;
 }
 
-/* Primary shimmer sweep — left to right */
+/* Laser scan line */
 .sale-banner__ticket::after {
     content: '';
     position: absolute;
-    top: 0; left: -100%;
-    width: 55%;
-    height: 100%;
-    background: linear-gradient(90deg,
+    top: -10%;
+    left: -30%;
+    width: 15%;
+    height: 120%;
+    background: linear-gradient(
+        105deg,
         transparent 0%,
-        rgba(251,191,36,0.08) 40%,
-        rgba(255,255,220,0.18) 50%,
-        rgba(251,191,36,0.08) 60%,
+        rgba(251,191,36,0.06) 30%,
+        rgba(251,191,36,0.35) 50%,
+        rgba(251,191,36,0.06) 70%,
         transparent 100%
     );
-    animation: ticketSweep 2.8s ease-in-out infinite;
+    animation: laserScan 3.5s ease-in-out infinite;
+    /* GPU compositor — no repaints */
     will-change: transform;
 }
-@keyframes ticketSweep {
-    0% { left: -100%; }
-    100% { left: 200%; }
+@keyframes laserScan {
+    0%   { transform: translate3d(0, 0, 0);     opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translate3d(800%, 0, 0);  opacity: 0; }
 }
 
-/* Zigzag notches — punched ticket effect */
+/* Zigzag border notches */
 .sale-banner__notch-left,
 .sale-banner__notch-right {
     position: absolute;
     top: 50%; transform: translateY(-50%);
-    width: 16px; height: 16px;
+    width: 14px; height: 14px;
     border-radius: 50%;
     background: var(--bg-main);
     z-index: 2;
-    box-shadow: inset 0 0 0 1px rgba(251,191,36,0.3);
 }
-.sale-banner__notch-left { left: -8px; }
-.sale-banner__notch-right { right: -8px; }
+.sale-banner__notch-left { left: -7px; }
+.sale-banner__notch-right { right: -7px; }
 
 .sale-banner__icon {
     width: 40px; height: 40px;
     border-radius: 10px;
-    background: linear-gradient(160deg, #fbbf24, #f59e0b, #d97706);
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     color: #120900;
-    box-shadow: 0 4px 14px rgba(251,191,36,0.45),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+    box-shadow: 0 4px 14px rgba(251,191,36,0.4);
 }
 
 .sale-banner__content { flex: 1; min-width: 0; }
@@ -1273,7 +1261,7 @@ body::before {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 2px;
-    text-shadow: 0 0 14px var(--gold-glow);
+    text-shadow: 0 0 10px var(--gold-glow);
 }
 .sale-banner__desc {
     font-size: 0.75rem;
@@ -1281,7 +1269,7 @@ body::before {
 }
 
 .sale-banner__badge {
-    background: linear-gradient(160deg, #fbbf24, #f59e0b);
+    background: var(--gold);
     color: #120900;
     font-family: var(--font-display);
     font-size: 0.9rem;
@@ -1290,10 +1278,9 @@ body::before {
     border-radius: var(--radius-xs);
     flex-shrink: 0;
     text-shadow: none;
-    box-shadow: 0 2px 8px rgba(251,191,36,0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
 }
 
+/* Legacy compatibility */
 .sale-banner.hidden { display: none !important; }
 
 /* ================================================================
@@ -1321,13 +1308,13 @@ body::before {
     width: 40px; height: 40px; border-radius: 10px;
     background: linear-gradient(135deg, var(--accent), var(--accent-dim));
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    box-shadow: 0 4px 14px var(--accent-glow);
+    box-shadow: 0 4px 12px var(--accent-glow);
 }
 .promo-input-group { display: flex; flex-direction: column; gap: 8px; }
 .promo-input {
     width: 100%;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     color: var(--text-high);
     font-family: var(--font-mono);
@@ -1349,13 +1336,13 @@ body::before {
    ================================================================ */
 .owned-badge {
     position: absolute; top: 8px; left: 8px;
-    background: rgba(34,208,122,0.18);
-    border: 1px solid rgba(34,208,122,0.38);
+    background: rgba(34,208,122,0.2);
+    border: 1px solid rgba(34,208,122,0.35);
     color: var(--success);
     font-size: 0.6rem; font-weight: 700;
     padding: 2px 6px; border-radius: 20px;
     display: flex; align-items: center; gap: 3px;
-    /* No backdrop-filter */
+    /* Solid 3.0: no backdrop-filter */
 }
 .sale-card-badge {
     position: absolute; top: 8px; right: 8px;
@@ -1365,7 +1352,6 @@ body::before {
     padding: 2px 6px; border-radius: 20px;
     text-transform: uppercase; letter-spacing: 0.05em;
     display: flex; align-items: center; gap: 2px;
-    box-shadow: 0 2px 6px rgba(251,191,36,0.35);
 }
 .shop-price {
     display: flex; align-items: center; justify-content: center;
@@ -1383,8 +1369,8 @@ body::before {
 
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 4px; }
 .card-tag {
-    background: var(--bg-raised);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     color: var(--text-low); font-size: 0.58rem; font-weight: 600;
     padding: 2px 5px; border-radius: 8px;
 }
@@ -1393,11 +1379,10 @@ body::before {
     background: linear-gradient(135deg, #22d07a, #16a85e) !important;
     color: #041a0a !important; font-weight: 800 !important;
     letter-spacing: 0.01em;
-    box-shadow: 0 4px 14px var(--success-glow), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 .vault-btn:hover {
     background: linear-gradient(135deg, #40e090, #22d07a) !important;
-    box-shadow: 0 6px 20px var(--success-glow), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+    box-shadow: 0 0 16px var(--success-glow) !important;
 }
 
 /* ================================================================
@@ -1406,26 +1391,25 @@ body::before {
 .sync-card { padding: 1.25rem; border-radius: var(--radius-lg); }
 
 .memory-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: linear-gradient(135deg, var(--bg-elevated), #1a1d2e);
+    border: 1px solid var(--glass-float-border);
     border-radius: var(--radius-lg);
     padding: 1.25rem;
     position: relative;
     overflow: hidden;
     margin-bottom: 1rem;
-    box-shadow: var(--shadow-sm);
 }
 
-/* Circuit board grid pattern */
+/* Circuit board pattern */
 .memory-card::before {
     content: '';
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(var(--border-subtle) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+        linear-gradient(var(--glass-base-border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--glass-base-border) 1px, transparent 1px);
     background-size: 24px 24px;
-    opacity: 0.5;
+    opacity: 0.3;
     pointer-events: none;
 }
 
@@ -1433,6 +1417,7 @@ body::before {
     display: flex; align-items: center; gap: 10px;
     margin-bottom: 1rem; position: relative; z-index: 1;
 }
+
 .memory-card__chip {
     width: 36px; height: 36px;
     border-radius: 8px;
@@ -1441,23 +1426,26 @@ body::before {
 }
 .memory-card__chip--export {
     background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-    box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.15);
+    box-shadow: 0 4px 14px var(--accent-glow);
 }
 .memory-card__chip--import {
     background: linear-gradient(135deg, #22d07a, #16a85e);
-    box-shadow: 0 4px 14px var(--success-glow), inset 0 1px 0 rgba(255,255,255,0.15);
+    box-shadow: 0 4px 14px var(--success-glow);
 }
+
 .memory-card__title {
     font-family: var(--font-display);
     font-size: 0.9rem; font-weight: 800;
     color: var(--text-high); margin: 0;
 }
-.memory-card__sub { font-size: 0.72rem; color: var(--text-low); margin: 0; }
+.memory-card__sub {
+    font-size: 0.72rem; color: var(--text-low); margin: 0;
+}
 
 .sync-textarea {
     width: 100%;
-    background: var(--bg-main);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-deep);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
     color: var(--text-low);
     font-family: var(--font-mono);
@@ -1479,7 +1467,7 @@ body::before {
     margin: 10px 0; font-size: 0.72rem; color: var(--text-mute);
 }
 .sync-separator::before, .sync-separator::after {
-    content: ''; flex: 1; height: 1px; background: var(--border-base);
+    content: ''; flex: 1; height: 1px; background: var(--glass-base-border);
 }
 
 .file-label { cursor: pointer; width: 100%; justify-content: center; padding: 9px; font-size: 0.84rem; }
@@ -1498,16 +1486,14 @@ body::before {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 12px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-base);
-    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    background: var(--solid-surface-base);
     color: var(--text-low);
     font-family: var(--font-body);
     font-size: 0.82rem; font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, color 0.18s;
-    position: relative;
+    cursor: pointer; transition: all 0.18s; position: relative;
 }
-.theme-btn:hover { border-color: var(--accent-border); color: var(--text-high); background: var(--bg-raised); }
+.theme-btn:hover { border-color: var(--accent-border); color: var(--text-high); background: var(--solid-surface-float); }
 .theme-btn--active { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text-high); }
 .theme-swatch {
     width: 18px; height: 18px;
@@ -1524,18 +1510,18 @@ body::before {
    ================================================================ */
 .moon-icon-wrap {
     background: linear-gradient(135deg, #7c3aed, #db2777) !important;
-    box-shadow: 0 4px 14px rgba(192, 132, 252, 0.35), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    box-shadow: 0 4px 14px rgba(192, 132, 252, 0.3) !important;
 }
 .moon-btn {
     background: linear-gradient(135deg, #7c3aed, #db2777) !important;
-    box-shadow: 0 4px 16px rgba(192, 132, 252, 0.35), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    box-shadow: 0 4px 16px rgba(192, 132, 252, 0.3) !important;
 }
 .moon-btn:hover {
-    box-shadow: 0 6px 24px rgba(192, 132, 252, 0.55), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    box-shadow: 0 6px 24px rgba(192, 132, 252, 0.5) !important;
     transform: translateY(-2px);
 }
 .eco-badge--moon {
-    background: rgba(192,132,252,0.14);
+    background: rgba(192,132,252,0.12);
     border-color: rgba(192,132,252,0.35);
     color: var(--moon);
 }
@@ -1551,14 +1537,14 @@ body::before {
 .economy-info { display: flex; flex-direction: column; gap: 8px; }
 .economy-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 0; border-bottom: 1px solid var(--border-base);
+    padding: 9px 0; border-bottom: 1px solid var(--glass-base-border);
     font-size: 0.85rem;
 }
 .economy-row:last-child { border-bottom: none; }
 .eco-badge {
     padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--glass-base-bg);
+    border: 1px solid var(--glass-base-border);
     color: var(--text-low);
 }
 .eco-badge--green { background: var(--success-soft); border-color: rgba(34,208,122,0.3); color: var(--success); }
@@ -1571,9 +1557,9 @@ body::before {
 .history-entry {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px; border-radius: var(--radius-sm);
-    background: transparent; transition: background 0.15s;
+    background: rgba(255,255,255,0.015); transition: background 0.15s;
 }
-.history-entry:hover { background: var(--bg-raised); }
+.history-entry:hover { background: rgba(255,255,255,0.04); }
 .history-icon {
     width: 24px; height: 24px; border-radius: 50%;
     font-size: 0.75rem; font-weight: 900;
@@ -1589,8 +1575,8 @@ body::before {
 .history-amount--out { color: var(--error); }
 
 /* ================================================================
-   TOAST — Strategic Glass (10% glassmorphism allowance)
-   Elevated floating element benefits from blur
+   TOAST — 10% Glass exception: legibility over any background.
+   Reduced blur (12px) + solid 97% base layer = performance-safe.
    ================================================================ */
 .toast {
     position: fixed;
@@ -1602,39 +1588,44 @@ body::before {
     z-index: 9999; opacity: 0;
     transition: opacity 0.3s, transform 0.3s;
     max-width: 92vw; text-align: left;
-    /* Glass kept here — toast is elevated, isolated, brief */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: var(--shadow-md);
+    /* 10% glass: minimal blur for text legibility */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(255,255,255,0.04);
     pointer-events: none;
     line-height: 1.5;
 }
 .toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast--success {
-    background: rgba(6, 18, 11, 0.96);
-    border: 1px solid rgba(34,208,122,0.38);
+    background: rgba(10,20,14,0.97);
+    border: 1px solid rgba(34,208,122,0.35);
     color: var(--success);
 }
 .toast--error {
-    background: rgba(18, 6, 6, 0.96);
-    border: 1px solid rgba(255,66,102,0.38);
+    background: rgba(20,10,10,0.97);
+    border: 1px solid rgba(255,66,102,0.35);
     color: var(--error);
 }
 
 /* ================================================================
    FEEDBACK MSG
    ================================================================ */
-.feedback-msg { margin-top: 8px; font-size: 0.8rem; min-height: 1rem; font-weight: 500; transition: opacity 0.4s; }
+.feedback-msg {
+    margin-top: 8px; font-size: 0.8rem; min-height: 1rem;
+    font-weight: 500; transition: opacity 0.4s;
+}
 
 /* ================================================================
-   CUSTOM CONFIRM MODAL — Strategic Glass (10% allowance)
+   CUSTOM CONFIRM MODAL — 10% Glass exception.
+   Max blur: 4px. Solid base layer at 95% opacity ensures readability
+   even on low-end devices where backdrop-filter degrades badly.
    ================================================================ */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 10000;
-    background: rgba(0,0,0,0.78);
-    /* Glass on overlay: user is "stepping outside" the main UI */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.82);
+    /* 10% glass: maximum 4px blur allowed */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
     animation: modalFadeIn 0.18s ease;
@@ -1649,11 +1640,10 @@ body::before {
     border-radius: var(--radius-xl);
     padding: 28px 22px;
     position: relative;
-    /* Solid modal box — glass is only on the overlay behind it */
-    background: var(--bg-card);
-    border: 1px solid var(--border-raised);
+    background: #0e1019;
+    border: 1px solid var(--glass-float-border);
     animation: modalSlideUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px var(--accent-border);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8), 0 0 0 1px var(--accent-border);
 }
 @keyframes modalSlideUp {
     from { transform: translateY(20px) scale(0.96); opacity: 0; }
@@ -1668,12 +1658,12 @@ body::before {
 .modal-body { margin-bottom: 20px; }
 .modal-product-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 0; border-bottom: 1px solid var(--border-base);
+    padding: 9px 0; border-bottom: 1px solid var(--glass-base-border);
     font-size: 0.85rem;
 }
 .modal-product-row:last-child { border-bottom: none; }
 .modal-product-row--total {
-    border-top: 1px solid var(--border-raised) !important;
+    border-top: 1px solid var(--glass-float-border) !important;
     margin-top: 4px; padding-top: 12px !important; border-bottom: none !important;
 }
 .modal-label { color: var(--text-low); }
@@ -1683,8 +1673,8 @@ body::before {
 .modal-value--cashback { color: var(--success); font-family: var(--font-display); font-weight: 800; }
 .modal-value--total { color: var(--text-high); font-size: 1rem; font-family: var(--font-display); font-weight: 900; }
 .modal-warning {
-    background: rgba(255,66,102,0.07);
-    border: 1px solid rgba(255,66,102,0.22);
+    background: rgba(255,66,102,0.06);
+    border: 1px solid rgba(255,66,102,0.2);
     border-radius: var(--radius-md);
     padding: 12px 14px;
     font-size: 0.82rem; color: var(--text-med); line-height: 1.5;
@@ -1695,34 +1685,43 @@ body::before {
 .modal-error { color: var(--error); font-size: 0.8rem; margin-top: 10px; min-height: 1rem; text-align: center; }
 
 /* ================================================================
-   IDENTITY MODAL — v9.4
-   Strategic glass on overlay only
+   IDENTITY MODAL — v9.4 Identity Update
    ================================================================ */
+
+/*
+ * Identity modal: 10% glass exception — max 4px blur + strong
+ * dark overlay to maintain the "first access" immersive feeling
+ * without the GPU cost of heavy blur.
+ */
 .identity-modal-overlay {
-    backdrop-filter: blur(14px) brightness(0.42);
-    -webkit-backdrop-filter: blur(14px) brightness(0.42);
+    backdrop-filter: blur(4px) brightness(0.4);
+    -webkit-backdrop-filter: blur(4px) brightness(0.4);
+    /* Cubre también el .player-hud que está en opacity:0 durante el primer acceso */
     z-index: 10500;
 }
 
 .identity-modal-box {
     max-width: 380px;
+    /* Mobile keyboard: max-height responde al viewport dinámico (dvh).
+       overflow-y permite scroll interno si el teclado encoge la pantalla. */
     max-height: 90dvh;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
-    box-shadow: 0 0 30px var(--accent-glow), 0 24px 80px rgba(0,0,0,0.9);
+    box-shadow: 0 0 30px var(--accent-glow), 0 24px 80px rgba(0,0,0,0.85);
     display: flex;
     flex-direction: column;
     gap: 0;
 }
 .identity-modal-box::-webkit-scrollbar { display: none; }
 
+/* Icono con glow centrado */
 .identity-modal-icon {
     width: 56px; height: 56px;
     border-radius: 50%;
     background: var(--accent-soft);
     border: 1px solid var(--accent-border);
-    box-shadow: 0 0 24px var(--accent-glow);
+    box-shadow: 0 0 20px var(--accent-glow);
     display: flex; align-items: center; justify-content: center;
     color: var(--accent);
     margin: 0 auto 16px;
@@ -1734,6 +1733,7 @@ body::before {
     font-size: 1.1rem;
     margin-bottom: 6px;
 }
+
 .identity-modal-sub {
     text-align: center;
     font-size: 0.78rem;
@@ -1742,6 +1742,7 @@ body::before {
     line-height: 1.5;
 }
 
+/* Label reutilizable para secciones del modal */
 .identity-label {
     display: block;
     font-size: 0.67rem;
@@ -1763,48 +1764,51 @@ body::before {
 .identity-chip {
     padding: 10px 6px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-base);
-    background: var(--bg-elevated);
+    border: 1px solid var(--border-mid);
+    background: var(--solid-surface-base);
     color: var(--text-low);
     font-family: var(--font-display);
     font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     text-align: center;
-    transition: border-color 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
-                color 0.18s,
-                background 0.18s,
-                transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
     line-height: 1.3;
     user-select: none;
 }
-.identity-chip strong { font-size: 1.05em; color: inherit; }
+.identity-chip strong {
+    font-size: 1.05em;
+    color: inherit;
+}
 .identity-chip:hover {
     border-color: var(--accent-border);
     color: var(--text-high);
-    background: var(--bg-raised);
+    background: var(--solid-surface-float);
     transform: translateY(-2px);
 }
 .identity-chip--active {
     border-color: var(--accent-border);
     background: var(--accent-soft);
     color: var(--accent);
-    box-shadow: 0 0 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: 0 0 12px var(--accent-glow);
     transform: translateY(-1px);
 }
-.identity-chip--active strong { color: var(--accent); }
+.identity-chip--active strong {
+    color: var(--accent);
+}
 
 /* ── Input de nickname ── */
 .identity-input-wrap {
     position: relative;
     margin-bottom: 6px;
 }
+
 .identity-input {
     width: 100%;
     padding: 13px 46px 13px 14px;
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-raised);
-    background: var(--bg-elevated);
+    border: 1px solid var(--border-mid);
+    background: var(--solid-surface-deep);
     color: var(--text-high);
     font-family: var(--font-display);
     font-size: 1rem;
@@ -1821,8 +1825,9 @@ body::before {
 }
 .identity-input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft), 0 0 14px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--accent-soft), 0 0 12px var(--accent-glow);
 }
+
 .identity-char-count {
     position: absolute;
     right: 12px;
@@ -1834,6 +1839,7 @@ body::before {
     pointer-events: none;
     line-height: 1;
 }
+
 .identity-input-error {
     font-size: 0.75rem;
     color: var(--error);
@@ -1845,6 +1851,7 @@ body::before {
 }
 .identity-input-error.hidden { display: none !important; }
 
+/* ── Botón de confirmar ── */
 .identity-confirm-btn {
     width: 100%;
     justify-content: center;
@@ -1852,6 +1859,8 @@ body::before {
     padding: 14px;
     font-size: 0.95rem;
     letter-spacing: 0.03em;
+    /* Margen inferior para que no quede pegado al borde cuando el scroll
+       está al final en pantallas pequeñas */
     margin-bottom: 2px;
 }
 
@@ -1862,10 +1871,10 @@ body::before {
     background: linear-gradient(135deg, var(--gold), #f59e0b);
     color: #120900; font-weight: 800; font-size: 0.86rem;
     padding: 10px 18px; border-radius: var(--radius-sm);
-    box-shadow: 0 0 16px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+    box-shadow: 0 0 16px var(--gold-glow);
 }
 .daily-btn:hover:not(:disabled) {
-    box-shadow: 0 0 28px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.3);
+    box-shadow: 0 0 24px var(--gold-glow);
     transform: translateY(-1px);
 }
 .daily-btn:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -1882,7 +1891,12 @@ body::before {
     gap: 6px;
     margin-top: 8px;
 }
-.streak-cal-day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.streak-cal-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
 .streak-cal-label {
     font-size: 0.58rem;
     font-weight: 700;
@@ -1894,8 +1908,8 @@ body::before {
     width: 100%;
     aspect-ratio: 1;
     border-radius: var(--radius-xs);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-deep);
+    border: 1px solid var(--border-subtle);
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-display);
     font-size: 0.62rem;
@@ -1915,23 +1929,28 @@ body::before {
     color: var(--gold);
     box-shadow: 0 0 10px var(--gold-glow);
     animation: calPulse 1.8s ease-in-out infinite;
-    will-change: box-shadow;
 }
 @keyframes calPulse {
-    0%, 100% { box-shadow: 0 0 7px var(--gold-glow); }
-    50% { box-shadow: 0 0 20px var(--gold-glow), 0 0 4px var(--gold); }
+    0%, 100% { box-shadow: 0 0 8px var(--gold-glow); }
+    50% { box-shadow: 0 0 18px var(--gold-glow); }
 }
 
 /* ================================================================
    FAQ
    ================================================================ */
-.faq-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.faq-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
 details.glass-panel {
     padding: 14px 16px;
     border-radius: var(--radius-md);
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.2s;
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
 }
-details.glass-panel[open] { border-color: var(--accent-border); background: var(--bg-raised); }
+details.glass-panel[open] { border-color: var(--accent-border); }
 details summary {
     cursor: pointer; font-weight: 700; font-size: 0.9rem;
     font-family: var(--font-display);
@@ -2017,38 +2036,49 @@ details[open] summary::after { transform: rotate(45deg); }
 
 /* ================================================================
    NARROW SCREEN — @media (max-width: 379px)
+   Oculta el icono del mando en el logo para ganar ~30px en pantallas
+   muy pequeñas (iPhone SE, mini) sin romper el glassmorphism de la navbar.
    ================================================================ */
 @media (max-width: 379px) {
     .nav-brand > i,
-    .nav-brand > svg { display: none; }
+    .nav-brand > svg {
+        display: none;
+    }
 }
 
 /* ================================================================
    UTILITY
    ================================================================ */
 .w-full { width: 100%; }
+
+/* Lucide icon consistent stroke */
 svg { stroke-width: 2; }
 
 /* ================================================================
    EMAIL MODAL — "Enviar por correo"
    ================================================================ */
+
+/* Thumbnail + nombre del item en la cabecera del modal */
 .email-modal-header {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    background: var(--bg-raised);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     margin-bottom: 18px;
 }
+
 .email-modal-thumb {
-    width: 52px; height: 52px;
+    width: 52px;
+    height: 52px;
     border-radius: var(--radius-sm);
     object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid var(--border-raised);
+    border: 1px solid var(--border-mid);
 }
+
 .email-modal-item-name {
     font-family: var(--font-display);
     font-size: 0.88rem;
@@ -2057,12 +2087,17 @@ svg { stroke-width: 2; }
     line-height: 1.2;
     margin-bottom: 3px;
 }
-.email-modal-item-sub { font-size: 0.7rem; color: var(--text-low); }
 
+.email-modal-item-sub {
+    font-size: 0.7rem;
+    color: var(--text-low);
+}
+
+/* Email input field */
 .email-input {
     width: 100%;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     color: var(--text-high);
     font-family: var(--font-body);
@@ -2082,77 +2117,141 @@ svg { stroke-width: 2; }
     box-shadow: 0 0 0 3px rgba(255, 66, 102, 0.1) !important;
 }
 
-.email-input-wrap { position: relative; margin-bottom: 8px; }
-.email-input-icon {
-    position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-low); pointer-events: none; transition: color 0.2s;
+/* Input wrapper with icon */
+.email-input-wrap {
+    position: relative;
+    margin-bottom: 8px;
 }
-.email-input-wrap:focus-within .email-input-icon { color: var(--accent); }
+.email-input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-low);
+    pointer-events: none;
+    transition: color 0.2s;
+}
+.email-input-wrap:focus-within .email-input-icon {
+    color: var(--accent);
+}
 
+/* Inline error message */
 .email-error-msg {
-    font-size: 0.75rem; font-weight: 600; color: var(--error);
-    min-height: 1rem; display: flex; align-items: center; gap: 5px;
-    opacity: 0; transform: translateY(-4px);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--error);
+    min-height: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    transform: translateY(-4px);
     transition: opacity 0.2s, transform 0.2s;
     margin-bottom: 4px;
 }
-.email-error-msg.visible { opacity: 1; transform: translateY(0); }
+.email-error-msg.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
 
+/* "Guardar correo" checkbox row */
 .email-save-row {
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 10px; padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 9px 12px;
     border-radius: var(--radius-sm);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-base);
-    cursor: pointer; user-select: none;
+    background: var(--solid-surface-base);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    user-select: none;
 }
 .email-save-row input[type="checkbox"] {
-    accent-color: var(--accent); width: 15px; height: 15px;
-    flex-shrink: 0; cursor: pointer;
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
 }
-.email-save-row label { font-size: 0.78rem; color: var(--text-med); cursor: pointer; flex: 1; }
+.email-save-row label {
+    font-size: 0.78rem;
+    color: var(--text-med);
+    cursor: pointer;
+    flex: 1;
+}
 
+/* Fallback clipboard section (FR7 — mailto too long) */
 .email-fallback {
-    margin-top: 14px; padding: 12px 14px;
+    margin-top: 14px;
+    padding: 12px 14px;
     border-radius: var(--radius-md);
-    background: rgba(251, 191, 36, 0.07);
+    background: rgba(251, 191, 36, 0.06);
     border: 1px solid rgba(251, 191, 36, 0.25);
     display: none;
 }
 .email-fallback.visible { display: block; }
 .email-fallback-title {
-    font-family: var(--font-display); font-size: 0.8rem; font-weight: 800;
-    color: var(--gold); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
 }
-.email-fallback-desc { font-size: 0.75rem; color: var(--text-low); line-height: 1.5; margin-bottom: 10px; }
+.email-fallback-desc {
+    font-size: 0.75rem;
+    color: var(--text-low);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
 .email-fallback-url {
-    font-family: var(--font-mono); font-size: 0.65rem;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
     color: var(--text-med);
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--border-base);
+    background: var(--solid-surface-deep);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xs);
-    padding: 8px 10px; word-break: break-all; margin-bottom: 10px; display: block;
+    padding: 8px 10px;
+    word-break: break-all;
+    margin-bottom: 10px;
+    display: block;
 }
 
+/* Tip box below the form */
 .email-tip {
-    display: flex; align-items: flex-start; gap: 7px;
-    padding: 9px 12px; border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
     background: var(--accent-soft);
     border: 1px solid var(--accent-border);
-    margin-top: 14px; font-size: 0.72rem; color: var(--text-med); line-height: 1.5;
+    margin-top: 14px;
+    font-size: 0.72rem;
+    color: var(--text-med);
+    line-height: 1.5;
 }
 .email-tip svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
 
+/* "Send email" button in library cards — secondary accent style */
 .btn-mail {
     background: transparent;
     color: var(--accent);
     border: 1px solid var(--accent-border);
-    padding: 7px; border-radius: var(--radius-sm);
-    font-size: 0.78rem; font-family: var(--font-body); font-weight: 700;
+    padding: 7px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-family: var(--font-body);
+    font-weight: 700;
     cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-    transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.18s;
     flex-shrink: 0;
 }
 .btn-mail:hover {
@@ -2162,28 +2261,51 @@ svg { stroke-width: 2; }
 }
 
 /* ================================================================
-   SHOP ERROR STATE — v9.1
+   SHOP ERROR STATE — v9.1 (Network failure fallback)
    ================================================================ */
 .shop-error-state {
     grid-column: 1 / -1;
-    display: flex; flex-direction: column;
-    align-items: center; gap: 12px;
-    padding: 60px 20px; text-align: center; color: var(--text-low);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-low);
 }
 .shop-error-state.hidden { display: none !important; }
+
 .shop-error-title {
-    font-family: var(--font-display); font-size: 1rem; font-weight: 800;
-    color: var(--text-med); margin: 0;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-med);
+    margin: 0;
 }
-.shop-error-desc { font-size: 0.82rem; color: var(--text-low); margin: 0; max-width: 280px; }
+.shop-error-desc {
+    font-size: 0.82rem;
+    color: var(--text-low);
+    margin: 0;
+    max-width: 280px;
+}
 
 /* ================================================================
-   TREASURY GRID — v9.2
+   TREASURY GRID — v9.2 (Mis Tesoros — overflow fix on < 380px)
    ================================================================ */
+/*
+ * #library-container usa .shop-grid .treasury-grid.
+ * Sobreescribimos el grid-template-columns con auto-fit + minmax para que
+ * la cuadrícula se adapte a cualquier ancho sin desbordarse en móvil pequeño.
+ * box-sizing: border-box ya está global desde el reset.
+ */
 .treasury-grid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     justify-content: center;
 }
+
+/* En pantallas muy pequeñas (< 380px) forzamos a 1 columna si 140px no cabe */
 @media (max-width: 320px) {
-    .treasury-grid { grid-template-columns: 1fr; }
+    .treasury-grid {
+        grid-template-columns: 1fr;
+    }
 }
