@@ -719,17 +719,192 @@ Cuando la transición `opacity 0→1` empieza, el scroll ya está en `top: 0`.
 
 ## 2j. Novedades en v10.2 — Preview 2.0 Sistema de Mockup Dinámico
 
+> **v10.2.1 — Hotfix:** Tres desconexiones críticas corregidas tras análisis post-entrega.
+> Ver subsección "Correcciones v10.2.1" al final de esta sección.
+
 ### Resumen
 
 | Área | Cambio |
 |---|---|
-| **shop-logic.js** | `openPreviewModal()` reemplazado con sistema de mockup dinámico. Nuevas funciones: `_buildMockupHTML()`, `updateMockupTime()`, `_closePreviewModal()`. |
+| **shop-logic.js** | `openPreviewModal()` reemplazado con sistema de mockup dinámico. Nuevas funciones: `_buildMockupHTML()`, `updateMockupTime()`, `closePreviewModal()`. Expuestas en `window`. |
 | **index.html** | `#preview-img-wrap` sustituido por `#preview-mockup-stage` + `#mockup-slot`. El `<img>` fue eliminado; el arte vive ahora como CSS `background-image`. |
 | **styles.css** | +130 líneas. Nuevas clases: `.mockup-container`, `.mockup-mobile`, `.mockup-pc`, `.mockup-layer-*`, `.mockup-statusbar`, `.mockup-app-grid`, `.mockup-taskbar` y variantes. |
 
 ---
 
 ### 1. Arquitectura del Mockup ("Sándwich de Capas")
+
+Dentro de `#mockup-slot`, JS inyecta un `div.mockup-container` con tres capas superpuestas via `position: absolute; inset: 0`:
+
+```
+┌─────────────────────────────────────┐  ← mockup-container (border-radius, overflow:hidden)
+│  Layer 3 — UI          z-index: 3   │  Status bar / taskbar / reloj / grid de iconos
+│  Layer 2 — Protección  z-index: 2   │  pointer-events:none · noise SVG overlay
+│  Layer 1 — Arte        z-index: 1   │  background-image (CSS, no <img>)
+└─────────────────────────────────────┘
+```
+
+**¿Por qué `background-image` y no `<img>`?**
+El menú contextual del navegador "Guardar imagen como…" solo aparece sobre elementos `<img>` y `<video>`. Al usar `background-image` en un div, ese menú no ofrece la opción de guardar — primera línea de defensa anti-piratería.
+
+---
+
+### 2. Detección de Frame (Tags → Ratio)
+
+La función `_buildMockupHTML(item)` lee `item.tags[]` del catálogo:
+
+| Tag en `shop.json` | Clase aplicada | Ratio | Descripción |
+|---|---|---|---|
+| `"Mobile"` | `.mockup-mobile` | 9:20 | Frame teléfono, max-height 58vh, border-radius 24px |
+| `"PC"` | `.mockup-pc` | 16:9 | Frame escritorio, ancho 100% |
+| (ninguno) | `.mockup-fallback` | 4:3 | Neutral con watermark del logo |
+
+---
+
+### 3. UI Elements — Mobile
+
+El frame Mobile incluye tres componentes UI sobre el wallpaper:
+
+**Status Bar**
+- Izquierda: reloj en tiempo real (`.mockup-clock-text`)
+- Derecha: iconos SVG inline de señal, Wi-Fi y batería
+- `mix-blend-mode: difference` adapta el color del texto al brillo del fondo
+
+**App Grid**
+- Cuadrícula 4×4 de 16 placeholders (`.mockup-app-icon`)
+- Por defecto: `rgba(12,12,24,0.82)` sólido — sin coste GPU en gama baja
+- Con soporte `backdrop-filter`: glassmorphism blur(4px) activado vía `@supports`
+
+**Home Indicator**
+- Barra de 28% del ancho centrada en el borde inferior
+- `mix-blend-mode: difference` para contraste automático
+
+---
+
+### 4. UI Elements — PC
+
+El frame PC incluye una **barra de tareas** en el borde inferior:
+
+- Izquierda: botón de inicio + 5 app slots genéricos
+- Derecha: iconos Wi-Fi + batería + reloj (`.mockup-pc-clock`)
+- Fondo: `rgba(8,8,18,0.78)` sólido o glassmorphism con `@supports`
+
+---
+
+### 5. Reloj en Tiempo Real
+
+```javascript
+// shop-logic.js
+let _mockupClockInterval = null;
+
+function updateMockupTime() {
+    const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.querySelectorAll('.mockup-clock-text, .mockup-pc-clock')
+        .forEach(el => el.textContent = t);
+}
+
+// En openPreviewModal():
+updateMockupTime();                              // Inmediato al abrir
+_mockupClockInterval = setInterval(updateMockupTime, 30_000); // Cada 30 s
+```
+
+El intervalo se destruye explícitamente en `closePreviewModal()` para evitar memory leaks.
+
+---
+
+### 6. Anti-Piratería (Hardening)
+
+| Técnica | Implementación |
+|---|---|
+| Bloqueo "Guardar imagen" | Arte como `background-image` en div, no `<img>` |
+| Bloqueo menú contextual | `contextmenu` → `preventDefault()` en `#preview-mockup-stage` |
+| Overlay de cobertura | `.mockup-layer-ui` cubre el 100% del arte con SVG de interfaz |
+| Noise overlay | `.mockup-layer-protection` con ruido SVG data-URI (sin HTTP) |
+| `user-select: none` | En todas las capas de UI y protección |
+
+---
+
+### 7. Optimización para Gama Baja
+
+| Técnica | Implementación |
+|---|---|
+| GPU rendering | `transform: translateZ(0)` en `.mockup-container` |
+| Containment | `contain: paint` en `.mockup-container` |
+| Container queries | `container-type: inline-size` en `#mockup-slot` para escalar iconos de forma fluida |
+| SVG inline | Todos los iconos del mockup son SVG inline; cero peticiones HTTP extra |
+| Glassmorphism condicional | Default = sólido. `@supports (backdrop-filter)` opt-in solo si el hardware lo soporta |
+
+**Regla de gama baja para el app grid:**
+```css
+/* ✅ CORRECTO — sólido por defecto, glassmorphism como opt-in */
+.mockup-app-icon {
+    background: rgba(12, 12, 24, 0.82); /* sin coste GPU */
+}
+@supports (backdrop-filter: blur(4px)) {
+    .mockup-app-icon { backdrop-filter: blur(4px); } /* solo en hardware capaz */
+}
+
+/* ❌ INCORRECTO — backdrop-filter como valor por defecto degrada gama baja */
+.mockup-app-icon { backdrop-filter: blur(4px); }
+```
+
+---
+
+### 8. API Pública — Funciones en `window`
+
+A partir de v10.2.1, las funciones del preview están expuestas globalmente:
+
+```javascript
+window.openPreviewModal(itemOrId)  // Acepta objeto item O número de ID
+window.closePreviewModal()         // Sin parámetros — resuelve refs internamente
+```
+
+Esto permite llamarlas desde:
+- Event listeners en HTML dinámico: `onclick="openPreviewModal(5)"`
+- Módulos de juego integrados
+- La consola del navegador durante desarrollo
+
+```javascript
+// ✅ Ambas formas son válidas:
+openPreviewModal(item);           // objeto completo (renderShop)
+openPreviewModal(5);              // ID numérico (onclick dinámico)
+openPreviewModal('5');            // ID como string (atributo HTML)
+```
+
+---
+
+### 9. Nuevas Funciones en `shop-logic.js`
+
+| Función | Visibilidad | Responsabilidad |
+|---|---|---|
+| `_buildMockupHTML(item)` | Privada | Genera el HTML del mockup según los tags del item. Retorna string. |
+| `updateMockupTime()` | Privada | Actualiza el reloj en todos los elementos de clock activos. |
+| `closePreviewModal([modal], [stage])` | **Pública (`window`)** | Cierra el modal, cancela el intervalo, elimina listener contextmenu. Sin args = auto-resolve. |
+| `openPreviewModal(itemOrId)` | **Pública (`window`)** | Acepta objeto O ID. Null-guard. Orquesta mockup, reloj y acciones. |
+| `MOCKUP_SVG` | Privada (constante) | Paths SVG inline: signal, wifi, battery, arcadeLogo. |
+
+---
+
+### Correcciones v10.2.1
+
+Tres desconexiones identificadas post-entrega y corregidas en esta revisión:
+
+| # | Problema | Causa raíz | Solución |
+|---|---|---|---|
+| 1 | `openPreviewModal` no accesible desde `onclick=""` | Función declarada como `function` local, no asignada a `window` | `window.openPreviewModal = openPreviewModal` añadido tras la definición |
+| 2 | Fallo silencioso si se pasa un ID numérico en lugar del objeto | Función solo aceptaba `object`, no resolvía por ID | Guarda de tipo añadida: si `typeof itemOrId === 'number'`, busca en `allItems.find()` |
+| 3 | `_closePreviewModal` privada, requería refs explícitas como argumentos | Diseño interno expuesto a callers externos | Renombrada a `closePreviewModal` pública; args opcionales con fallback a `getElementById` |
+
+---
+
+### Archivos modificados
+
+| Archivo | Versión | Cambio |
+|---|---|---|
+| `shop-logic.js` | v9.1 → v10.2.1 | `openPreviewModal` refactorizado. Funciones públicas en `window`. |
+| `index.html` | — | Preview modal reemplazado con `#preview-mockup-stage` + `#mockup-slot`. |
+| `styles.css` | v3.1 → v3.2 | +130 líneas del sistema de mockup. `backdrop-filter` como opt-in. |
+| `DOCUMENTACION.md` | — | Sección 2j añadida con hotfix 10.2.1. |
 
 Dentro de `#mockup-slot`, JS inyecta un `div.mockup-container` con tres capas superpuestas via `position: absolute; inset: 0`:
 
@@ -806,55 +981,6 @@ _mockupClockInterval = setInterval(updateMockupTime, 30_000); // Cada 30 s
 ```
 
 El intervalo se destruye explícitamente en `_closePreviewModal()` para evitar memory leaks.
-
----
-
-### 6. Anti-Piratería (Hardening)
-
-| Técnica | Implementación |
-|---|---|
-| Bloqueo "Guardar imagen" | Arte como `background-image` en div, no `<img>` |
-| Bloqueo menú contextual | `contextmenu` → `preventDefault()` en `#preview-mockup-stage` |
-| Overlay de cobertura | `.mockup-layer-ui` cubre el 100% del arte con SVG de interfaz |
-| Noise overlay | `.mockup-layer-protection` con ruido SVG data-URI (sin HTTP) |
-| `user-select: none` | En todas las capas de UI y protección |
-
-El listener de `contextmenu` se registra y elimina con la apertura/cierre del modal (no queda persistente en el DOM).
-
----
-
-### 7. Optimización para Gama Baja
-
-| Técnica | CSS/JS |
-|---|---|
-| GPU rendering | `transform: translateZ(0)` en `.mockup-container` |
-| Containment | `contain: paint` en `.mockup-container` |
-| Container queries | `container-type: inline-size` en `#mockup-slot` para escalar iconos de forma fluida |
-| SVG inline | Todos los iconos del mockup son SVG inline; cero peticiones HTTP extra |
-| Glassmorphism condicional | `@supports (backdrop-filter: blur(4px))` — fallback sólido en gama baja |
-
----
-
-### 8. Nuevas Funciones en `shop-logic.js`
-
-| Función | Responsabilidad |
-|---|---|
-| `_buildMockupHTML(item)` | Genera el HTML del mockup según los tags del item. Retorna string. |
-| `updateMockupTime()` | Actualiza el reloj en todos los elementos de clock activos. |
-| `_closePreviewModal(modal, stage)` | Cierra el modal, cancela el intervalo y elimina el listener de contextmenu. |
-| `openPreviewModal(item)` | Orquesta: inyecta mockup, arranca el reloj, configura acciones. |
-| `MOCKUP_SVG` | Objeto de constantes con los paths SVG inline (signal, wifi, battery, logo). |
-
----
-
-### Archivos modificados
-
-| Archivo | Versión | Cambio |
-|---|---|---|
-| `shop-logic.js` | v9.1 → v10.2 | `openPreviewModal` refactorizado. Nuevas funciones de mockup. |
-| `index.html` | — | Preview modal reemplazado con `#preview-mockup-stage` + `#mockup-slot`. |
-| `styles.css` | v3.1 → v3.2 | +130 líneas de clases del sistema de mockup. |
-| `DOCUMENTACION.md` | — | Sección 2j añadida. |
 
 ---
 
