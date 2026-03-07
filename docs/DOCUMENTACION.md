@@ -1,5 +1,5 @@
 # 📚 Documentación Técnica — Love Arcade
-### Plataforma de Recompensas · v9.3 · Zero-Flicker Initiative
+### Plataforma de Recompensas · v9.5 · Solid Design System
 
 ---
 
@@ -13,6 +13,7 @@
 2e. [Novedades en v9.2 — Font FOIT/FOUT, Coin Init & Treasury Grid](#2e-novedades-en-v92--font-foitfout-coin-init--treasury-grid)
 2f. [Novedades en v9.3 — Zero-Flicker Initiative](#2f-novedades-en-v93--zero-flicker-initiative)
 2g. [Novedades en v9.4 — Identity Update](#2g-novedades-en-v94--identity-update)
+2h. [Novedades en v9.5 — Solid Design System](#2h-novedades-en-v95--solid-design-system)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -381,6 +382,117 @@ El `.player-hud` permanece en `opacity: 0` en **ambos caminos** hasta el `reveal
 | `styles.css` | `.identity-modal-overlay`, `.identity-modal-box`, `.identity-chips`, `.identity-chip`, `.identity-chip--active`, `.identity-input`, `.identity-char-count`, `.identity-input-error`, `.identity-confirm-btn`. `.hud-name`: +`min-height`. |
 
 ---
+
+## 2h. Novedades en v9.5 — Solid Design System
+
+### Visión General
+
+Reescritura completa de `styles.css` bajo la filosofía **90% Solid · 10% Strategic Glass**. El cambio prioriza el rendimiento en dispositivos móviles de gama baja-media eliminando `backdrop-filter` de la gran mayoría de elementos, sin sacrificar calidad visual. El resultado es un sistema de superficies sólidas con mayor jerarquía, sombras más ricas y animaciones potenciadas.
+
+### Filosofía de Diseño
+
+| Concepto anterior (v3.0) | Concepto nuevo (v9.5) |
+|---|---|
+| Dark glass premium | Dark solid precision |
+| Profundidad por transparencia + blur | Profundidad por paleta de superficies + sombra |
+| `backdrop-filter` en ~15 elementos | `backdrop-filter` solo en modales y toasts (2 usos) |
+| `background: rgba(255,255,255,0.06)` | `background: var(--bg-elevated)` o `var(--bg-raised)` |
+| Borders `rgba(255,255,255,0.07)` | Borders `rgba(255,255,255,0.10–0.18)` (más definición) |
+
+### Nuevo Sistema de Tokens — Superficies Sólidas
+
+Reemplaza el sistema de vidrio por una jerarquía de 5 valores sólidos:
+
+```css
+--bg-main:      #07070d;   /* Base — body background         */
+--bg-surface:   #0c0d18;   /* Navbar, panels                 */
+--bg-elevated:  #111320;   /* Cards, inputs, HUD             */
+--bg-raised:    #181b2a;   /* Hover states, active elements  */
+--bg-card:      #1d2033;   /* Prominent cards, modal inner   */
+```
+
+Las variables `--glass-base-bg`, `--glass-float-bg` y `--glass-hi-bg` se mantienen por retrocompatibilidad con el HTML existente, pero ahora apuntan a sus equivalentes sólidos en lugar de `rgba()` con alpha.
+
+### Impacto en Rendimiento (Mobile)
+
+| Propiedad eliminada | Elementos afectados | Impacto estimado |
+|---|---|---|
+| `backdrop-filter` en navbar | 1 elemento fixed permanente | Alto — repintado en cada scroll |
+| `backdrop-filter` en bottom-nav | 1 elemento fixed permanente | Alto — repintado en cada scroll |
+| `backdrop-filter` en coin-badge | 1 elemento | Medio |
+| `backdrop-filter` en wishlist-btn | N elementos (uno por card) | Medio-alto |
+| `backdrop-filter` en owned-badge | N elementos | Medio |
+| `backdrop-filter` en card-badge/reward | N elementos | Medio |
+
+**Usos de `backdrop-filter` que se conservan:**
+
+| Elemento | Justificación |
+|---|---|
+| `.toast` | Elemento flotante efímero. El blur contextualiza la notificación sobre contenido variable. Presupuesto de 1 blur por interacción. |
+| `.modal-overlay` | El blur del overlay comunica que el usuario está "fuera" de la UI principal. Es el uso canónico del efecto. |
+| `.identity-modal-overlay` | Misma razón que modal-overlay, con blur agresivo para el flujo de primera configuración. |
+
+### Animaciones Potenciadas
+
+#### Avatar Ring — Dual Layer
+
+La animación del anillo de avatar se reemplaza por un sistema de doble capa:
+
+```css
+/* Capa 1: conic-gradient rotatorio (visible) */
+.hud-avatar-ring {
+    background: conic-gradient(from 0deg, var(--accent), transparent 40%, var(--accent-dim) 70%, transparent 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), white calc(100% - 2.5px));
+    animation: ringRotate 3.5s linear infinite;
+}
+
+/* Capa 2: inner ring que pulsa independientemente */
+.hud-avatar-ring::after {
+    animation: ringPulse 2.5s ease-in-out infinite;
+}
+```
+
+#### Daily Button — Shimmer Sweep Continuo
+
+El botón de reclamo diario incluye un sweep de brillo animado que refuerza la acción:
+
+```css
+.hud-daily-btn::before {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    animation: dailyShimmer 3s ease-in-out infinite;
+}
+```
+
+#### Sale Banner — Sweep Mejorado
+
+El sweep de la sale banner usa un gradiente más definido (pico central brillante `rgba(255,255,220,0.18)`) y timing más rápido para mayor dramatismo.
+
+#### Game Cards — Left Accent Stripe
+
+Las cards de juego revelan una línea de acento izquierda en hover mediante `scaleY(0→1)`, reemplazando el enfoque de `box-shadow` exterior:
+
+```css
+.game-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.game-card:hover::before { transform: scaleY(1); }
+```
+
+### Compatibilidad de Clases HTML
+
+Todas las clases existentes en `index.html` se mantienen sin cambios. La migración es puramente visual — no requiere modificaciones en `app.js`, `shop-logic.js`, `spa-router.js` ni `index.html`.
+
+Las clases `.glass-panel`, `.glass-float` y `.glass-highlight` conservan sus nombres pero ahora renderizan superficies sólidas con los nuevos tokens.
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `styles.css` | Reescritura completa. Version bumped a v3.0. Nuevo solid surface system. Animaciones potenciadas. `backdrop-filter` reducido de ~15 usos a 3 usos estratégicos. |
 
 ## 3. Arquitectura del Proyecto
 
@@ -955,6 +1067,10 @@ La transición usa únicamente la clase `.hidden` (`display: none !important`). 
 
 ## 11. styles.css — Sistema de Diseño Mobile-First
 
+### Versión actual: v3.0 — Solid Design System
+
+A partir de v9.5, `styles.css` opera bajo la filosofía **90% Solid · 10% Strategic Glass**. Ver sección [2h](#2h-novedades-en-v95--solid-design-system) para la descripción completa del cambio.
+
 ### Principio Mobile-First
 
 A partir de v8.0, los estilos base en `styles.css` corresponden al viewport más pequeño (pantalla de teléfono). Las expansiones para pantallas más grandes se definen con media queries de tipo `min-width`.
@@ -967,7 +1083,7 @@ A partir de v8.0, los estilos base en `styles.css` corresponden al viewport más
     /* overrides de mobile */
 }
 
-/* AHORA (v8.0): Mobile como base, desktop como expansión */
+/* AHORA (v8.0+): Mobile como base, desktop como expansión */
 .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
 @media (min-width: 768px) {
@@ -983,111 +1099,78 @@ A partir de v8.0, los estilos base en `styles.css` corresponden al viewport más
 | Desktop | `min-width: 768px` | Tablets y escritorios |
 | Desktop wide | `min-width: 1024px` | Escritorios grandes |
 
+### Sistema de Tokens (v9.5)
+
+**Superficies sólidas — jerarquía de 5 niveles:**
+
+```css
+--bg-main:      #07070d;   /* Fondo base del body */
+--bg-surface:   #0c0d18;   /* Navbar, bottom-nav */
+--bg-elevated:  #111320;   /* Cards, inputs, HUD base */
+--bg-raised:    #181b2a;   /* Hover, elementos activos */
+--bg-card:      #1d2033;   /* Cards prominentes, modales */
+```
+
+**Escala de bordes:**
+
+```css
+--border-subtle:  rgba(255,255,255,0.07);  /* Apenas visible */
+--border-base:    rgba(255,255,255,0.11);  /* Predeterminado */
+--border-raised:  rgba(255,255,255,0.18);  /* Elementos elevados */
+```
+
+**Alias backward-compatible:** `--glass-base-bg`, `--glass-float-bg` y `--glass-hi-bg` siguen existiendo pero ahora apuntan a las variables sólidas correspondientes, no a `rgba()` con alpha. El HTML no necesita cambios.
+
+### Regla de `backdrop-filter` (v9.5)
+
+`backdrop-filter` está **prohibido** en elementos nuevos salvo aprobación explícita. Los tres usos permitidos son:
+
+1. **`.toast`** — notificación flotante efímera
+2. **`.modal-overlay`** — overlay de confirmación/compra
+3. **`.identity-modal-overlay`** — overlay de primer acceso
+
 ### Cambios clave por componente
 
-**Body:**
-- Mobile base: `padding-bottom: var(--bottom-nav-height)` (espacio para bottom nav)
-- Desktop: `padding-bottom: 0`
+**Navbar:** `backdrop-filter` eliminado. Fondo sólido `var(--bg-surface)` + `border-bottom`. La línea de acento inferior cambia de 1px a 2px para mayor presencia.
 
-**Bottom Nav:**
-- Mobile base: `display: flex` (visible)
-- Desktop: `display: none` (oculto)
+**Bottom Nav:** `backdrop-filter` eliminado. Fondo sólido `var(--bg-surface)`. Línea superior de acento cambia a 2px.
 
-**Nav Links (top):**
-- Mobile base: `display: none`
-- Desktop: `display: flex`
+**Player HUD:** `border-top` con color de acento (`var(--accent-border)`) como firma visual. Textura de grid sutil en `::after` sin costo de filtro.
 
-**`.shop-hero` (Hero Balance):**
-- Mobile base: `display: none` — eliminado visualmente en móvil porque el saldo ya está en la Navbar superior
-- Desktop: `display: flex`
+**Avatar Ring:** sistema dual — `conic-gradient` rotatorio + inner ring pulsante via `::after`.
 
-**`.shop-grid`:**
-- Mobile base: `repeat(2, 1fr); gap: 12px` — 2 columnas compactas
-- Desktop: `repeat(auto-fill, minmax(220px, 1fr)); gap: 20px`
+**Daily Button:** shimmer sweep animado continuo via `::before`. Sombra inset para efecto de material físico.
 
-**`.shop-card`:**
-- Mobile base: `padding: 12px`
-- Desktop: `padding: 18px`
+**Game Cards:** stripe de acento izquierda via `::before` con `scaleY(0→1)` en hover.
 
-**`.shop-img`:**
-- Mobile base: `height: 120px`
-- Desktop: `height: 170px`
+**Sale Banner:** sweep de gradiente mejorado con pico de brillo central. `box-shadow` inset para profundidad de ticket.
 
-**`.section-title`:**
-- Mobile base: `font-size: 1.4rem`
-- Desktop: `font-size: 1.8rem`
+**Coin Badge, Wishlist Btn, Owned Badge, Card Badge:** todos eliminan `backdrop-filter`. Usan fondo sólido semiopaco.
 
-**`.shop-tab`:**
-- Mobile base: `padding: 8px 10px; font-size: 0.78rem`
-- Desktop: `padding: 10px 18px; font-size: 0.88rem`
+**Body:** background-image conserva los dos `radial-gradient` para el ambient glow, sin costo de GPU porque son estáticos y no usan `filter`.
 
-**`.promo-input-group`:**
-- Mobile base: `flex-direction: column` (apilado)
-- Desktop: `flex-direction: row`
+### Clases CSS por sección (referencia rápida)
 
-**`.theme-grid`:**
-- Mobile base: `grid-template-columns: 1fr 1fr` (2 columnas)
-- Desktop: `repeat(auto-fill, minmax(150px, 1fr))`
-
-**`.faq-grid`:**
-- Mobile base: `grid-template-columns: 1fr`
-- Desktop: `repeat(auto-fill, minmax(340px, 1fr))`
-
-**`.toast`:**
-- Mobile base: `bottom: calc(var(--bottom-nav-height) + 10px)` — sobre la bottom nav
-- Desktop: `bottom: 30px`
+| Clase | Sección | Descripción |
+|---|---|---|
+| `.glass-panel`, `.glass-float`, `.glass-highlight` | Panel System | Ahora sólidos. Backward-compat con HTML. |
+| `.btn-primary`, `.btn-ghost`, `.btn-mail` | Buttons | Sin cambios de API. Sombra inset añadida en primary. |
+| `.navbar`, `.bottom-nav` | Navigation | Sólidos. Sin backdrop-filter. |
+| `.coin-badge` | Nav | Sólido. |
+| `.player-hud` | HUD | Border-top acento. Grid texture en `::after`. |
+| `.hud-avatar-ring` | HUD | Dual-layer conic-gradient. |
+| `.hud-daily-btn` | HUD | Shimmer sweep animado. |
+| `.game-card` | Cards | Left accent stripe en hover. |
+| `.shop-card` | Shop | Sólido. |
+| `.sale-banner__ticket` | Sale Banner | Sweep mejorado, box-shadow inset. |
+| `.toast` | Toast | Conserva backdrop-filter (estratégico). |
+| `.modal-overlay` | Modales | Conserva backdrop-filter en overlay. |
+| `.modal-box` | Modales | Sólido (`var(--bg-card)`). |
+| `.identity-modal-overlay` | Identity | Conserva backdrop-filter (primer acceso). |
 
 ### Clases nuevas en v8.0
 
-**`.wishlist-cost-banner`** — Contenedor del indicador de coste de Wishlist:
-```css
-.wishlist-cost-banner {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-    border-radius: var(--radius-md);
-    background: rgba(255,79,122,0.08); border: 1px solid rgba(255,79,122,0.25);
-    font-size: 0.82rem; color: var(--text-med);
-}
-.wishlist-cost-banner strong { color: #ff4f7a; }
-```
-
-**`.pill--wishlist`** — Pill de filtro con color rosa diferenciado:
-```css
-.pill--wishlist.active { background: #ff4f7a; border-color: #ff4f7a; }
-```
-
-**`.wishlist-btn--active svg path`** — Rellena el corazón SVG de Lucide vía CSS:
-```css
-.wishlist-btn--active svg path,
-.wishlist-btn--active svg circle { fill: currentColor !important; }
-```
-
-**`.sync-separator`** — Separador visual entre métodos de importación:
-```css
-.sync-separator { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 0.78rem; color: var(--text-low); }
-.sync-separator::before, .sync-separator::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
-```
-
-**`.file-label`** — Label del input de archivo estilizado como botón ghost:
-```css
-.file-label { cursor: pointer; width: 100%; justify-content: center; padding: 10px; }
-```
-
-**`.card-name` y `.card-desc-text`** — Clases CSS para los textos de cards (v8.0 reemplaza inline styles para facilitar overrides responsive):
-```css
-.shop-card .card-name { font-size: 0.9rem; font-weight: 700; /* desktop: 1.02rem */ }
-.shop-card .card-desc-text { font-size: 0.76rem; -webkit-line-clamp: 2; /* desktop: 0.82rem, clamp 3 */ }
-```
-
-**`.moon-blessing-badge`** — Actualizado para ser compatible con el icono SVG Lucide:
-```css
-.moon-blessing-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.8));
-    animation: moonPulse 2.5s ease-in-out infinite;
-}
-```
-
----
+**`.wishlist-cost-banner`** — Indicador de coste de Wishlist. **`.pill--wishlist`** — Pill rosa diferenciado. **`.sync-separator`** — Separador entre métodos de importación. **`.file-label`** — Label del input de archivo. **`.card-name`, `.card-desc-text`** — Textos de cards. **`.moon-blessing-badge`** — Badge SVG Lucide con drop-shadow y animación.
 
 ## 12. Códigos Promocionales (SHA-256)
 
