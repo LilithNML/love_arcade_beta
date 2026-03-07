@@ -1,5 +1,5 @@
 /**
- * spa-router.js — Love Arcade v9.1
+ * spa-router.js — Love Arcade v9.2
  * ─────────────────────────────────────────────────────────────────────────────
  * Router de navegación para la arquitectura Single Page Application.
  *
@@ -10,9 +10,21 @@
  *  - Llamar a window.GameCenter.syncUI() para sincronizar saldo en todos los
  *    indicadores (Navbar + HUD) inmediatamente tras la transición.
  *  - Re-inicializar Lucide en la vista entrante.
- *  - Restaurar el scroll a 0,0 con comportamiento instantáneo (sin animación).
+ *  - Restaurar el scroll a 0,0 ANTES de la animación de entrada (instant),
+ *    garantizando que la vista nueva empieza desde arriba sin salto visual.
  *  - Manejar data-anchor para deep-links dentro de la vista Inicio (#games, #faq).
  *  - [v9.1] Integrar la History API: botón Atrás vuelve a vista anterior sin recargar.
+ *  - [v9.2] Añadir clase .view-section a las vistas para activar la transición
+ *           anti-golpe CSS (opacity + translateY, GPU-only, 250ms).
+ *
+ * VIEW TRANSITIONS (v9.2 — Anti-Golpe):
+ *  - Las vistas #view-home y #view-shop llevan la clase .view-section en el HTML.
+ *  - CSS define opacity:0 + translateY(10px) como estado base y la transición
+ *    a opacity:1 + translateY(0) cuando no tienen .hidden.
+ *  - _applyView() ejecuta window.scrollTo ANTES de quitar .hidden, para que
+ *    el scroll ya esté en 0 cuando la transición de entrada empieza.
+ *  - Regla de los 300ms: la duración de transición es 0.25s (250ms). Nunca
+ *    se animarán height, width ni margin — solo opacity y transform.
  *
  * HISTORY API (v9.1):
  *  - navigateTo() llama a history.pushState({ viewId, anchor }) en cada
@@ -23,7 +35,8 @@
  *    (evita que el primer "Atrás" genere una entrada huérfana).
  *
  * RESTRICCIONES DE RENDIMIENTO:
- *  - Cero reflows: la transición usa únicamente .hidden (display:none).
+ *  - Cero reflows: la transición usa únicamente .hidden (display:none) +
+ *    opacity/transform manejados en el compositor GPU.
  *  - El router NO hace fetch ni accede a APIs externas.
  *  - Event listeners registrados una sola vez (DOMContentLoaded).
  */
@@ -45,11 +58,26 @@
      * Aplica la transición visual a una vista SIN registrar en el historial.
      * Ruta interna: usada tanto por navigateTo() como por el handler popstate.
      *
+     * Orden de operaciones (v9.2 — Anti-Golpe):
+     *  1. Scroll reset INSTANTÁNEO antes de mostrar la vista entrante.
+     *     Así la vista nueva siempre empieza desde arriba, y la animación CSS
+     *     de entrada (opacity + translateY) parte de una posición limpia.
+     *  2. Quitar .hidden de la vista destino → CSS dispara la transición de
+     *     entrada (.view-section:not(.hidden) → opacity:1 + translateY(0)).
+     *  3. Sincronizar saldo, iconos y callbacks de vista.
+     *
      * @param {'home'|'shop'} viewId
      * @param {string|null}   [anchor]
      */
     function _applyView(viewId, anchor) {
         if (!viewEls[viewId]) return;
+
+        // [v9.2] Scroll reset ANTES de la transición de entrada.
+        // behavior:'instant' garantiza que no hay scroll animado compitiendo
+        // con la animación de entrada de la vista.
+        if (!anchor) {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
 
         VIEWS.forEach(id => {
             viewEls[id].classList.toggle('hidden', id !== viewId);
@@ -66,8 +94,6 @@
                 const target = document.getElementById(anchor);
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
-        } else {
-            window.scrollTo({ top: 0, behavior: 'instant' });
         }
 
         if (viewId === 'home') window.HomeView?.refresh?.();
