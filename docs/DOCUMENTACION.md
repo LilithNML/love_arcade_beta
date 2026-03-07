@@ -14,6 +14,7 @@
 2f. [Novedades en v9.3 — Zero-Flicker Initiative](#2f-novedades-en-v93--zero-flicker-initiative)
 2g. [Novedades en v9.4 — Identity Update](#2g-novedades-en-v94--identity-update)
 2h. [Novedades en v10.0 — Arcade Solid 3.0](#2h-novedades-en-v100--arcade-solid-30)
+2i. [Novedades en v10.1 — Limpieza Visual & Transiciones Anti-Golpe](#2i-novedades-en-v101--limpieza-visual--transiciones-anti-golpe)
 3. [Arquitectura del Proyecto](#3-arquitectura-del-proyecto)
 4. [Estructura de Archivos](#4-estructura-de-archivos)
 5. [app.js — El Motor](#5-appjs--el-motor)
@@ -597,6 +598,125 @@ Ambos mantienen el borde de 1px con `--border-subtle`. Los pseudo-elementos `::b
 
 ---
 
+## 2i. Novedades en v10.1 — Limpieza Visual & Transiciones Anti-Golpe
+
+### Resumen
+
+| Área | Cambio |
+|---|---|
+| **CSS — Corner accents** | Eliminados los pseudo-elementos de "corchete" en `.glass-panel` y `.player-hud`. |
+| **CSS — `.view-section`** | Nueva clase con transición GPU de entrada (opacity + translateY, 250ms). |
+| **spa-router.js** | Scroll reset reordenado: ahora ocurre **antes** de quitar `.hidden` en la vista entrante. |
+
+---
+
+### 1. Eliminación de Corner Accents
+
+Los pseudo-elementos `::before` / `::after` añadidos en v10.0 sobre `.glass-panel` y `.player-hud` generaban líneas de acento en la esquina superior izquierda. En pantallas móviles a alta densidad de píxeles estas líneas de 2px se percibían como artefactos o errores de renderizado, rompiendo la limpieza de los paneles sólidos.
+
+**Acción:** eliminados completamente de `.glass-panel::after`, `.player-hud::before` y `.player-hud::after`. La jerarquía visual se mantiene únicamente a través del color de fondo sólido y el borde de 1px.
+
+```css
+/* ELIMINADO — ya no existe en styles.css */
+.glass-panel::after  { content: ''; width: 24px; height: 2px; ... }
+.player-hud::before  { content: ''; width: 48px; height: 2px; ... }
+.player-hud::after   { content: ''; width: 2px;  height: 48px; ... }
+```
+
+---
+
+### 2. Sistema de Transiciones de Vista — `.view-section`
+
+#### Problema
+
+Al alternar entre Inicio y Tienda, el contenido aparecía instantáneamente (un "golpe" visual), haciendo que la app se sintiera como una página web recargando en lugar de una interfaz reactiva.
+
+#### Solución
+
+Nueva clase `.view-section` en `styles.css`. Debe aplicarse en el HTML a los contenedores `#view-home` y `#view-shop`:
+
+```html
+<div id="view-home"  class="view-section">...</div>
+<div id="view-shop"  class="view-section hidden">...</div>
+```
+
+```css
+.view-section {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    will-change: opacity, transform;
+    contain: paint;
+}
+.view-section:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+```
+
+#### Decisiones técnicas
+
+| Decisión | Justificación |
+|---|---|
+| `opacity` + `transform` únicamente | Propiedades compositor-only. Cero layout, cero paint. |
+| `translateY(10px)` → `translateY(0)` | Solo 10px: entrada suave sin parecer slide agresivo. |
+| `ease-out` | Respuesta perceptualmente inmediata; la animación desacelera al llegar. |
+| `0.25s` (250ms) | Regla de los 300ms: por encima el usuario percibe lentitud. |
+| `will-change: opacity, transform` | Promueve el nodo a capa GPU antes del primer frame. |
+| `contain: paint` | Limita repaints al área del nodo; el documento padre no se ve afectado. |
+
+#### Reglas de oro — GPU-First
+
+```css
+/* ❌ PROHIBIDO — provoca reflow */
+transition: height 0.3s;
+transition: margin 0.3s;
+transition: width 0.3s;
+
+/* ✅ PERMITIDO — solo compositor GPU */
+transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+```
+
+---
+
+### 3. Reordenación del Scroll Reset en spa-router.js
+
+#### Problema
+
+El scroll reset se ejecutaba **después** de quitar `.hidden`. La vista nueva aparecía durante un frame con su scroll anterior antes de saltar al inicio, compitiendo visualmente con la animación de entrada.
+
+#### Solución (v9.2)
+
+`_applyView()` ejecuta el scroll reset **antes** de modificar `.hidden`:
+
+```javascript
+function _applyView(viewId, anchor) {
+    // 1. Scroll reset instantáneo ANTES de mostrar la vista
+    if (!anchor) window.scrollTo({ top: 0, behavior: 'instant' });
+
+    // 2. Toggle .hidden → dispara la transición CSS de entrada
+    VIEWS.forEach(id => viewEls[id].classList.toggle('hidden', id !== viewId));
+
+    // 3. Sincronizar saldo, iconos, callbacks...
+}
+```
+
+Cuando la transición `opacity 0→1` empieza, el scroll ya está en `top: 0`.
+
+---
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `styles.css` | v3.0 → v3.1. Corner accents eliminados. `.view-section` añadido. |
+| `spa-router.js` | v9.1 → v9.2. Scroll reset reordenado. JSDoc actualizado. |
+| `DOCUMENTACION.md` | Sección 2i añadida. |
+
+> **Nota HTML:** añadir clase `view-section` a `#view-home` y `#view-shop` en `index.html` para activar las transiciones. Sin esta clase, las vistas siguen funcionando correctamente pero sin animación de entrada.
+
+---
+
 ## 4. Estructura de Archivos
 
 ```
@@ -604,13 +724,13 @@ love_arcade/
 │
 ├── index.html              # SPA unificada (Inicio + Tienda en un solo archivo)
 │                           # shop.html ELIMINADO en v9.0
-├── styles.css              # Hoja de estilos global — Arcade Solid 3.0 (v10.0)
+├── styles.css              # Hoja de estilos global — Arcade Solid 3.1 (v10.1)
 │
 ├── js/
 │   ├── app.js              # Motor principal — GameCenter API v9.0
 │   │                       #   + getState(), syncUI() (nuevos en v9.0)
 │   ├── shop-logic.js       # Módulo de Tienda — extraído de shop.html (nuevo en v9.0)
-│   ├── spa-router.js       # Router SPA — navegación sin recargas (nuevo en v9.0)
+│   ├── spa-router.js       # Router SPA — v9.2, scroll-before-transition (v10.1)
 │   └── sync-worker.js      # Web Worker — Base64 + checksum SHA-256 (sin cambios)
 │
 ├── data/
@@ -1132,16 +1252,19 @@ La transición usa únicamente la clase `.hidden` (`display: none !important`). 
 
 ---
 
-## 11. styles.css — Sistema de Diseño Arcade Solid 3.0
+## 11. styles.css — Sistema de Diseño Arcade Solid 3.1
 
-### Filosofía de Diseño (v10.0 — Arcade Solid)
+### Filosofía de Diseño (v10.1)
 
-A partir de v10.0, el sistema visual abandona el Glassmorphism y adopta un diseño **Sólido Premium** de ratio 90/10:
+### Filosofía de Diseño (v10.1)
 
-- **90% Sólido:** Todas las superficies de panel, navegación, tarjetas y entradas usan fondos de color sólido oscuro. La jerarquía de profundidad se comunica mediante bordes de acento (hard-edge) y sombras cortas sólidas, no mediante transparencias y blur.
-- **10% Glass:** El `backdrop-filter` está permitido *solo* en elementos flotantes críticos (toasts, modales de confirmación, identity modal) donde la legibilidad sobre fondos arbitrarios es esencial.
+A partir de v10.0 el sistema visual abandona el Glassmorphism y adopta un diseño **Sólido Premium** de ratio 90/10. En v10.1 se refinan dos puntos adicionales: eliminación de artefactos de esquina y sistema de transiciones de vista GPU-only.
 
-**Beneficio de rendimiento:** al eliminar el `backdrop-filter` de navbar, bottom-nav y todos los paneles, el browser ya no necesita rasterizar y mezclar el contenido detrás de cada superficie. En dispositivos gama baja/media, esto se traduce en ~30-50% menos overdraw y compositing budget.
+- **90% Sólido:** Todas las superficies de panel, navegación, tarjetas y entradas usan fondos de color sólido oscuro. La jerarquía de profundidad se comunica mediante bordes de acento (hard-edge) y sombras cortas sólidas.
+- **10% Glass:** El `backdrop-filter` está permitido *solo* en elementos flotantes críticos (toasts, modales de confirmación, identity modal).
+- **GPU-First:** Ninguna animación toca `height`, `width` o `margin`. Solo `opacity`, `transform` y opcionalmente `filter`. La regla de los 300ms se cumple en todas las transiciones.
+
+**Beneficio de rendimiento:** eliminar el `backdrop-filter` de navbar, bottom-nav y todos los paneles reduce ~30-50% el overdraw en dispositivos gama baja/media.
 
 ### Principio Mobile-First
 
