@@ -1,12 +1,12 @@
 # Snake — Documentación Técnica
-### LA-Snake Classic v1.2 | Love Arcade Game Suite
+### LA-Snake Classic v1.3 | Love Arcade Game Suite
 
 ---
 
 ## Tabla de Contenidos
 
 1. [Visión General](#1-visión-general)
-2. [Changelog v1.2](#2-changelog-v12)
+2. [Changelog v1.3](#2-changelog-v13)
 3. [Arquitectura del Sistema](#3-arquitectura-del-sistema)
 4. [Módulo 1 — snake-core.js](#4-módulo-1--snake-corejs)
 5. [Módulo 2 — snake-renderer.js](#5-módulo-2--snake-rendererjs)
@@ -23,56 +23,46 @@
 
 ## 1. Visión General
 
-**Snake** es un juego clásico tipo Snake con mecánicas de combo y power-ups de utilidad, diseñado para el ecosistema **Love Arcade**. El nombre visible para el jugador es "Snake".
+**Snake** es un juego clásico tipo Snake con mecánicas de combo y power-ups de utilidad, diseñado para el ecosistema **Love Arcade**.
 
-| Atributo          | Valor                                 |
-|-------------------|---------------------------------------|
-| Nombre del juego  | Snake                                 |
-| Game ID           | `la_snake_classic`                    |
-| Level ID          | `standard_mode`                       |
-| Versión           | 1.2.0                                 |
-| Plataforma        | Web (Mobile First, ≤ 375px)           |
-| Estética          | Flat Design — cero glassmorphism      |
-| Renderer          | Canvas API nativo con HiDPI scaling   |
-| Assets            | SVGs inline (strings)                 |
-| Audio             | Web Audio API (sin archivos .mp3)     |
-| Almacenamiento    | localStorage con prefijo `LAS_`       |
-| Dependencias      | Ninguna (vanilla JS)                  |
+| Atributo          | Valor                                   |
+|-------------------|-----------------------------------------|
+| Nombre del juego  | Snake                                   |
+| Game ID           | `la_snake_classic`                      |
+| Level ID          | Único por sesión — `session_{ts}_{hex}` |
+| Versión           | 1.3.0                                   |
+| Plataforma        | Web (Mobile First, ≤ 375px)             |
+| Estética          | Flat Design — cero glassmorphism        |
+| Renderer          | Canvas API nativo con HiDPI scaling     |
+| Audio             | Web Audio API (sin archivos .mp3)       |
+| Almacenamiento    | localStorage con prefijo `LAS_`         |
+| Dependencias      | Ninguna (vanilla JS)                    |
 
 ---
 
-## 2. Changelog v1.2
+## 2. Changelog v1.3
 
-### snake-core.js
-- **Sistema de input migrado a Swipe global** con umbral de **20px** de desplazamiento mínimo para disparar un giro. Elimina la lógica anterior de 4 zonas táctiles.
-- **`touchmove` con `e.preventDefault()`** bloqueando scroll nativo del navegador durante toda la duración del toque.
-- **`touchcancel`** handler añadido para limpiar estado en interrupciones de gestos.
-- **`navigator.vibrate(10)`** — Feedback háptico de 10ms en cada giro válido registrado (silencia errores si la API no está disponible).
-- **`onInvalidDirection` callback** — Se dispara cuando el jugador intenta girar 180 grados sobre sí mismo. Usado por el audio para `sfxInvalidTurn`.
+### Corrección crítica de integración — recompensas Love Arcade
 
-### snake-renderer.js
-- **Soporte HiDPI completo** — `window.devicePixelRatio` detectado en `initCanvas`. El canvas físico se escala por el DPR; el contexto se escala inversamente con `ctx.scale(dpr, dpr)`. Los draw calls siguen usando coordenadas lógicas.
-- **Stroke 1.5px en todos los segmentos** — Cada segmento del cuerpo recibe un `strokeRect` de 1.5px de ancho con el color de la skin 20% más oscuro que el relleno (función `LAS_darkenHex`).
-- **Eliminado Courier New** — Toda tipografía en canvas usa `-apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif`.
-- **Skins bloqueadas** — El canvas de preview usa `CSS filter: grayscale(100%)` + `opacity: 0.4` en el elemento DOM. Sin blur/glassmorphism.
+**Bug A — `app.js` no cargado:**
+`snake.html` no incluía `<script src="../../js/app.js">`. Esto causaba que `window.GameCenter` fuera siempre el stub de consola, nunca el sistema real. Las monedas nunca se acreditaban.
 
-### snake-audio.js
-- **`sfxTurn()`** — Click metálico de onda cuadrada 0.05s (1200 Hz → 400 Hz con envolvente rápida). Confirma cada giro válido al jugador.
-- **`sfxInvalidTurn()`** — Golpe grave sordo de onda sinusoidal 0.12s (90 Hz → 55 Hz). Comunica rechazo del movimiento sin ser intrusivo.
+**Fix:** `<script src="../../js/app.js">` añadido como primera etiqueta script en el body, antes de todos los módulos del juego.
 
-### snake-economy.js
-- **`LAS_GAME_ID`**: `'snake'` → `'la_snake_classic'` (requisito de app.js v9.4).
-- **`LAS_LEVEL_ID`**: `'session'` → `'standard_mode'` (requisito de app.js v9.4).
-- **Fórmula de recompensa**: `Math.max(1, Math.floor(sessionScore × comboMultiplierAtDeath))`.
-- El multiplicador se **captura antes del reset** en `endSession()`.
-- **`Math.floor()`** + **`Math.max(1, ...)`** garantizan entero positivo > 0.
-- `completeLevel` envuelto en `try/catch` con verificación de existencia.
+**Bug B — Idempotencia de `completeLevel()`:**
+`app.js` registra cada `levelId` pagado en `store.progress[gameId]` y silencia repeticiones. El `levelId` estático `'standard_mode'` causaba que solo la primera sesión de vida del usuario recibiera monedas.
 
-### snake.html (Orquestador)
-- **Selector de skins con flechas SVG** — Reemplaza el carrusel de scroll. Flechas `‹` y `›` navegan por las skins; botón "SELECT" solo activo si `highScore >= skin.unlockScore`.
-- **Botón mute con iconografía SVG** — Rutas SVG que cambian entre speaker y speaker-muted. Sin emojis.
-- **100ms delay antes de `endSession()`** — Garantiza que el DOM de app.js v9.4 esté listo para recibir la transacción.
-- **Fuente sans-serif en toda la UI** — Variable CSS `--LAS_font` con stack de sistema.
+**Fix:** `LAS_sessionId` generado en `startSession()` como `session_{timestamp}_{hex4}`. Cada partida produce un ID único nunca visto por app.js.
+
+Ver **SNAKE_ECONOMY_DOCS.md §3** para el análisis detallado de ambos bugs.
+
+### Cambios v1.2 (referencia)
+- Sistema de swipe global con umbral 20px
+- HiDPI / Retina scaling en canvas
+- Stroke 1.5px en segmentos
+- Fuente sans-serif (eliminado Courier New)
+- `sfxTurn()` y `sfxInvalidTurn()` en snake-audio.js
+- Selector de skins con flechas SVG
 
 ---
 
@@ -80,13 +70,17 @@
 
 ```
 snake.html           ← Orquestador (UI + wiring)
+├── ../../js/app.js  ← Love Arcade GameCenter (cargado primero)
 ├── snake-core.js    ← Motor de juego y lógica
-├── snake-renderer.js← Renderizado SVG/Canvas + HiDPI
+├── snake-renderer.js← Renderizado Canvas + HiDPI
 ├── snake-audio.js   ← Síntesis Web Audio API
 └── snake-economy.js ← Economía, combos, skins, GameCenter
 ```
 
-Todos los módulos son **IIFEs** sin dependencias externas. El orquestador los conecta mediante callbacks.
+Todos los módulos son IIFEs sin dependencias externas. El orquestador los conecta mediante callbacks.
+
+**Orden de carga obligatorio:**
+`app.js` → módulos snake → script orquestador inline
 
 ---
 
@@ -97,48 +91,29 @@ Todos los módulos son **IIFEs** sin dependencias externas. El orquestador los c
 ```
 START → COUNTDOWN → PLAYING ⇄ PAUSED
                   ↓
-               GAMEOVER → (START | PLAYING)
+               GAMEOVER
 ```
 
-### 4.2 Motor de Movimiento
-
-`requestAnimationFrame` con control de tick por tiempo:
-
-```javascript
-const speedMs = activePowerup?.type === 'brake' ? 280 : 140;
-if (timestamp - lastTick >= speedMs) {
-    lastTick = timestamp;
-    tick();
-}
-```
-
-Velocidad constante independiente del FPS del dispositivo.
-
-### 4.3 Sistema de Input — Swipe Global (v1.2)
+### 4.2 Sistema de Input — Swipe Global (v1.2)
 
 **Flujo de eventos:**
+
 ```
-touchstart  → registra origen (clientX/Y) + e.preventDefault()
-touchmove   → e.preventDefault()  ← bloquea scroll del navegador
+touchstart  → registra origen + e.preventDefault()
+touchmove   → e.preventDefault() (bloquea scroll nativo)
 touchend    → calcula delta, llama resolveSwipe()
 touchcancel → limpia LAS_touchActive
 ```
 
-**Resolución de dirección:**
-```javascript
-// Solo dispara si max(|dx|, |dy|) >= 20px
-// El eje dominante gana
-resolveSwipe(dx, dy) → 'up' | 'down' | 'left' | 'right' | null
-```
-
-**Validación en queueDirection:**
-- **180°**: Rechazado → `onInvalidDirection()` callback
-- **Igual a nextDirection**: No-op silencioso
-- **Válido**: Encola → `navigator.vibrate(10)`
+**Resolución:**
+- Delta < 20px en ambos ejes: ignorado (sin giro accidental)
+- Eje dominante gana
+- 180°: rechazado → `onInvalidDirection()` → `sfxInvalidTurn()`
+- Válido: encola dirección → `navigator.vibrate(10)` (háptico)
 
 **Teclado (desktop):** Flechas / WASD. `P` o `Escape` pausa.
 
-### 4.4 Callbacks Públicos
+### 4.3 Callbacks Públicos
 
 ```javascript
 LAS_Core.onEat(fn)                // fn(isPowerup: bool)
@@ -146,7 +121,7 @@ LAS_Core.onDeath(fn)              // fn()
 LAS_Core.onStateChange(fn)        // fn(newState: string)
 LAS_Core.onTurn(fn)               // fn(x, y) — cada giro ejecutado
 LAS_Core.onFrame(fn)              // fn() — cada frame
-LAS_Core.onInvalidDirection(fn)   // fn() — rechazo de 180° (v1.2)
+LAS_Core.onInvalidDirection(fn)   // fn() — rechazo de 180°
 ```
 
 ---
@@ -156,109 +131,79 @@ LAS_Core.onInvalidDirection(fn)   // fn() — rechazo de 180° (v1.2)
 ### 5.1 HiDPI Scaling (v1.2)
 
 ```javascript
-function LAS_initCanvas(canvasEl, cols, rows) {
-    const dpr = window.devicePixelRatio || 1;
-    // Física: canvas real más grande
-    canvasEl.width  = logicalW * dpr;
-    canvasEl.height = logicalH * dpr;
-    // CSS: tamaño visual igual al lógico
-    canvasEl.style.width  = logicalW + 'px';
-    canvasEl.style.height = logicalH + 'px';
-    // Contexto: escalar para que draw calls usen px lógicos
-    ctx.scale(dpr, dpr);
-}
+const dpr = window.devicePixelRatio || 1;
+canvasEl.width  = logicalW * dpr;   // físico
+canvasEl.height = logicalH * dpr;
+canvasEl.style.width  = logicalW + 'px';  // CSS = lógico
+canvasEl.style.height = logicalH + 'px';
+ctx.scale(dpr, dpr);  // draw calls en coords lógicas
 ```
 
-En un iPhone Retina (DPR=3): canvas físico 3× más grande → sin pixelado.
+En iPhone Retina (DPR=3): canvas físico 3× más grande, cero pixelado.
 
 ### 5.2 Stroke en Segmentos (v1.2)
 
-Todos los segmentos del cuerpo usan:
 ```javascript
-// Fill con color de skin
+// Fill sólido + 1.5px stroke 20% más oscuro
 ctx.fillRect(rx, ry, rw, rh);
-// Stroke 1.5px, color 20% más oscuro
-ctx.strokeStyle = skin.stroke;
+ctx.strokeStyle = skin.stroke;       // LAS_darkenHex(fill, 0.20)
 ctx.lineWidth   = 1.5;
 ctx.strokeRect(rx + 0.75, ry + 0.75, rw - 1.5, rh - 1.5);
 ```
-
-El `+ 0.75` alinea el stroke al pixel para evitar subpixel rendering borroso.
 
 ### 5.3 Tipografía Canvas
 
 ```javascript
 const LAS_FONT_STACK = '-apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif';
-ctx.font = `700 ${fontSize}px ${LAS_FONT_STACK}`;
-```
-
-### 5.4 Locked Skin Preview
-
-```javascript
-// CSS filter en el elemento canvas, no efectos de Canvas API
-if (locked) {
-    canvasEl.style.filter  = 'grayscale(100%)';
-    canvasEl.style.opacity = '0.4';
-}
 ```
 
 ---
 
 ## 6. Módulo 3 — snake-audio.js
 
-### 6.1 Efectos de Sonido (Completo v1.2)
-
-| Función              | Evento              | Descripción                                    |
-|----------------------|---------------------|------------------------------------------------|
-| `sfxEat()`           | Comida              | 300→600 Hz, 0.12s, onda cuadrada               |
-| `sfxPowerup()`       | Power-up            | Arpegio 400→500→700→1000 Hz, sawtooth          |
-| `sfxDeath()`         | Muerte              | Ruido blanco + tono grave descendente           |
-| `sfxCombo(n)`        | Combo sube          | Acorde doble que escala con multiplicador       |
-| `sfxClick()`         | UI                  | 440→480 Hz breve                               |
-| `sfxStart()`         | Inicio de partida   | Jingle C4-E4-G4-C5                             |
-| `sfxTurn()` (v1.2)   | Giro válido         | 1200→400 Hz, 0.05s, click metálico square      |
-| `sfxInvalidTurn()` (v1.2) | Giro rechazado | 90→55 Hz, 0.12s, golpe sordo sinusoidal        |
-
-### 6.2 Lazy Init
-
-El `AudioContext` solo se crea tras el primer gesto del usuario (requisito de navegadores). El orquestador llama `LAS_Audio.init()` en `touchstart` y en el primer clic de botón.
+| Función              | Evento                | Descripción                             |
+|----------------------|-----------------------|-----------------------------------------|
+| `sfxEat()`           | Comer comida          | 300→600 Hz, 0.12s, square               |
+| `sfxPowerup()`       | Comer power-up        | Arpegio ascendente, sawtooth            |
+| `sfxDeath()`         | Muerte                | Ruido blanco + tono grave               |
+| `sfxCombo(n)`        | Combo sube            | Acorde doble escalado con multiplicador |
+| `sfxClick()`         | Botones UI            | 440→480 Hz breve                        |
+| `sfxStart()`         | Inicio de partida     | Jingle C4-E4-G4-C5                      |
+| `sfxTurn()`          | Giro válido           | 1200→400 Hz, 0.05s, click metálico      |
+| `sfxInvalidTurn()`   | Giro rechazado (180°) | 90→55 Hz, 0.12s, golpe sordo sinusoidal |
 
 ---
 
 ## 7. Módulo 4 — snake-economy.js
 
-Ver también: **SNAKE_ECONOMY_DOCS.md** para documentación económica detallada.
+Ver también: **SNAKE_ECONOMY_DOCS.md** para documentación económica completa, incluyendo el diagnóstico de bugs v1.3.
 
-### 7.1 IDs Corregidos (v1.2)
+### 7.1 IDs de integración
 
 ```javascript
-const LAS_GAME_ID  = 'la_snake_classic'; // app.js v9.4 rechaza 'snake'
-const LAS_LEVEL_ID = 'standard_mode';    // app.js v9.4 rechaza 'session'
+const LAS_GAME_ID = 'la_snake_classic';  // estable — identifica el juego en app.js
+// levelId → LAS_sessionId               // único por sesión — generado en startSession()
 ```
 
-### 7.2 Fórmula de Recompensa (v1.2)
+### 7.2 Generación de Session ID
 
 ```javascript
-const multiplierAtDeath = LAS_comboMultiplier; // capturar ANTES del reset
-const rewardAmount = Math.max(1, Math.floor(finalScore * multiplierAtDeath));
-```
-
-### 7.3 Llamada GameCenter (v1.2)
-
-```javascript
-// 100ms delay en el orquestador garantiza DOM de app.js listo
-if (window.GameCenter &&
-    typeof window.GameCenter.completeLevel === 'function') {
-    try {
-        window.GameCenter.completeLevel(
-            'la_snake_classic',
-            'standard_mode',
-            rewardAmount  // integer >= 1
-        );
-    } catch (err) {
-        console.warn('[LAS_Economy] GameCenter.completeLevel failed:', err);
-    }
+function LAS_generateSessionId() {
+    const ts   = Date.now();
+    const rand = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+    return `session_${ts}_${rand}`;  // "session_1719432800123_a7f3"
 }
+// Llamado en startSession() → nuevo ID antes de cada partida
+```
+
+### 7.3 Llamada GameCenter (producción)
+
+```javascript
+window.GameCenter.completeLevel(
+    'la_snake_classic',  // gameId — estable
+    LAS_sessionId,       // levelId — único por sesión
+    rewardAmount         // integer >= 1
+);
 ```
 
 ---
@@ -267,116 +212,111 @@ if (window.GameCenter &&
 
 ### 8.1 Power-ups
 
-| Power-up | Asset SVG | Efecto                                     | Duración |
-|----------|-----------|--------------------------------------------|----------|
-| Imán     | U-shape   | Atrae comida en radio de 3 celdas (nudge)  | 5s       |
-| Fantasma | Capa      | Inmunidad a auto-colisión                  | 5s       |
-| Freno    | Reloj     | 140ms/tick → 280ms/tick                    | 5s       |
+| Power-up | Efecto                                    | Duración |
+|----------|-------------------------------------------|----------|
+| Imán     | Atrae comida en radio de 3 celdas (nudge) | 5s       |
+| Fantasma | Inmunidad a auto-colisión                 | 5s       |
+| Freno    | 140ms/tick → 280ms/tick                   | 5s       |
 
-Aparecen cada 8 comidas. Máximo 1 en grid. Desaparecen solos a los 10s si no se recogen.
+Aparecen cada 8 comidas. Máximo 1 en grid. Desaparecen a los 10s si no se recogen.
 
 ### 8.2 Velocidad
 
-| Condición         | Intervalo |
-|-------------------|-----------|
-| Normal            | 140ms     |
-| Brake activo      | 280ms     |
+| Condición     | Intervalo |
+|---------------|-----------|
+| Normal        | 140ms     |
+| Brake activo  | 280ms     |
 
 ---
 
 ## 9. Sistema de Skins
 
-| Score mínimo | Skin ID   | Nombre         | Visual                                    |
-|--------------|-----------|----------------|-------------------------------------------|
-| 0            | `classic` | Classic Green  | Verde sólido + stroke oscuro 1.5px        |
-| 500          | `neon`    | Neon Pulse     | Verde brillante + outline neon 1.5px      |
-| 1500         | `cyber`   | Cyber Scale    | Azul + overlay geométrico + stroke 1.5px  |
-| 3000         | `gold`    | Gold Edition   | Dorado + partículas SVG en giros          |
+| Score mínimo | Skin ID   | Visual                                   |
+|--------------|-----------|------------------------------------------|
+| 0            | `classic` | Verde sólido + stroke oscuro 1.5px       |
+| 500          | `neon`    | Verde brillante + outline neon 1.5px     |
+| 1500         | `cyber`   | Azul + overlay geométrico SVG            |
+| 3000         | `gold`    | Dorado + partículas SVG en cada giro     |
 
-### 9.1 Selector de Skins (v1.2)
-
-Reemplaza el carrusel de scroll por un **selector con flechas SVG** `‹/›`:
-- Navega por las 4 skins en bucle.
-- El botón SELECT está **desactivado** (`disabled`) si `highScore < skin.unlockScore`.
-- Skins bloqueadas muestran el score requerido y preview en escala de grises.
-- Dots de paginación muestran la posición actual.
+Selector con flechas SVG `‹/›`. Botón SELECT desactivado si `highScore < skin.unlockScore`. Skins bloqueadas: `filter: grayscale(100%)` + `opacity: 0.4` en el canvas de preview.
 
 ---
 
 ## 10. Integración Love Arcade
 
-### 10.1 Secuencia de Recompensa
+### 10.1 Secuencia completa (v1.3)
 
 ```
-Muerte de serpiente
-    │
-    ▼ sfxDeath() + renderizado de overlay final
-    │
-    ▼ [100ms delay — DOM de app.js v9.4 listo]
-    │
-    ▼ LAS_Economy.endSession(score, length)
-        ├── Captura comboMultiplier
-        ├── Resetea combo
-        ├── Guarda high score
-        ├── Calcula rewardAmount = max(1, floor(score × multiplier))
-        └── window.GameCenter.completeLevel('la_snake_classic', 'standard_mode', reward)
-    │
-    ▼ [700ms — tiempo para leer overlay]
-    │
-    ▼ Muestra pantalla Game Over con stats y reward
+[Jugador muere]
+      │
+      ▼ sfxDeath() + overlay de canvas
+      │
+      ▼ [100ms] — DOM de app.js estable
+      │
+      ▼ LAS_Economy.endSession()
+          ├── Captura combo
+          ├── Calcula rewardAmount = max(1, floor(score × combo))
+          └── GameCenter.completeLevel('la_snake_classic', sessionId, reward)
+                                                          ↑ único ← fix v1.3
+      │
+      ▼ [700ms] — pausa para leer overlay
+      │
+      ▼ Pantalla Game Over (stats + reward)
 ```
 
-### 10.2 Stub de Desarrollo
+### 10.2 Orden de carga en snake.html
 
-```javascript
-if (!window.GameCenter) {
-    window.GameCenter = {
-        completeLevel: (gameId, levelId, reward) => {
-            console.log(`[GameCenter] ${gameId} / ${levelId} / ${reward}`);
-        }
-    };
-}
+```html
+<!-- 1. Love Arcade core — define window.GameCenter real -->
+<script src="../../js/app.js"></script>
+
+<!-- 2. Módulos del juego -->
+<script src="snake-audio.js"></script>
+<script src="snake-economy.js"></script>
+<script src="snake-renderer.js"></script>
+<script src="snake-core.js"></script>
+
+<!-- 3. Orquestador + stub de desarrollo -->
+<script>
+  if (!window.GameCenter) { /* stub solo en standalone */ }
+</script>
 ```
 
 ---
 
 ## 11. Diseño y UX
 
-### 11.1 Tipografía (v1.2)
+### 11.1 Tipografía
 
-| Contexto     | Fuente                                          |
-|--------------|-------------------------------------------------|
-| UI (CSS)     | `--LAS_font: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif` |
-| Canvas       | `700 {n}px -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif` |
-
-Courier New eliminado completamente. No hay fuentes monoespaciadas en ningún contexto.
+Toda la UI usa `--LAS_font: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif`. Courier New eliminado completamente.
 
 ### 11.2 Principios de Diseño
 
-- **Flat Design estricto**: Sin `backdrop-filter`, sin `box-shadow` difusa.
-- **Solid colors only**: Borders sólidos, fills opacos.
-- **Sin emojis**: Mute button usa rutas SVG que se alternan programáticamente.
-- **Alto contraste**: Stroke 1.5px + 20% oscuro en todos los segmentos para legibilidad OLED.
+- Flat Design estricto: sin `backdrop-filter`, sin sombras difusas.
+- Todos los iconos son SVG (sin emojis).
+- Alto contraste OLED: stroke 1.5px en todos los segmentos.
+- Touch-first: swipe 20px threshold, sin zonas invisibles de tap.
 
 ---
 
 ## 12. Restricciones Técnicas
 
-| Restricción                          | Estado   | Implementación                                          |
-|--------------------------------------|----------|---------------------------------------------------------|
-| Sin glassmorphism                    | Cumplida | Cero `backdrop-filter`, colores sólidos                 |
-| Sin emojis                           | Cumplida | Mute: SVG paths alternables; todos los iconos son SVG   |
-| Sin librerías pesadas                | Cumplida | Vanilla JS, Canvas API nativo                           |
-| Diseño responsivo ≤ 375px            | Cumplida | `max-width: 430px`, grid dinámico                       |
-| Prefijo `LAS_` en variables          | Cumplida | Todas las vars JS y claves localStorage                 |
-| `window.GameCenter` + stub           | Cumplida | Existencia + tipo verificados, try/catch                |
-| Game ID correcto (`la_snake_classic`)| Cumplida | v1.2 — corregido                                        |
-| Level ID correcto (`standard_mode`)  | Cumplida | v1.2 — corregido                                        |
-| Audio sin .mp3                       | Cumplida | Web Audio API oscillators + BufferSource                |
-| Recompensa solo al terminar sesión   | Cumplida | Solo en `LAS_endSession()` con 100ms delay              |
-| Input swipe 20px threshold           | Cumplida | v1.2 — `LAS_SWIPE_THRESHOLD = 20`                       |
-| HiDPI / Retina                       | Cumplida | v1.2 — `devicePixelRatio` scaling                       |
-| Font sans-serif (sin Courier New)    | Cumplida | v1.2 — `-apple-system` stack en CSS y Canvas            |
+| Restricción                               | Estado   | Implementación                                  |
+|-------------------------------------------|----------|-------------------------------------------------|
+| Sin glassmorphism                         | Cumplida | Cero `backdrop-filter`, colores sólidos         |
+| Sin emojis                                | Cumplida | Todos los iconos como SVG                       |
+| Sin librerías externas                    | Cumplida | Vanilla JS, Canvas API nativo                   |
+| Responsive ≤ 375px                        | Cumplida | `max-width: 430px`, grid dinámico               |
+| Prefijo `LAS_` en variables               | Cumplida | Todas las vars JS y claves localStorage         |
+| `app.js` cargado antes de los módulos     | Cumplida | v1.3 — primera etiqueta script                  |
+| Game ID: `la_snake_classic`               | Cumplida | v1.2 — corregido                                |
+| Level ID único por sesión                 | Cumplida | v1.3 — `session_{ts}_{hex4}`                    |
+| `completeLevel` con guard + try/catch     | Cumplida | verificación de existencia + tipo               |
+| Reward solo al terminar sesión            | Cumplida | Solo en `endSession()` con 100ms delay          |
+| HiDPI / Retina                            | Cumplida | `devicePixelRatio` scaling en `initCanvas()`    |
+| Fuente sans-serif (sin Courier New)       | Cumplida | `-apple-system` stack en CSS y Canvas           |
+| Input swipe 20px threshold                | Cumplida | `LAS_SWIPE_THRESHOLD = 20`                      |
+| `LAS_` no colisiona con claves de app.js  | Cumplida | app.js usa `gamecenter_v6_promos`               |
 
 ---
 
@@ -385,33 +325,35 @@ Courier New eliminado completamente. No hay fuentes monoespaciadas en ningún co
 ### 13.1 Estructura de Archivos
 
 ```
-/
+games/snake/
 ├── snake.html           ← Punto de entrada
-├── snake-core.js        ← Módulo 1: Lógica v1.2
-├── snake-renderer.js    ← Módulo 2: Visuales v1.2
-├── snake-audio.js       ← Módulo 3: Audio v1.2
-└── snake-economy.js     ← Módulo 4: Economía v1.2
+├── snake-core.js        ← Módulo 1: Lógica
+├── snake-renderer.js    ← Módulo 2: Visuales
+├── snake-audio.js       ← Módulo 3: Audio
+└── snake-economy.js     ← Módulo 4: Economía
 ```
 
-### 13.2 Ajustes de Configuración
+La ruta `../../js/app.js` asume que los archivos del juego están en `games/snake/` dentro de la estructura de Love Arcade. Ajustar si la ruta difiere.
+
+### 13.2 Parámetros de Configuración
 
 ```javascript
 // snake-core.js
-const LAS_BASE_SPEED_MS          = 140;  // ms/tick — reducir para más velocidad
-const LAS_SWIPE_THRESHOLD        = 20;   // px — umbral de swipe
-const LAS_POWERUP_SPAWN_INTERVAL = 8;    // comidas entre power-ups
+const LAS_BASE_SPEED_MS          = 140;   // ms/tick
+const LAS_SWIPE_THRESHOLD        = 20;    // px
+const LAS_POWERUP_SPAWN_INTERVAL = 8;     // comidas entre power-ups
 
 // snake-economy.js
-const LAS_COMBO_WINDOW_MS = 3000;  // ventana de combo en ms
-const LAS_MAX_MULTIPLIER  = 8;     // techo del multiplicador
+const LAS_COMBO_WINDOW_MS = 3000;  // ventana de combo
+const LAS_MAX_MULTIPLIER  = 8;     // techo multiplicador
 ```
 
-### 13.3 Integración en Love Arcade
+### 13.3 Integración Love Arcade
 
-1. Inyectar `window.GameCenter` **antes** de cargar `snake.html`.
-2. Asegurar que `GameCenter.completeLevel` acepte `('la_snake_classic', 'standard_mode', integer)`.
-3. Si el host inyecta su navbar, ajustar o eliminar `#LAS_header`.
+1. Verificar que `../../js/app.js` existe y es app.js v9.4+.
+2. Confirmar que `GameCenter.completeLevel` acepta `(string, string, number)`.
+3. El juego no requiere ningún cambio en `index.html` ni en `app.js`.
 
 ---
 
-*Documentación generada para LA-Snake Classic v1.2.0 — Love Arcade Game Suite*
+*Documentación generada para LA-Snake Classic v1.3.0 — Love Arcade Game Suite*
