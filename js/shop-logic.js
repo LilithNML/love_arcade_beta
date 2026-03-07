@@ -58,18 +58,175 @@ function _closeModal(value) {
     if (_modalResolve) { _modalResolve(value); _modalResolve = null; }
 }
 
-// ── Wallpaper Preview Modal ───────────────────────────────────────────────────
+// ── Wallpaper Preview Modal — Preview 2.0 (Dynamic Mockup) ───────────────────
+//
+// Replaces the static <img> preview with a 3-layer mockup frame:
+//   Layer 1 (Art)        — CSS background-image (blocks "Save image as…")
+//   Layer 2 (Protection) — pointer-events:none noise overlay
+//   Layer 3 (UI)         — live clock + OS chrome (status bar / taskbar)
+//
+// Frame type is selected from item.tags:
+//   "Mobile" → 9:20 portrait phone with status bar + 4×4 app grid
+//   "PC"     → 16:9 landscape desktop with taskbar
+//   (none)   → neutral 4:3 with watermark badge
+
+let _mockupClockInterval = null;   // Cleared on modal close to prevent leaks
+
+/**
+ * Returns the current time as "HH:MM" using the device locale.
+ * @returns {string}
+ */
+function _getMockupTimeString() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Updates every .mockup-clock-text / .mockup-pc-clock element in the active mockup.
+ * Called once on open, then every 30 s via interval.
+ */
+function updateMockupTime() {
+    const t = _getMockupTimeString();
+    document.querySelectorAll('.mockup-clock-text, .mockup-pc-clock').forEach(el => {
+        el.textContent = t;
+    });
+}
+
+/**
+ * Inline SVG icons for the mockup status bar and taskbar.
+ * All paths are pure geometry — no external requests, no Lucide dependency.
+ */
+const MOCKUP_SVG = {
+    signal: `<svg width="12" height="11" viewBox="0 0 12 11" fill="currentColor" aria-hidden="true">
+        <rect x="0" y="7" width="2.2" height="4" rx="0.6"/>
+        <rect x="3.3" y="5" width="2.2" height="6" rx="0.6"/>
+        <rect x="6.6" y="2.5" width="2.2" height="8.5" rx="0.6"/>
+        <rect x="9.8" y="0" width="2.2" height="11" rx="0.6" opacity="0.32"/>
+    </svg>`,
+
+    wifi: `<svg width="12" height="10" viewBox="0 0 12 10" fill="currentColor" aria-hidden="true">
+        <circle cx="6" cy="9" r="1.15"/>
+        <path d="M3.2 6.4a3.95 3.95 0 0 1 5.6 0l-.95.95a2.6 2.6 0 0 0-3.7 0z"/>
+        <path d="M1 4.2a6.4 6.4 0 0 1 10 0l-.95.95a5.05 5.05 0 0 0-8.1 0z"/>
+    </svg>`,
+
+    battery: `<svg width="20" height="10" viewBox="0 0 20 10" fill="none" aria-hidden="true">
+        <rect x="0.5" y="0.5" width="16" height="9" rx="2.2" stroke="currentColor" stroke-width="1"/>
+        <rect x="17" y="3" width="2.5" height="4" rx="1" fill="currentColor"/>
+        <rect x="2" y="2" width="11" height="6" rx="1.2" fill="currentColor"/>
+    </svg>`,
+
+    arcadeLogo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="6" width="20" height="14" rx="3"/>
+        <path d="M7 12h4M9 10v4"/>
+        <circle cx="16" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+        <circle cx="13" cy="14" r="1.2" fill="currentColor" stroke="none" opacity="0.6"/>
+        <path d="M8 3l1.5 3M16 3l-1.5 3"/>
+    </svg>`,
+};
+
+/**
+ * Builds the 3-layer mockup HTML string for a given item.
+ * @param {object} item  — shop item with .image and .tags[]
+ * @returns {string}     — innerHTML for #mockup-slot
+ */
+function _buildMockupHTML(item) {
+    const tags   = Array.isArray(item.tags) ? item.tags : [];
+    const isMob  = tags.includes('Mobile');
+    const isPc   = tags.includes('PC');
+    const imgUrl = item.image.replace(/'/g, "\\'"); // escape for CSS url()
+    const now    = _getMockupTimeString();
+
+    // ── Choose frame class ────────────────────────────────────────────────────
+    let frameClass;
+    if      (isMob) frameClass = 'mockup-mobile';
+    else if (isPc)  frameClass = 'mockup-pc';
+    else            frameClass = 'mockup-fallback';
+
+    // ── Layer 3 UI content ────────────────────────────────────────────────────
+    let uiHTML = '';
+
+    if (isMob) {
+        // Generate 4×4 grid of 16 rounded app icon placeholders
+        const icons = Array.from({ length: 16 }, () => '<div class="mockup-app-icon"></div>').join('');
+
+        uiHTML = `
+            <div class="mockup-statusbar">
+                <span class="mockup-clock-text">${now}</span>
+                <div class="mockup-statusbar-icons">
+                    ${MOCKUP_SVG.signal}
+                    ${MOCKUP_SVG.wifi}
+                    ${MOCKUP_SVG.battery}
+                </div>
+            </div>
+            <div class="mockup-app-area">
+                <div class="mockup-app-grid">${icons}</div>
+            </div>
+            <div class="mockup-home-indicator"></div>`;
+
+    } else if (isPc) {
+        // 5 generic app slots for the taskbar
+        const taskApps = Array.from({ length: 5 }, () => '<div class="mockup-taskbar-app"></div>').join('');
+
+        uiHTML = `
+            <div class="mockup-taskbar">
+                <div class="mockup-taskbar-left">
+                    <div class="mockup-taskbar-icon"></div>
+                    <div class="mockup-taskbar-apps">${taskApps}</div>
+                </div>
+                <div class="mockup-taskbar-right">
+                    ${MOCKUP_SVG.wifi}
+                    ${MOCKUP_SVG.battery}
+                    <span class="mockup-pc-clock">${now}</span>
+                </div>
+            </div>`;
+
+    } else {
+        // Fallback: watermark badge only
+        uiHTML = `
+            <div class="mockup-fallback-watermark">
+                ${MOCKUP_SVG.arcadeLogo}
+            </div>`;
+    }
+
+    return `
+        <div class="mockup-container ${frameClass}">
+            <div class="mockup-layer-art"
+                 style="background-image: url('${imgUrl}');"
+                 aria-hidden="true"></div>
+            <div class="mockup-layer-protection" aria-hidden="true"></div>
+            <div class="mockup-layer-ui">
+                ${uiHTML}
+            </div>
+        </div>`;
+}
+
+/**
+ * Opens the preview modal with the dynamic mockup for the given item.
+ * Handles clock updates, context-menu blocking, and action buttons.
+ * @param {object} item
+ */
 function openPreviewModal(item) {
     const modal     = document.getElementById('preview-modal');
-    const img       = document.getElementById('preview-img');
+    const slot      = document.getElementById('mockup-slot');
     const nameEl    = document.getElementById('preview-name');
     const actionsEl = document.getElementById('preview-actions');
     const eco       = window.ECONOMY;
 
-    img.src            = item.image;
-    img.alt            = item.name;
+    // ── Inject mockup ─────────────────────────────────────────────────────────
+    slot.innerHTML     = _buildMockupHTML(item);
     nameEl.textContent = item.name;
 
+    // ── Context-menu hardening on the mockup stage ────────────────────────────
+    const stage = document.getElementById('preview-mockup-stage');
+    stage._noCtxHandler = stage._noCtxHandler || function(e) { e.preventDefault(); };
+    stage.addEventListener('contextmenu', stage._noCtxHandler);
+
+    // ── Live clock: update immediately, then every 30 s ───────────────────────
+    if (_mockupClockInterval) clearInterval(_mockupClockInterval);
+    updateMockupTime();
+    _mockupClockInterval = setInterval(updateMockupTime, 30_000);
+
+    // ── Action buttons ────────────────────────────────────────────────────────
     const isOwned    = GameCenter.getBoughtCount(item.id) > 0;
     const finalPrice = eco.isSaleActive ? Math.floor(item.price * eco.saleMultiplier) : item.price;
 
@@ -98,7 +255,7 @@ function openPreviewModal(item) {
     if (window.lucide) lucide.createIcons({ nodes: [actionsEl] });
 
     actionsEl.querySelector('.preview-buy-btn')?.addEventListener('click', async () => {
-        modal.classList.add('hidden');
+        _closePreviewModal(modal, stage);
         const parsed = JSON.parse(
             actionsEl.querySelector('.preview-buy-btn').dataset.item.replace(/&#39;/g, "'")
         );
@@ -106,8 +263,19 @@ function openPreviewModal(item) {
     });
 
     document.getElementById('preview-close-btn')?.addEventListener('click', () => {
-        modal.classList.add('hidden');
+        _closePreviewModal(modal, stage);
     });
+}
+
+/**
+ * Closes the preview modal and cleans up clock interval + context-menu listener.
+ * @param {HTMLElement} modal
+ * @param {HTMLElement} stage
+ */
+function _closePreviewModal(modal, stage) {
+    modal.classList.add('hidden');
+    if (_mockupClockInterval) { clearInterval(_mockupClockInterval); _mockupClockInterval = null; }
+    if (stage?._noCtxHandler) stage.removeEventListener('contextmenu', stage._noCtxHandler);
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -908,12 +1076,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === e.currentTarget) _closeModal(false);
     });
 
-    // Preview modal
+    // Preview modal (Preview 2.0 — uses _closePreviewModal for cleanup)
     document.getElementById('preview-close').addEventListener('click', () => {
-        document.getElementById('preview-modal').classList.add('hidden');
+        const modal = document.getElementById('preview-modal');
+        const stage = document.getElementById('preview-mockup-stage');
+        _closePreviewModal(modal, stage);
     });
     document.getElementById('preview-modal').addEventListener('click', e => {
-        if (e.target === e.currentTarget) document.getElementById('preview-modal').classList.add('hidden');
+        if (e.target === e.currentTarget) {
+            _closePreviewModal(e.currentTarget, document.getElementById('preview-mockup-stage'));
+        }
     });
 
     // Email modal
@@ -933,7 +1105,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
             document.getElementById('confirm-modal').classList.add('hidden');
-            document.getElementById('preview-modal').classList.add('hidden');
+            _closePreviewModal(
+                document.getElementById('preview-modal'),
+                document.getElementById('preview-mockup-stage')
+            );
             _closeEmailModal();
         }
     });
