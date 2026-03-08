@@ -90,7 +90,9 @@
         </ul>
 
         <div class="nav-user">
-            <div class="coin-badge">
+            <!-- title muestra saldo exacto cuando el formato navbar usa "k" abreviado.
+                 El valor se actualiza dinámicamente en app.js updateUI(). -->
+            <div class="coin-badge" title="0 monedas">
                 <span class="moon-blessing-badge hidden" title="Bendición Lunar activa">
                     <i data-lucide="moon" size="13"></i>
                 </span>
@@ -143,7 +145,7 @@
 
                 <div class="hud-top">
                     <div class="hud-avatar-wrap">
-                        <label for="avatar-upload-hud">
+                        <label for="avatar-upload-hud" aria-label="Cambiar foto de perfil">
                             <div class="hud-avatar" id="hud-avatar-display" style="background-image: url('assets/default_avatar.png');">
                                 <i data-lucide="user" size="24"></i>
                             </div>
