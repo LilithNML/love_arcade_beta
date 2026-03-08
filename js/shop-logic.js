@@ -58,6 +58,35 @@ let searchQuery  = '';
 // hacer removeEventListener correctamente al cerrar el modal.
 let _stageCtxHandler = null;
 
+// ── Último elemento con foco antes de abrir un modal ─────────────────────────
+// Se guarda en openXxxModal() y se restaura en _closeXxxModal() para que los
+// usuarios de teclado no pierdan su posición en el flujo de la interfaz (WCAG 2.4.3).
+let _lastFocusedElement = null;
+
+// ── Utilidad de iconos ─────────────────────────────────────────────────────────
+/**
+ * Inicializa o refresca los iconos Lucide dentro de un contenedor específico.
+ *
+ * REGLA DE RENDIMIENTO: Nunca llamar lucide.createIcons() sin scope en renders
+ * parciales. Un scan global del DOM completo en cada pulsación de teclado del
+ * buscador o en cada toggle de wishlist duplica el trabajo en la SPA porque
+ * ambas vistas (home + shop) están cargadas simultáneamente.
+ *
+ * USO CORRECTO:
+ *   refreshIcons(container)  → escanea solo el subárbol del contenedor
+ *   refreshIcons()           → scan global — SOLO en init inicial del DOM
+ *
+ * @param {HTMLElement|null} [container]  Nodo raíz del scan. null = global (solo init).
+ */
+function refreshIcons(container) {
+    if (!window.lucide) return;
+    if (container) {
+        lucide.createIcons({ nodes: [container] });
+    } else {
+        lucide.createIcons();
+    }
+}
+
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
 let _modalResolve = null;
 
@@ -66,6 +95,8 @@ function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
     document.getElementById('modal-body').innerHTML      = bodyHTML;
     document.getElementById('modal-confirm').textContent = confirmText;
     document.getElementById('modal-error').textContent   = '';
+    // Guardar el elemento con foco activo para restaurarlo al cerrar (WCAG 2.4.3).
+    _lastFocusedElement = document.activeElement;
     const overlay = document.getElementById('confirm-modal');
     overlay.classList.remove('hidden');
     requestAnimationFrame(() => document.getElementById('modal-confirm').focus());
@@ -75,6 +106,10 @@ function openConfirmModal({ title, bodyHTML, confirmText = 'Confirmar' }) {
 function _closeModal(value) {
     document.getElementById('confirm-modal').classList.add('hidden');
     if (_modalResolve) { _modalResolve(value); _modalResolve = null; }
+    // Restaurar foco al elemento que abrió el modal para no desorientar al usuario
+    // de teclado (WCAG 2.4.3 — Focus Order).
+    _lastFocusedElement?.focus();
+    _lastFocusedElement = null;
 }
 
 // ── Wallpaper Preview Modal — Preview 2.0 (Dynamic Mockup) ───────────────────
@@ -514,7 +549,13 @@ function openPreviewModal(itemOrId) {
     }
 
     modal.classList.remove('hidden');
-    if (window.lucide) lucide.createIcons({ nodes: [actionsEl] });
+    // Guardar foco y moverlo al botón de cierre del modal (WCAG 2.4.3).
+    _lastFocusedElement = document.activeElement;
+    requestAnimationFrame(() => {
+        document.getElementById('preview-close-btn')?.focus()
+            ?? document.getElementById('preview-close')?.focus();
+    });
+    refreshIcons(actionsEl);
 
     actionsEl.querySelector('.preview-buy-btn')?.addEventListener('click', async () => {
         closePreviewModal();
@@ -579,6 +620,10 @@ function closePreviewModal(modal, stage) {
     if (s && _stageCtxHandler) {
         s.removeEventListener('contextmenu', _stageCtxHandler);
     }
+
+    // ── Restaurar foco al elemento que abrió la vista previa (WCAG 2.4.3) ────
+    _lastFocusedElement?.focus();
+    _lastFocusedElement = null;
 }
 
 // Private alias kept for internal callers that pass explicit refs (unchanged API)
@@ -598,14 +643,16 @@ function switchTab(tab) {
         b.classList.toggle('active', b.dataset.tab === tab)
     );
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    const panel = document.getElementById(`tab-${tab}`);
+    panel.classList.remove('hidden');
 
     if (tab === 'settings') {
         renderHistory();
         renderMoonBlessingStatus();
         renderStreakCalendar();
     }
-    if (window.lucide) lucide.createIcons();
+    // Scope al panel activo: evita re-escanear vistas ocultas de la SPA.
+    refreshIcons(panel);
 }
 
 // ── Filtros ───────────────────────────────────────────────────────────────────
@@ -829,7 +876,11 @@ function renderShop(items) {
         });
     });
 
-    if (window.lucide) lucide.createIcons();
+    // Scope al container del catálogo.
+    // @perf ADVERTENCIA: renderShop destruye y reconstruye el DOM completo en cada
+    // llamada (cada keystroke del buscador, cada cambio de filtro, cada compra).
+    // NO añadir lógica costosa dentro del forEach de items sin considerar este ciclo.
+    refreshIcons(container);
 }
 
 // ── Render: Biblioteca ────────────────────────────────────────────────────────
@@ -845,7 +896,7 @@ function renderLibrary(items) {
                 <p style="font-family:var(--font-display); font-size:1rem; font-weight:700; color:var(--text-med);">Tu biblioteca está vacía</p>
                 <p style="font-size:0.8rem; margin-top:6px;">Canjea wallpapers en el Catálogo.</p>
             </div>`;
-        if (window.lucide) lucide.createIcons();
+        refreshIcons(container); // scope al contenedor vacío
         return;
     }
 
@@ -899,7 +950,7 @@ function renderLibrary(items) {
         });
     });
 
-    if (window.lucide) lucide.createIcons();
+    refreshIcons(container); // scope a la biblioteca renderizada
 }
 
 // ── Render: Historial ─────────────────────────────────────────────────────────
@@ -931,6 +982,11 @@ function renderHistory() {
                 </span>
             </div>`;
         } else {
+            // Formato legado v7.2 (anterior a la migración SPA). Las entradas antiguas
+            // usaban { date, itemId, name, price } en lugar de { fecha, tipo, cantidad, motivo }.
+            // Este branch permanece activo para stores que no han pasado por migrateState()
+            // todavía (primera carga desde v7.2 sin haber exportado e importado).
+            // Puede retirarse cuando se confirme que ningún usuario activo tiene stores pre-v7.5.
             const fecha  = entry.date
                 ? new Date(entry.date).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                 : '—';
@@ -1009,11 +1065,27 @@ async function initiatePurchase(item, btn) {
     }
 }
 
+/**
+ * Aplica la animación de "shake" a un elemento sin forzar un layout reflow síncrono.
+ *
+ * El patrón clásico `void el.offsetWidth` fuerza al navegador a calcular el layout
+ * completo del documento para obtener offsetWidth, lo cual es la operación de
+ * layout más costosa. El doble requestAnimationFrame evita ese coste: el primer RAF
+ * espera a que el browser haya procesado la eliminación de la clase en el frame
+ * actual; el segundo RAF aplica la clase de nuevo en el siguiente frame, logrando
+ * el reset de animación sin tocar el árbol de layout.
+ *
+ * @param {HTMLElement} el  Elemento al que aplicar la animación.
+ */
 function shakeElement(el) {
     el.classList.remove('anim-shake');
-    void el.offsetWidth; // force reflow to restart animation
-    el.classList.add('anim-shake');
-    el.addEventListener('animationend', () => el.classList.remove('anim-shake'), { once: true });
+    // Doble RAF: reinicia la animación CSS sin forzar layout reflow (reemplaza void el.offsetWidth).
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            el.classList.add('anim-shake');
+            el.addEventListener('animationend', () => el.classList.remove('anim-shake'), { once: true });
+        });
+    });
 }
 
 // ── Confetti ──────────────────────────────────────────────────────────────────
@@ -1160,7 +1232,8 @@ function initSaleBanner() {
             `${pct}% de descuento + ${Math.round(eco.cashbackRate * 100)}% de cashback en toda la tienda.`;
         if (badgeEl) badgeEl.textContent = `${pct}%`;
     }
-    if (window.lucide) lucide.createIcons();
+    // Scope al banner; el ícono de rayo (zap) solo vive dentro de este nodo.
+    refreshIcons(banner);
 }
 
 function initEconomyInfo() {
@@ -1207,7 +1280,9 @@ function openEmailModal(item, absoluteUrl) {
 
     const modal = document.getElementById('email-modal');
     modal.classList.remove('hidden');
-    if (window.lucide) lucide.createIcons({ nodes: [modal] });
+    // Guardar foco activo para restaurarlo al cerrar el modal (WCAG 2.4.3).
+    _lastFocusedElement = document.activeElement;
+    refreshIcons(modal);
     requestAnimationFrame(() => { if (inputEl) inputEl.focus(); });
 }
 
@@ -1215,6 +1290,9 @@ function _closeEmailModal() {
     document.getElementById('email-modal').classList.add('hidden');
     _emailItem        = null;
     _emailAbsoluteUrl = '';
+    // Restaurar foco al botón de envío que abrió el modal (WCAG 2.4.3).
+    _lastFocusedElement?.focus();
+    _lastFocusedElement = null;
 }
 
 function _setEmailError(show, msg = 'Introduce un correo electrónico válido.') {
@@ -1292,7 +1370,16 @@ window.ShopView = {
         document.querySelectorAll('.coin-display').forEach(el => {
             el.textContent = window.GameCenter?.getBalance?.() ?? 0;
         });
-        if (window.lucide) lucide.createIcons();
+        // Re-aplicar filtros activos: si el usuario vuelve a la Tienda después de
+        // navegar al Home, el catálogo se refiltra con el estado previo de activeFilter
+        // y searchQuery en lugar de resetear a "Todos". Esto preserva el contexto
+        // de navegación y evita la frustración de perder un filtro aplicado.
+        if (allItems.length) filterItems();
+
+        // Scope a la vista de la tienda. El sale banner, tabs y pills tienen
+        // iconos dinámicos que pueden necesitar re-inicialización al volver a la vista.
+        const shopView = document.getElementById('view-shop');
+        if (shopView) refreshIcons(shopView);
     }
 };
 
@@ -1516,5 +1603,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // donde setTheme() actualiza el store, los CSS vars, la clase theme-{key}
     // en <body> y el estado visual de todos los .theme-btn desde un único lugar.
 
-    if (window.lucide) lucide.createIcons();
+    // Scan global ÚNICO al final del init: todos los iconos del HTML estático
+    // (navbars, botones de ajustes, FAQs) se inicializan aquí. A partir de este
+    // punto, todos los refreshIcons() en renders dinámicos usan scope explícito.
+    refreshIcons();
 });
