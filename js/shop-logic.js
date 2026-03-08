@@ -125,60 +125,63 @@ const MOCKUP_SVG = {
         <path d="M8 3l1.5 3M16 3l-1.5 3"/>
     </svg>`,
 
-    // ── App grid icons (16 total, used in 4×4 Mobile grid) ───────────────────
-    // Each is a self-contained SVG with its own accent colour and icon glyph.
-    // Sizes are intentionally relative (viewBox only) so CSS scales them freely.
+    // ── App grid / desktop icons ──────────────────────────────────────────────
+    // bg      → solid colour (reference only, no longer used in HTML)
+    // bgAlpha → semi-transparent version: accent colour at 35% opacity +
+    //           a white tint layer so the wallpaper always shows through.
+    //           Value: rgba(R,G,B, 0.38) keeps the hue readable without
+    //           blocking the image behind it.
     appIcons: [
         // 0 — Music
-        { color: '#fc3c44', bg: '#1c0608',
+        { bg: '#1c0608', bgAlpha: 'rgba(252,60,68,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 15V5l8-2v10"/>
             <circle cx="4.5" cy="15" r="1.5" fill="white" stroke="none"/>
             <circle cx="12.5" cy="13" r="1.5" fill="white" stroke="none"/>
           </svg>` },
         // 1 — Camera
-        { color: '#1c1c1e', bg: '#1c1c1e',
+        { bg: '#1c1c1e', bgAlpha: 'rgba(80,80,90,0.40)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <path d="M2 6.5C2 5.7 2.7 5 3.5 5H5l1-2h6l1 2h1.5C15.3 5 16 5.7 16 6.5v7c0 .8-.7 1.5-1.5 1.5h-11C2.7 15 2 14.3 2 13.5z"/>
             <circle cx="9" cy="10" r="2.5"/>
           </svg>` },
         // 2 — Messages
-        { color: '#30d158', bg: '#0a1f0e',
+        { bg: '#0a1f0e', bgAlpha: 'rgba(48,209,88,0.30)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M15 11.5c0 .8-.7 1.5-1.5 1.5H5.5L2 16V4.5C2 3.7 2.7 3 3.5 3h10C14.3 3 15 3.7 15 4.5z"/>
           </svg>` },
         // 3 — Phone
-        { color: '#30d158', bg: '#0a1f0e',
+        { bg: '#0a1f0e', bgAlpha: 'rgba(48,209,88,0.30)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 3h3l1.5 3-1.8 1.1A9 9 0 0 0 10.9 11.3L12 9.5l3 1.5v3c0 .8-.7 1-1 1C6.8 15 3 10.2 3 4c0-.3.2-1 1-1z"/>
           </svg>` },
         // 4 — Mail
-        { color: '#0a84ff', bg: '#02101f',
+        { bg: '#02101f', bgAlpha: 'rgba(10,132,255,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="14" height="10" rx="1.5"/>
             <path d="M2 6l7 5 7-5"/>
           </svg>` },
         // 5 — Maps
-        { color: '#ff9f0a', bg: '#1f1200',
+        { bg: '#1f1200', bgAlpha: 'rgba(255,159,10,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 2C6.8 2 5 3.8 5 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.2-1.8-4-4-4z"/>
             <circle cx="9" cy="6" r="1.3" fill="white" stroke="none"/>
           </svg>` },
         // 6 — Photos
-        { color: '#ff375f', bg: '#1f0008',
+        { bg: '#1f0008', bgAlpha: 'rgba(255,55,95,0.32)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <rect x="2" y="3" width="14" height="12" rx="2"/>
             <circle cx="6.5" cy="7.5" r="1.5"/>
             <path d="M2 12l4-3.5 3 3 2.5-2 4.5 4"/>
           </svg>` },
         // 7 — Settings
-        { color: '#636366', bg: '#111113',
+        { bg: '#111113', bgAlpha: 'rgba(99,99,102,0.42)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="9" cy="9" r="2.3"/>
             <path d="M9 2v1.5M9 14.5V16M2 9h1.5M14.5 9H16M4 4l1 1M13 13l1 1M4 14l1-1M13 5l1-1"/>
           </svg>` },
         // 8 — Calendar
-        { color: '#ff3b30', bg: '#1f0200',
+        { bg: '#1f0200', bgAlpha: 'rgba(255,59,48,0.32)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <rect x="2.5" y="3.5" width="13" height="12" rx="2"/>
             <path d="M2.5 7.5h13"/>
@@ -186,13 +189,13 @@ const MOCKUP_SVG = {
             <rect x="6" y="10" width="2" height="2" rx="0.4" fill="white" stroke="none"/>
           </svg>` },
         // 9 — Clock
-        { color: '#1c1c1e', bg: '#1c1c1e',
+        { bg: '#1c1c1e', bgAlpha: 'rgba(80,80,90,0.40)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <circle cx="9" cy="9" r="6.5"/>
             <path d="M9 5.5v4l2.5 2.5"/>
           </svg>` },
         // 10 — Calculator
-        { color: '#2c2c2e', bg: '#0d0d0e',
+        { bg: '#0d0d0e', bgAlpha: 'rgba(44,44,46,0.50)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <rect x="3" y="2.5" width="12" height="13" rx="2"/>
             <rect x="5" y="4.5" width="8" height="3" rx="0.8" fill="white" fill-opacity="0.3" stroke="none"/>
@@ -204,13 +207,13 @@ const MOCKUP_SVG = {
             <circle cx="12" cy="13.5" r="0.8" fill="white" stroke="none"/>
           </svg>` },
         // 11 — Notes
-        { color: '#ffd60a', bg: '#1f1800',
+        { bg: '#1f1800', bgAlpha: 'rgba(255,214,10,0.30)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <rect x="3" y="2" width="12" height="14" rx="2"/>
             <path d="M6 6h6M6 9h6M6 12h4"/>
           </svg>` },
         // 12 — Podcast
-        { color: '#b56bff', bg: '#0e0519',
+        { bg: '#0e0519', bgAlpha: 'rgba(181,107,255,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <circle cx="9" cy="7" r="3"/>
             <path d="M5 11a5.4 5.4 0 0 0 8 0"/>
@@ -218,7 +221,7 @@ const MOCKUP_SVG = {
             <line x1="9" y1="10" x2="9" y2="16"/>
           </svg>` },
         // 13 — Game
-        { color: '#30d158', bg: '#041208',
+        { bg: '#041208', bgAlpha: 'rgba(48,209,88,0.28)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="5.5" width="14" height="9" rx="3"/>
             <path d="M6 8.5v3M4.5 10h3"/>
@@ -226,19 +229,26 @@ const MOCKUP_SVG = {
             <circle cx="13.5" cy="11.5" r="0.8" fill="white" stroke="none"/>
           </svg>` },
         // 14 — Wallet
-        { color: '#ff9f0a', bg: '#1f1200',
+        { bg: '#1f1200', bgAlpha: 'rgba(255,159,10,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round">
             <rect x="2" y="5" width="14" height="10" rx="2"/>
             <path d="M2 8h14"/>
             <circle cx="13" cy="12" r="1.2" fill="white" stroke="none"/>
           </svg>` },
         // 15 — Store
-        { color: '#0a84ff', bg: '#001830',
+        { bg: '#001830', bgAlpha: 'rgba(10,132,255,0.35)',
           svg: `<svg viewBox="0 0 18 18" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 7h12l-1 7H4z"/>
             <path d="M1 4h16"/>
             <path d="M7 14v-4h4v4"/>
           </svg>` },
+    ],
+
+    // Labels shown under each desktop icon in the PC mockup
+    appLabels: [
+        'Music', 'Camera', 'Messages', 'Phone', 'Mail',
+        'Maps', 'Photos', 'Settings', 'Calendar', 'Clock',
+        'Calculator', 'Notes', 'Podcasts', 'Games', 'Wallet', 'Store',
     ],
 };
 
@@ -268,9 +278,10 @@ function _buildMockupHTML(item) {
     let uiHTML = '';
 
     if (isMob) {
-        // 4×4 grid — all 16 named app icons with individual accent colours
+        // 4×4 grid — all 16 named app icons.
+        // Backgrounds are semi-transparent so the wallpaper bleeds through.
         const iconCells = MOCKUP_SVG.appIcons.map(app => `
-            <div class="mockup-app-icon" style="background:${app.bg};">
+            <div class="mockup-app-icon" style="background:${app.bgAlpha};">
                 ${app.svg}
             </div>`).join('');
 
@@ -289,13 +300,27 @@ function _buildMockupHTML(item) {
             <div class="mockup-home-indicator"></div>`;
 
     } else if (isPc) {
-        // Dock — first 5 app icons (Music → Phone) with SVG glyphs
+        // Desktop icons grid (Windows-style) — covers centre of the wallpaper
+        // so a screenshot crop cannot isolate the clean artwork.
+        // Uses icons 5-15 (Maps → Store) spread across a 3-column desktop grid.
+        const desktopIcons = MOCKUP_SVG.appIcons.slice(5).map((app, i) => `
+            <div class="mockup-desktop-icon">
+                <div class="mockup-desktop-icon-img" style="background:${app.bgAlpha};">
+                    ${app.svg}
+                </div>
+                <span class="mockup-desktop-label">${MOCKUP_SVG.appLabels[i + 5]}</span>
+            </div>`).join('');
+
+        // Dock — first 5 app icons in the taskbar
         const dockIcons = MOCKUP_SVG.appIcons.slice(0, 5).map(app => `
-            <div class="mockup-taskbar-app" style="background:${app.bg}; display:flex; align-items:center; justify-content:center;">
+            <div class="mockup-taskbar-app" style="background:${app.bgAlpha};">
                 ${app.svg}
             </div>`).join('');
 
         uiHTML = `
+            <div class="mockup-desktop-area">
+                <div class="mockup-desktop-grid">${desktopIcons}</div>
+            </div>
             <div class="mockup-taskbar">
                 <div class="mockup-taskbar-left">
                     <div class="mockup-taskbar-icon"></div>
