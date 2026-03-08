@@ -2534,9 +2534,12 @@ svg { stroke-width: 2; }
 .mockup-app-icon {
     aspect-ratio: 1;
     border-radius: clamp(4px, 2cqw, 9px);
-    /* Default: solid dark per-icon bg set inline; border as subtle separator */
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    /* Center the SVG glyph */
+    /*
+     * No background here — each icon's `bgAlpha` (rgba at ~35% opacity) is set
+     * inline by JS so the wallpaper bleeds through visibly while the accent hue
+     * still identifies the app. The border reinforces the shape without opacity.
+     */
+    border: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2548,14 +2551,22 @@ svg { stroke-width: 2; }
     height: 55%;
     display: block;
     flex-shrink: 0;
+    /* Drop-shadow keeps glyphs readable over any wallpaper colour */
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
 }
 
-/* Glassmorphism opt-in: only on devices that support AND perform backdrop-filter. */
-@supports (backdrop-filter: blur(4px)) {
-    .mockup-app-icon {
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+/* Glassmorphism opt-in: desktop only (pointer:fine) — adds blur to the
+   semi-transparent bg so underlying wallpaper detail softens nicely. */
+@supports (backdrop-filter: blur(6px)) {
+    @media (pointer: fine) {
+        .mockup-app-icon {
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
     }
+}
+    display: block;
+    flex-shrink: 0;
 }
 
 /* Home indicator bar at the bottom */
@@ -2573,7 +2584,78 @@ svg { stroke-width: 2; }
 
 /* ── PC UI ELEMENTS ── */
 
-.mockup-pc-ui {
+/*
+ * Desktop area: fills the space between the top of the frame and the taskbar.
+ * A 3-column grid of labelled icon+text pairs (Windows-style) covers most of
+ * the wallpaper, making any cropped screenshot obviously an OS desktop shot.
+ */
+.mockup-desktop-area {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 4% 4% 1%;
+    overflow: hidden;
+}
+
+.mockup-desktop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(4px, 2cqw, 10px);
+    width: 100%;
+}
+
+/* Individual desktop icon: square tile + label underneath */
+.mockup-desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, 1cqw, 4px);
+}
+
+.mockup-desktop-icon-img {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: clamp(4px, 1.5cqw, 8px);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.mockup-desktop-icon-img svg {
+    width: 52%;
+    height: 52%;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.55));
+}
+
+/* Icon label — short text below each desktop icon */
+.mockup-desktop-label {
+    font-size: clamp(4px, 1.8cqw, 8px);
+    color: rgba(255, 255, 255, 0.88);
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    line-height: 1;
+    font-family: var(--font-body, sans-serif);
+}
+
+/* Desktop glassmorphism opt-in — same pointer:fine guard as mobile icons */
+@supports (backdrop-filter: blur(6px)) {
+    @media (pointer: fine) {
+        .mockup-desktop-icon-img {
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+    }
+}
+
+
     justify-content: flex-end;
 }
 
