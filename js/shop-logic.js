@@ -125,6 +125,14 @@ const MOCKUP_SVG = {
         <path d="M8 3l1.5 3M16 3l-1.5 3"/>
     </svg>`,
 
+    // Windows 11 Start button — four coloured squares arranged in a 2×2 grid
+    winStart: `<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="1"  y="1"  width="6.5" height="6.5" rx="1.2" fill="rgba(255,255,255,0.92)"/>
+        <rect x="8.5" y="1"  width="6.5" height="6.5" rx="1.2" fill="rgba(255,255,255,0.92)"/>
+        <rect x="1"  y="8.5" width="6.5" height="6.5" rx="1.2" fill="rgba(255,255,255,0.92)"/>
+        <rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1.2" fill="rgba(255,255,255,0.92)"/>
+    </svg>`,
+
     // ── App grid / desktop icons ──────────────────────────────────────────────
     // bg      → solid colour (reference only, no longer used in HTML)
     // bgAlpha → semi-transparent version: accent colour at 35% opacity +
@@ -300,31 +308,38 @@ function _buildMockupHTML(item) {
             <div class="mockup-home-indicator"></div>`;
 
     } else if (isPc) {
-        // Desktop icons grid (Windows-style) — covers centre of the wallpaper
-        // so a screenshot crop cannot isolate the clean artwork.
-        // Uses icons 5-15 (Maps → Store) spread across a 3-column desktop grid.
-        const desktopIcons = MOCKUP_SVG.appIcons.slice(5).map((app, i) => `
+        // Left column: 6 small desktop shortcuts, Windows-style.
+        // Only 6 icons in a single column hugging the left edge.
+        // The wallpaper dominates the frame; OS feel from chrome, not coverage.
+        const desktopIcons = MOCKUP_SVG.appIcons.slice(0, 6).map((app, i) => `
             <div class="mockup-desktop-icon">
                 <div class="mockup-desktop-icon-img" style="background:${app.bgAlpha};">
                     ${app.svg}
                 </div>
-                <span class="mockup-desktop-label">${MOCKUP_SVG.appLabels[i + 5]}</span>
+                <span class="mockup-desktop-label">${MOCKUP_SVG.appLabels[i]}</span>
             </div>`).join('');
 
-        // Dock — first 5 app icons in the taskbar
-        const dockIcons = MOCKUP_SVG.appIcons.slice(0, 5).map(app => `
-            <div class="mockup-taskbar-app" style="background:${app.bgAlpha};">
+        // Taskbar centre: 6 pinned app icons (icons 6-11)
+        const pinnedApps = MOCKUP_SVG.appIcons.slice(6, 12).map(app => `
+            <div class="mockup-taskbar-pinned" style="background:${app.bgAlpha};">
                 ${app.svg}
             </div>`).join('');
 
         uiHTML = `
             <div class="mockup-desktop-area">
-                <div class="mockup-desktop-grid">${desktopIcons}</div>
+                <div class="mockup-desktop-shortcuts">${desktopIcons}</div>
             </div>
             <div class="mockup-taskbar">
                 <div class="mockup-taskbar-left">
-                    <div class="mockup-taskbar-icon"></div>
-                    <div class="mockup-taskbar-apps">${dockIcons}</div>
+                    <div class="mockup-taskbar-start">
+                        ${MOCKUP_SVG.winStart}
+                    </div>
+                    <div class="mockup-taskbar-search">
+                        <svg viewBox="0 0 12 12" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.3" stroke-linecap="round"><circle cx="5" cy="5" r="3"/><line x1="7.5" y1="7.5" x2="10" y2="10"/></svg>
+                    </div>
+                </div>
+                <div class="mockup-taskbar-centre">
+                    ${pinnedApps}
                 </div>
                 <div class="mockup-taskbar-right">
                     ${MOCKUP_SVG.wifi}
