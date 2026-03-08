@@ -362,7 +362,7 @@
   {
     "id": 37,
     "name": "Akaza",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/akaza_9ffa9051_thumbs.webp",
     "file": "akaza_9ffa9051.jpg",
     "tags": [
@@ -372,7 +372,7 @@
   {
     "id": 38,
     "name": "All Might",
-    "price": 1000,
+    "price": 1200,
     "image": "assets/product-thumbs/all_might_cd42d6db_thumbs.webp",
     "file": "all_might_cd42d6db.jpg",
     "tags": [
@@ -382,7 +382,7 @@
   {
     "id": 39,
     "name": "Androide Numero 17",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/androide_numero_17_42bbef89_thumbs.webp",
     "file": "androide_numero_17_42bbef89.jpg",
     "tags": [
@@ -392,7 +392,7 @@
   {
     "id": 40,
     "name": "Arlecchino",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/arlecchino_51eddcf7_thumbs.webp",
     "file": "arlecchino_51eddcf7.jpg",
     "tags": [
@@ -402,7 +402,7 @@
   {
     "id": 41,
     "name": "Batman",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/batman_522fa884_thumbs.webp",
     "file": "batman_522fa884.jpg",
     "tags": [
@@ -412,7 +412,7 @@
   {
     "id": 42,
     "name": "Citlali",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/citlali_efcd7773_thumbs.webp",
     "file": "citlali_efcd7773.jpg",
     "tags": [
@@ -422,7 +422,7 @@
   {
     "id": 43,
     "name": "Columbina",
-    "price": 1000,
+    "price": 1200,
     "image": "assets/product-thumbs/columbina_80942540_thumbs.webp",
     "file": "columbina_80942540.jpg",
     "tags": [
@@ -432,7 +432,7 @@
   {
     "id": 44,
     "name": "Giyu Tomioka",
-    "price": 600,
+    "price": 800,
     "image": "assets/product-thumbs/giyu_tomioka_cda472a0_thumbs.webp",
     "file": "giyu_tomioka_cda472a0.jpg",
     "tags": [
@@ -442,7 +442,7 @@
   {
     "id": 45,
     "name": "Hoshimi Miyabi",
-    "price": 600,
+    "price": 800,
     "image": "assets/product-thumbs/hoshimi_miyabi_39d046aa_thumbs.webp",
     "file": "hoshimi_miyabi_39d046aa.jpg",
     "tags": [
@@ -452,7 +452,7 @@
   {
     "id": 46,
     "name": "Inosuke Hashibira",
-    "price": 1300,
+    "price": 1500,
     "image": "assets/product-thumbs/inosuke_hashibira_21200eb8_thumbs.webp",
     "file": "inosuke_hashibira_21200eb8.jpg",
     "tags": [
@@ -462,7 +462,7 @@
   {
     "id": 47,
     "name": "Izuku Midoriya",
-    "price": 900,
+    "price": 1100,
     "image": "assets/product-thumbs/izuku_midoriya_c4d27cd0_thumbs.webp",
     "file": "izuku_midoriya_c4d27cd0.jpg",
     "tags": [
@@ -472,7 +472,7 @@
   {
     "id": 48,
     "name": "Izuku Midoriya Regalo",
-    "price": 0,
+    "price": 200,
     "image": "assets/product-thumbs/izuku_midoriya_regalo_0417bd9f_thumbs.webp",
     "file": "izuku_midoriya_regalo_0417bd9f.jpg",
     "tags": [
@@ -482,7 +482,7 @@
   {
     "id": 49,
     "name": "Katsuki Bakugo",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/katsuki_bakugo_96451f25_thumbs.webp",
     "file": "katsuki_bakugo_96451f25.jpg",
     "tags": [
@@ -492,7 +492,7 @@
   {
     "id": 50,
     "name": "Kessoku Band",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/kessoku_band_725e1272_thumbs.webp",
     "file": "kessoku_band_725e1272.jpg",
     "tags": [
@@ -502,7 +502,7 @@
   {
     "id": 51,
     "name": "Knuckles",
-    "price": 900,
+    "price": 1100,
     "image": "assets/product-thumbs/knuckles_d3efdda0_thumbs.webp",
     "file": "knuckles_d3efdda0.jpg",
     "tags": [
@@ -512,7 +512,7 @@
   {
     "id": 52,
     "name": "Kyojuro Rengoku",
-    "price": 1200,
+    "price": 1400,
     "image": "assets/product-thumbs/kyojuro_rengoku_40c550c3_thumbs.webp",
     "file": "kyojuro_rengoku_40c550c3.jpg",
     "tags": [
@@ -522,7 +522,7 @@
   {
     "id": 53,
     "name": "Lazer Bird",
-    "price": 700,
+    "price": 900,
     "image": "assets/product-thumbs/lazer_bird_6eb931d5_thumbs.webp",
     "file": "lazer_bird_6eb931d5.jpg",
     "tags": [
@@ -532,7 +532,7 @@
   {
     "id": 54,
     "name": "Miles Tails Prower",
-    "price": 100,
+    "price": 300,
     "image": "assets/product-thumbs/miles_tails_prower_1beadf62_thumbs.webp",
     "file": "miles_tails_prower_1beadf62.jpg",
     "tags": [
@@ -542,7 +542,7 @@
   {
     "id": 55,
     "name": "Neuvillette",
-    "price": 700,
+    "price": 900,
     "image": "assets/product-thumbs/neuvillette_47979e62_thumbs.webp",
     "file": "neuvillette_47979e62.jpg",
     "tags": [
@@ -552,7 +552,7 @@
   {
     "id": 56,
     "name": "Nino Nakano",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/nino_nakano_01c51a71_thumbs.webp",
     "file": "nino_nakano_01c51a71.jpg",
     "tags": [
@@ -562,7 +562,7 @@
   {
     "id": 57,
     "name": "Pablo",
-    "price": 300,
+    "price": 500,
     "image": "assets/product-thumbs/pablo_078dfbcb_thumbs.webp",
     "file": "pablo_078dfbcb.jpg",
     "tags": [
@@ -572,7 +572,7 @@
   {
     "id": 58,
     "name": "Robin Damian Wayne",
-    "price": 1200,
+    "price": 1400,
     "image": "assets/product-thumbs/robin_damian_wayne_c6cb008d_thumbs.webp",
     "file": "robin_damian_wayne_c6cb008d.jpg",
     "tags": [
@@ -582,7 +582,7 @@
   {
     "id": 59,
     "name": "Shinobu Kocho",
-    "price": 900,
+    "price": 1100,
     "image": "assets/product-thumbs/shinobu_kocho_81949198_thumbs.webp",
     "file": "shinobu_kocho_81949198.jpg",
     "tags": [
@@ -592,7 +592,7 @@
   {
     "id": 60,
     "name": "Tanjiro Kamado",
-    "price": 1300,
+    "price": 1500,
     "image": "assets/product-thumbs/tanjiro_kamado_008a7fe9_thumbs.webp",
     "file": "tanjiro_kamado_008a7fe9.jpg",
     "tags": [
@@ -602,7 +602,7 @@
   {
     "id": 61,
     "name": "Tengen Uzui",
-    "price": 700,
+    "price": 900,
     "image": "assets/product-thumbs/tengen_uzui_4c2e4345_thumbs.webp",
     "file": "tengen_uzui_4c2e4345.jpg",
     "tags": [
@@ -612,7 +612,7 @@
   {
     "id": 62,
     "name": "Tsukasa Tsukuyomi",
-    "price": 800,
+    "price": 1000,
     "image": "assets/product-thumbs/tsukasa_tsukuyomi_4f3b4357_thumbs.webp",
     "file": "tsukasa_tsukuyomi_4f3b4357.jpg",
     "tags": [
@@ -622,7 +622,7 @@
   {
     "id": 63,
     "name": "Zhu Yuan",
-    "price": 600,
+    "price": 800,
     "image": "assets/product-thumbs/zhu_yuan_5458e3ae_thumbs.webp",
     "file": "zhu_yuan_5458e3ae.jpg",
     "tags": [
