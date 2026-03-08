@@ -1,7 +1,7 @@
 [
   {
     "id": "lvl_1",
-    "image": "./assets/Nivel1.webp",
+    "image": "./assets/Nivel01.webp",
     "thumbnail": "./assets/thumbnails/Nivel1_thumb.webp",
     "pieces": 16,
     "rewardCoins": 150,
@@ -10,7 +10,7 @@
   },
   {
     "id": "lvl_2",
-    "image": "./assets/Nivel2.webp",
+    "image": "./assets/Nivel02.webp",
     "thumbnail": "./assets/thumbnails/Nivel2_thumb.webp",
     "pieces": 16,
     "rewardCoins": 153,
@@ -19,7 +19,7 @@
   },
   {
     "id": "lvl_3",
-    "image": "./assets/Nivel3.webp",
+    "image": "./assets/Nivel03.webp",
     "thumbnail": "./assets/thumbnails/Nivel3_thumb.webp",
     "pieces": 16,
     "rewardCoins": 157,
@@ -28,7 +28,7 @@
   },
   {
     "id": "lvl_4",
-    "image": "./assets/Nivel4.webp",
+    "image": "./assets/Nivel04.webp",
     "thumbnail": "./assets/thumbnails/Nivel4_thumb.webp",
     "pieces": 16,
     "rewardCoins": 160,
@@ -37,7 +37,7 @@
   },
   {
     "id": "lvl_5",
-    "image": "./assets/Nivel5.webp",
+    "image": "./assets/Nivel05.webp",
     "thumbnail": "./assets/thumbnails/Nivel5_thumb.webp",
     "pieces": 16,
     "rewardCoins": 163,
@@ -46,7 +46,7 @@
   },
   {
     "id": "lvl_6",
-    "image": "./assets/Nivel6.webp",
+    "image": "./assets/Nivel06.webp",
     "thumbnail": "./assets/thumbnails/Nivel6_thumb.webp",
     "pieces": 16,
     "rewardCoins": 167,
@@ -55,7 +55,7 @@
   },
   {
     "id": "lvl_7",
-    "image": "./assets/Nivel7.webp",
+    "image": "./assets/Nivel07.webp",
     "thumbnail": "./assets/thumbnails/Nivel7_thumb.webp",
     "pieces": 16,
     "rewardCoins": 170,
@@ -64,7 +64,7 @@
   },
   {
     "id": "lvl_8",
-    "image": "./assets/Nivel8.webp",
+    "image": "./assets/Nivel08.webp",
     "thumbnail": "./assets/thumbnails/Nivel8_thumb.webp",
     "pieces": 16,
     "rewardCoins": 173,
@@ -73,7 +73,7 @@
   },
   {
     "id": "lvl_9",
-    "image": "./assets/Nivel9.webp",
+    "image": "./assets/Nivel09.webp",
     "thumbnail": "./assets/thumbnails/Nivel9_thumb.webp",
     "pieces": 16,
     "rewardCoins": 177,
