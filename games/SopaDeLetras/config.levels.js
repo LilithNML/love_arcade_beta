@@ -509,6 +509,219 @@ window.LA_WS_LEVELS = [
         gridSize: 10,
         words: ["PACMAN", "TETRIS", "PONG", "ZELDA", "METROID", "DOOM", "QUAKE"],
         rewardCoins: 250 // HITO nivel 70 → máxima recompensa
+    },
+
+    // ─── BLOQUE 71-100: Videojuegos, Cine, Arte y más ───────────────────────
+
+    {
+        id: "lvl_71",
+        title: "The Legend of Zelda",
+        gridSize: 11,
+        words: ["LINK", "ZELDA", "GANON", "TRIFORCE", "HYRULE", "EPONA", "NAVI"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_72",
+        title: "Marvel: Vengadores",
+        gridSize: 10,
+        words: ["THOR", "HULK", "VIUDA", "LOKI", "IRON", "ROGERS"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_73",
+        title: "Impresionismo",
+        gridSize: 10,
+        words: ["MONET", "RENOIR", "DEGAS", "LUZ", "JARDIN", "AGUA"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_74",
+        title: "The Witcher",
+        gridSize: 12,
+        words: ["GERALT", "YENNEFER", "CIRI", "TRISS", "JASKIER", "ROACH", "LESHEN", "DROWNER"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + YENNEFER (9 chars) → 180+20
+    },
+    {
+        id: "lvl_75",
+        title: "Pixar: Personajes",
+        gridSize: 11,
+        words: ["WOODY", "BUZZ", "NEMO", "DORY", "REMY", "CARL", "MERIDA"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_76",
+        title: "Escultura",
+        gridSize: 10,
+        words: ["MARMOL", "ARCILLA", "CINCEL", "BRONCE", "MOLDE"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_77",
+        title: "Minecraft",
+        gridSize: 11,
+        words: ["MADERA", "PIEDRA", "HIERRO", "TIERRA", "ARENA", "DIAMANTE", "CARBON", "CREEPER"],
+        rewardCoins: 175 // Media: 11x11, 8 palabras → tope de rango medio
+    },
+    {
+        id: "lvl_78",
+        title: "Astronomia",
+        gridSize: 12,
+        words: ["NEBULOSA", "GALAXIA", "PULSAR", "COMETA", "ORBITA", "QUASAR", "ECLIPSE", "METEORO"],
+        rewardCoins: 220 // Avanzada: 12x12, 8 palabras + temática científica → rango técnico
+    },
+    {
+        id: "lvl_79",
+        title: "El Señor de los Anillos",
+        gridSize: 12,
+        words: ["FRODO", "GANDALF", "SAURON", "LEGOLAS", "ARAGORN", "GIMLI", "GOLLUM", "BOROMIR"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_80",
+        title: "Gaming: Iconos",
+        gridSize: 12,
+        words: ["MARIO", "PIKACHU", "KRATOS", "MASTER", "DANTE", "SORA", "CLOUD", "LARA", "GORDON", "KIRBY"],
+        rewardCoins: 250 // HITO nivel 80 + Maestra: 12x12, 10 palabras → máxima recompensa
+    },
+    {
+        id: "lvl_81",
+        title: "Mortal Kombat",
+        gridSize: 12,
+        words: ["RAIDEN", "SCORPION", "KANO", "SONYA", "SUBZERO", "KITANA", "KOTAL", "MILEENA"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_82",
+        title: "Arquitectura Mundial",
+        gridSize: 10,
+        words: ["PIRAMIDE", "COLISEO", "LOUVRE", "BABEL", "TEMPLO"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_83",
+        title: "Blade Runner",
+        gridSize: 11,
+        words: ["ROY", "PRIS", "DECKARD", "NEXUS", "REPLICANTE", "TYRRELL"],
+        rewardCoins: 150 // Media: 11x11, 6 palabras + REPLICANTE (10 chars) → 130+20
+    },
+    {
+        id: "lvl_84",
+        title: "League of Legends",
+        gridSize: 12,
+        words: ["JINX", "AHRI", "TEEMO", "THRESH", "EZREAL", "VAYNE", "SYNDRA", "LULU"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_85",
+        title: "Arte Abstracto",
+        gridSize: 10,
+        words: ["FORMA", "PLANO", "ANGULO", "CUBO", "LINEA", "COLOR"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_86",
+        title: "Studio Ghibli",
+        gridSize: 11,
+        words: ["TOTORO", "CHIHIRO", "KIKI", "PONYO", "HOWL", "ASHITAKA", "NAUSICAA"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_87",
+        title: "Final Fantasy",
+        gridSize: 12,
+        words: ["CLOUD", "TIFA", "AERITH", "SEPHIROTH", "TERRA", "LIGHTNING", "NOCTIS", "TIDUS", "YUNA"],
+        rewardCoins: 220 // Avanzada: 12x12, 9 palabras + SEPHIROTH (9) y LIGHTNING (9) → 200+20
+    },
+    {
+        id: "lvl_88",
+        title: "Fotografia",
+        gridSize: 10,
+        words: ["CAMARA", "LENTE", "FLASH", "ENFOQUE", "RETRATO"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_89",
+        title: "La Matrix",
+        gridSize: 11,
+        words: ["NEO", "TRINITY", "MORPHEUS", "SMITH", "ORACLE", "ZION", "CYPHER"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_90",
+        title: "Arte Universal",
+        gridSize: 12,
+        words: ["PINTURA", "ESCULTURA", "MUSICA", "DANZA", "TEATRO", "CINE", "FOTOGRAFIA", "DIBUJO", "OPERA", "MURAL"],
+        rewardCoins: 250 // HITO nivel 90 + Maestra: 12x12, 10 palabras + FOTOGRAFIA (10 chars) → máxima recompensa
+    },
+    {
+        id: "lvl_91",
+        title: "God of War",
+        gridSize: 12,
+        words: ["KRATOS", "ATREUS", "ZEUS", "ARES", "POSEIDON", "FREYA", "THOR", "BALDUR"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_92",
+        title: "Géneros Musicales",
+        gridSize: 10,
+        words: ["JAZZ", "BLUES", "ROCK", "POP", "SALSA", "CUMBIA"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_93",
+        title: "Jurassic Park",
+        gridSize: 11,
+        words: ["TREX", "RAPTOR", "AMBER", "ISLA", "PARQUE", "MOSA", "CLON"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_94",
+        title: "Overwatch: Héroes",
+        gridSize: 12,
+        words: ["TRACER", "GENJI", "MERCY", "REAPER", "PHARAH", "WINSTON", "DVA", "LUCIO"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_95",
+        title: "Surrealismo",
+        gridSize: 11,
+        words: ["DALI", "MAGRITTE", "ERNST", "SUENO", "IMAGEN", "TIEMPO", "RELOJES"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_96",
+        title: "Cine de Tarantino",
+        gridSize: 12,
+        words: ["PULP", "FICTION", "DJANGO", "BEATRIX", "VEGA", "JULES", "MIA", "VINCENT"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_97",
+        title: "Cyberpunk 2077",
+        gridSize: 12,
+        words: ["JOHNNY", "SILVERHAND", "NETRUNNER", "NIGHT", "CITY", "ARASAKA", "TRAUMA", "MILITECH", "RIPPERDOC"],
+        rewardCoins: 220 // Avanzada: 12x12, 9 palabras + SILVERHAND (10) y NETRUNNER (9) → 200+20
+    },
+    {
+        id: "lvl_98",
+        title: "Jazz y Blues",
+        gridSize: 10,
+        words: ["JAZZ", "BLUES", "SWING", "SAXO", "ALMA"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_99",
+        title: "Indiana Jones",
+        gridSize: 11,
+        words: ["JONES", "INDY", "MARIAN", "SALLAH", "BELLOQ", "TEMPLO", "LATIGO"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_100",
+        title: "El Gran Final",
+        gridSize: 12,
+        words: ["EPICO", "MAXIMO", "LOGRO", "CAMPEON", "VICTORIA", "FINAL", "NIVEL", "RECORD", "MAESTRO", "TROFEO", "CROWN", "LEGEND"],
+        rewardCoins: 250 // HITO nivel 100 + Maestra: 12x12, 12 palabras → máxima recompensa
     }
 ];
 
