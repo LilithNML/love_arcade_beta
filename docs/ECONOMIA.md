@@ -73,8 +73,8 @@ Cambia `isSaleActive` a `true`. Eso es todo. El resto del sistema reacciona auto
 ```javascript
 const ECONOMY = {
     isSaleActive:   true,     // ← CAMBIO
-    saleMultiplier: 0.8,
-    saleLabel:      '20% OFF',
+    saleMultiplier: 0.9,
+    saleLabel:      '10% OFF',
     cashbackRate:   0.1
 };
 ```
@@ -102,9 +102,9 @@ saleMultiplier = 1 − (descuento_deseado / 100)
 | Descuento deseado | Valor de saleMultiplier |
 |---|---|
 | 5% | `0.95` |
-| 10% | `0.90` |
+| **10%** | **`0.90`** ← valor por defecto |
 | 15% | `0.85` |
-| **20%** | **`0.80`** ← valor por defecto |
+| 20% | `0.80` |
 | 25% | `0.75` |
 | 30% | `0.70` |
 | 50% | `0.50` |
@@ -155,8 +155,8 @@ Si quieres cambiar ese texto de descripción del banner, edita directamente `ini
 const ECONOMY = {
     isSaleActive: false, // ← Oferta desactivada
     // El resto de valores se ignoran mientras isSaleActive sea false
-    saleMultiplier: 0.8,
-    saleLabel:      '20% OFF',
+    saleMultiplier: 0.o,
+    saleLabel:      '10% OFF',
     cashbackRate:   0.1
 };
 ```
