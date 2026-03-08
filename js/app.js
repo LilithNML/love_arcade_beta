@@ -293,6 +293,22 @@ function getSyncWorker() {
     return _syncWorker;
 }
 
+/**
+ * Envía una tarea al Web Worker de sincronización y devuelve una Promise con el resultado.
+ *
+ * COMPORTAMIENTO DE FALLBACK: si el worker no está disponible (navegador sin soporte,
+ * error de instanciación, o contexto sin origen — e.g. file://), la Promise es rechazada
+ * con Error('Worker no disponible'). Los llamadores (exportSave / importSave) tienen
+ * bloques try/catch que capturan este rechazo y ejecutan la operación en el hilo
+ * principal como fallback. El sistema nunca bloquea la UI incluso sin worker.
+ *
+ * IDEMPOTENCIA: cada llamada crea un `id` único ({timestamp}-{random}) para correlacionar
+ * la respuesta del worker. Múltiples llamadas concurrentes se resuelven de forma
+ * independiente gracias a este id.
+ *
+ * @param {{ action: 'export'|'import', [key: string]: any }} payload
+ * @returns {Promise<any>}
+ */
 function workerTask(payload) {
     return new Promise((resolve, reject) => {
         const worker = getSyncWorker();
@@ -814,7 +830,9 @@ window.GameCenter = {
     setAvatar: (dataUrl) => { store.userAvatar = dataUrl; saveState(); applyAvatar(); },
     getAvatar: ()        => store.userAvatar,
 
-    // Alias público para compatibilidad con shop.html
+    // Alias de compatibilidad — mantenido por si juegos externos llaman a activateMoonBlessing().
+    // shop.html fue eliminado en la migración SPA v9.0; la función real es buyMoonBlessing().
+    // Puede retirarse cuando se confirme que ningún juego integrado usa este alias.
     activateMoonBlessing: function() { return this.buyMoonBlessing(); },
 
     // ── TEMA ─────────────────────────────────────────────────────────────────
@@ -1030,7 +1048,12 @@ function updateUI() {
     if (_displayedCoins === store.coins) {
         // Sin delta: escribir valores formateados directamente, sin animación.
         // Evita sobrescribir el valor formateado que ya pintó el init silencioso.
-        navbarDisplays.forEach(el => { el.textContent = formatCoinsNavbar(store.coins); });
+        navbarDisplays.forEach(el => {
+            el.textContent = formatCoinsNavbar(store.coins);
+            // El tooltip muestra el valor exacto cuando la navbar usa formato abreviado
+            // (ej: "25.5k"). El usuario puede ver el número preciso sin ir al HUD.
+            el.closest('.coin-badge')?.setAttribute('title', `${store.coins} monedas`);
+        });
         otherDisplays.forEach(el  => { el.textContent = store.coins; });
     } else {
         // Con delta: animar con número exacto y formatear navbar al terminar
@@ -1251,6 +1274,19 @@ applyIdentity();
 // que updateStreakBar() y updateCountdownDisplay() también hayan corrido.
 // Esto garantiza que .player-hud se revela con TODOS sus estados correctos
 // (botón, countdown, barras de racha y avatar) en un solo RAF.
+//
+// ¿Por qué revealUI() NO se llama aquí directamente?
+// ──────────────────────────────────────────────────────────────────────────
+// app.js no tiene acceso a las funciones updateStreakBar() y
+// updateCountdownDisplay(), que viven en el inline script de index.html.
+// Si revealUI() se llamara aquí, el HUD se revelaría ANTES de que esas
+// funciones hayan ejecutado, causando un salto visual de estado ("jitter"):
+//   1. El botón aparece con el texto correcto (updateDailyButton ya corrió)
+//   2. Pero las barras de racha aparecen vacías (updateStreakBar no corrió aún)
+//   3. El countdown aparece oculto (updateCountdownDisplay no corrió aún)
+// Al delegarlo al inline script del <body>, se garantiza el orden correcto:
+//   updateStreakBar() → updateCountdownDisplay() → revealUI()
+// Todo en el mismo hilo, antes del primer paint.
 
 // =====================================================
 // EVENT LISTENERS — DOMContentLoaded
