@@ -83,6 +83,10 @@ export class PuzzleEngine {
 
         this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
+        // [v16] Mobile portrait layout
+        this.isMobilePortrait = false;
+        this.trayY = null; // canvas Y where the piece tray begins (mobile only)
+
         this.isLoopRunning = false;
         this._idleWakeCount = 0; // frames to keep loop alive for idle blink
 
@@ -165,13 +169,6 @@ export class PuzzleEngine {
         const h        = parent.clientHeight;
         const imgRatio = this.img.width / this.img.height;
 
-        let cssW = w, cssH = w / imgRatio;
-        if (cssH > h) { cssH = h; cssW = cssH * imgRatio; }
-
-        const workAreaScale = 0.65;
-        cssW *= workAreaScale;
-        cssH *= workAreaScale;
-
         this.canvas.width  = w * this.dpr;
         this.canvas.height = h * this.dpr;
         this.canvas.style.width  = '100%';
@@ -184,16 +181,49 @@ export class PuzzleEngine {
         this.staticCtx.setTransform(1, 0, 0, 1, 0, 0);
         this.staticCtx.scale(this.dpr, this.dpr);
 
-        this.boardWidth  = cssW;
-        this.boardHeight = cssH;
-        this.boardX      = Math.round((w - cssW) / 2);
-        this.boardY      = Math.round((h - cssH) / 2);
+        this.logicalWidth  = w;
+        this.logicalHeight = h;
+
+        // [v16] Mobile portrait layout: wide board on top, piece tray below
+        const isMobilePortrait = w < h && w < 520;
+        this.isMobilePortrait  = isMobilePortrait;
+
+        let cssW, cssH;
+
+        if (isMobilePortrait) {
+            // Tray occupies bottom 40% of the canvas
+            const trayH     = Math.round(h * 0.40);
+            const boardAreaH = h - trayH;
+            this.trayY      = boardAreaH;
+
+            // Board fills 94% of screen width; constrained by the board area height
+            cssW = w * 0.94;
+            cssH = cssW / imgRatio;
+            const maxBoardH = boardAreaH - 20; // 10px margin top + 10px bottom
+            if (cssH > maxBoardH) { cssH = maxBoardH; cssW = cssH * imgRatio; }
+
+            this.boardWidth  = cssW;
+            this.boardHeight = cssH;
+            this.boardX      = Math.round((w - cssW) / 2);
+            this.boardY      = Math.round((boardAreaH - cssH) / 2);
+        } else {
+            // Original desktop / landscape / tablet layout
+            this.trayY = null;
+            cssW = w; cssH = w / imgRatio;
+            if (cssH > h) { cssH = h; cssW = cssH * imgRatio; }
+            const workAreaScale = 0.65;
+            cssW *= workAreaScale;
+            cssH *= workAreaScale;
+
+            this.boardWidth  = cssW;
+            this.boardHeight = cssH;
+            this.boardX      = Math.round((w - cssW) / 2);
+            this.boardY      = Math.round((h - cssH) / 2);
+        }
 
         this.pieceWidth  = this.boardWidth  / this.gridSize;
         this.pieceHeight = this.boardHeight / this.gridSize;
         this.tabSize     = Math.min(this.pieceWidth, this.pieceHeight) * 0.25;
-        this.logicalWidth  = w;
-        this.logicalHeight = h;
 
         this.sourceCanvas.width  = Math.ceil(this.boardWidth  * this.dpr);
         this.sourceCanvas.height = Math.ceil(this.boardHeight * this.dpr);
@@ -398,6 +428,36 @@ export class PuzzleEngine {
         ctx.lineWidth   = 1;
         ctx.strokeRect(bx, by, bw, bh);
 
+        // [v16] Mobile portrait: draw the piece tray zone below the board
+        if (this.isMobilePortrait && this.trayY !== null) {
+            const ty = this.trayY;
+
+            // Tray subtle background
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+            ctx.fillRect(0, ty, this.logicalWidth, this.logicalHeight - ty);
+
+            // Dashed separator line
+            ctx.save();
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.20)';
+            ctx.lineWidth   = 1;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(0, ty);
+            ctx.lineTo(this.logicalWidth, ty);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // Micro-label: "PIECES" centered at top of tray
+            ctx.save();
+            ctx.font      = '500 7px Rajdhani, sans-serif';
+            ctx.fillStyle = 'rgba(59,130,246,0.35)';
+            ctx.textAlign = 'center';
+            ctx.letterSpacing = '2px';
+            ctx.fillText('PIECES', this.logicalWidth / 2, ty + 12);
+            ctx.restore();
+        }
+
         // Locked pieces
         for (let i = 0; i < this.lockedPieces.length; i++) {
             this.renderPieceToContext(ctx, this.lockedPieces[i], false, true);
@@ -567,14 +627,21 @@ export class PuzzleEngine {
             }
         }
 
-        const topSafe    = 80;
-        const bottomSafe = 160;
-
-        const zones = [
-            { x: 10, y: topSafe, w: Math.max(0, this.boardX - 20), h: this.logicalHeight - topSafe - bottomSafe },
-            { x: this.boardX + this.boardWidth + 10, y: topSafe, w: Math.max(0, this.logicalWidth - (this.boardX + this.boardWidth) - 20), h: this.logicalHeight - topSafe - bottomSafe },
-            { x: 10, y: this.boardY + this.boardHeight + 10, w: this.logicalWidth - 20, h: Math.max(0, this.logicalHeight - (this.boardY + this.boardHeight) - bottomSafe) }
-        ];
+        // [v16] Mobile portrait: pieces spawn exclusively in the bottom tray
+        let zones;
+        if (this.isMobilePortrait && this.trayY !== null) {
+            const trayYStart = this.trayY + 8;
+            const trayHeight = this.logicalHeight - trayYStart - 30;
+            zones = [{ x: 10, y: trayYStart, w: this.logicalWidth - 20, h: trayHeight }];
+        } else {
+            const topSafe    = 80;
+            const bottomSafe = 160;
+            zones = [
+                { x: 10, y: topSafe, w: Math.max(0, this.boardX - 20), h: this.logicalHeight - topSafe - bottomSafe },
+                { x: this.boardX + this.boardWidth + 10, y: topSafe, w: Math.max(0, this.logicalWidth - (this.boardX + this.boardWidth) - 20), h: this.logicalHeight - topSafe - bottomSafe },
+                { x: 10, y: this.boardY + this.boardHeight + 10, w: this.logicalWidth - 20, h: Math.max(0, this.logicalHeight - (this.boardY + this.boardHeight) - bottomSafe) }
+            ];
+        }
 
         const validZones = zones.filter(z => z.w > this.pieceWidth && z.h > this.pieceHeight);
         if (validZones.length === 0) {
@@ -606,6 +673,10 @@ export class PuzzleEngine {
 
     /* ---- CLAMPING ---- */
     isInRestrictedArea(x, y) {
+        // [v16] Mobile portrait: buttons are horizontal (130 × 80px) not vertical
+        if (this.isMobilePortrait) {
+            return (x > this.logicalWidth - 130) && (y > this.logicalHeight - 80);
+        }
         return (x > this.logicalWidth - 90) && (y > this.logicalHeight - 160);
     }
 
@@ -615,7 +686,9 @@ export class PuzzleEngine {
         const distToCorrect  = Math.hypot(x - p.correctX, y - p.correctY);
         const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
         if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth / 2, y + this.pieceHeight / 2)) {
-            y = this.logicalHeight - 170 - this.pieceHeight;
+            // [v16] mobile portrait: horizontal buttons are only 80px tall
+            const bottomClear = this.isMobilePortrait ? 90 : 170;
+            y = this.logicalHeight - bottomClear - this.pieceHeight;
         }
         p.currentX = x;
         p.currentY = y;
