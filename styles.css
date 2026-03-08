@@ -1618,6 +1618,11 @@ body::before {
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
     animation: modalFadeIn 0.18s ease;
+    /* GPU compositing hint — prevents repaints from bleeding outside the overlay */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
 }
 .modal-overlay.hidden { display: none !important; }
 @keyframes modalFadeIn {
@@ -2356,10 +2361,11 @@ svg { stroke-width: 2; }
 .mockup-container {
     position: relative;
     overflow: hidden;
-    /* GPU layer: isolate compositing */
-    transform: translateZ(0);
-    will-change: transform;
-    /* Containment: prevents layout recalc of surrounding page */
+    /* translate3d forces a dedicated GPU compositing layer for this element only.
+     * will-change is intentionally absent here — it is applied dynamically by
+     * openPreviewModal() to the modal itself and removed by closePreviewModal()
+     * to avoid wasting GPU memory on idle composited layers. */
+    transform: translate3d(0, 0, 0);
     contain: paint;
     flex-shrink: 0;
 }
@@ -2410,7 +2416,47 @@ svg { stroke-width: 2; }
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
+    /* Opacity transition for the thumbnail→HiRes swap (Phase 1→2) */
+    transition: filter 0.4s ease, transform 0.4s ease;
     /* Prevents right-click "Save image as..." — image is a CSS bg, not <img> */
+}
+
+/*
+ * Thumbnail "ghost" — shown immediately while the full wallpaper loads.
+ * The blur + slight scale-up hides the low-res artifacts of the thumbnail.
+ * transform: scale(1.1) compensates for the blur edge softening.
+ */
+.mockup-bg-loading {
+    filter: blur(10px);
+    transform: scale(1.1);
+}
+
+/*
+ * High-res wallpaper ready — transition from blurred thumbnail to sharp image.
+ * 0.4s matches the CSS transition on .mockup-layer-art above.
+ */
+.mockup-bg-ready {
+    filter: blur(0);
+    transform: scale(1);
+}
+
+/*
+ * ::after noise layer — secondary anti-extraction measure on top of the art.
+ * Renders a semi-transparent SVG turbulence pattern that:
+ *  (a) breaks automated pixel-perfect image capture tools
+ *  (b) does not affect perceived visual quality at 3% opacity
+ * pointer-events:none ensures it never intercepts UI interactions.
+ */
+.mockup-layer-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23a)' opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 300px 300px;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 1;
 }
 
 /* ── Layer 2: Protection (interference overlay) ── */
@@ -2661,4 +2707,29 @@ svg { stroke-width: 2; }
      * gives .mockup-mobile a bounded inline-size for the container query.
      */
     width: 100%;
+}
+
+/*
+ * 90/10 Rule — Mobile backdrop-filter restriction
+ *
+ * backdrop-filter: blur() is GPU-intensive. On mobile touch devices (detected
+ * via pointer: coarse — the most reliable signal for mobile hardware) it drops
+ * frames at 60fps on low-end CPUs/GPUs. The rule is:
+ *   Desktop: glassmorphism allowed (pointer: fine = mouse/trackpad)
+ *   Mobile:  solid color fallback, zero blur
+ *
+ * This overrides the @supports opt-in blocks for .mockup-app-icon and
+ * .mockup-taskbar to enforce solid rendering on touch hardware.
+ */
+@media (pointer: coarse) {
+    .mockup-app-icon {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    .mockup-taskbar {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        /* Compensate with higher solid opacity so the bar remains legible */
+        background: rgba(8, 8, 18, 0.92) !important;
+    }
 }
