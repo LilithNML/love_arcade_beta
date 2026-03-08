@@ -6,7 +6,7 @@
     "pieces": 16,
     "rewardCoins": 150,
     "description": "Introducción",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_2",
@@ -15,7 +15,7 @@
     "pieces": 16,
     "rewardCoins": 153,
     "description": "Primer desafío",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_3",
@@ -24,7 +24,7 @@
     "pieces": 16,
     "rewardCoins": 157,
     "description": "Un poco más complejo",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_4",
@@ -33,7 +33,7 @@
     "pieces": 16,
     "rewardCoins": 160,
     "description": "Atención al detalle",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_5",
@@ -42,7 +42,7 @@
     "pieces": 16,
     "rewardCoins": 163,
     "description": "Dificultad media",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_6",
@@ -51,7 +51,7 @@
     "pieces": 16,
     "rewardCoins": 167,
     "description": "Empieza el reto",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_7",
@@ -60,7 +60,7 @@
     "pieces": 16,
     "rewardCoins": 170,
     "description": "Nivel avanzado",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_8",
@@ -69,7 +69,7 @@
     "pieces": 16,
     "rewardCoins": 173,
     "description": "Alta concentración",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_9",
@@ -78,7 +78,7 @@
     "pieces": 16,
     "rewardCoins": 177,
     "description": "Desafío experto",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_10",
@@ -87,7 +87,7 @@
     "pieces": 16,
     "rewardCoins": 180,
     "description": "Reto final",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_11",
@@ -96,7 +96,7 @@
     "pieces": 16,
     "rewardCoins": 181,
     "description": "Precisión y paciencia",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_12",
@@ -105,7 +105,7 @@
     "pieces": 25,
     "rewardCoins": 184,
     "description": "Nada garantizado",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_13",
@@ -114,7 +114,7 @@
     "pieces": 16,
     "rewardCoins": 188,
     "description": "El doble golpe",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_14",
@@ -123,7 +123,7 @@
     "pieces": 25,
     "rewardCoins": 192,
     "description": "Constancia silenciosa",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_15",
@@ -132,7 +132,7 @@
     "pieces": 16,
     "rewardCoins": 195,
     "description": "Recompensa máxima",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_16",
@@ -141,7 +141,7 @@
     "pieces": 25,
     "rewardCoins": 198,
     "description": "El engaño",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_17",
@@ -150,7 +150,7 @@
     "pieces": 16,
     "rewardCoins": 202,
     "description": "Rebote inesperado",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_18",
@@ -159,7 +159,7 @@
     "pieces": 25,
     "rewardCoins": 206,
     "description": "Nada fácil",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_19",
@@ -168,7 +168,7 @@
     "pieces": 16,
     "rewardCoins": 209,
     "description": "Casi todo",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_20",
@@ -177,7 +177,7 @@
     "pieces": 25,
     "rewardCoins": 212,
     "description": "El cierre perfecto",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_21",
@@ -186,7 +186,7 @@
     "pieces": 16,
     "rewardCoins": 216,
     "description": "Nuevo amanecer",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_22",
@@ -195,7 +195,7 @@
     "pieces": 25,
     "rewardCoins": 220,
     "description": "Perspectiva clara",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_23",
@@ -204,7 +204,7 @@
     "pieces": 16,
     "rewardCoins": 223,
     "description": "Camino sinuoso",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_24",
@@ -213,7 +213,7 @@
     "pieces": 25,
     "rewardCoins": 226,
     "description": "Fragmentos del alma",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_25",
@@ -222,7 +222,7 @@
     "pieces": 16,
     "rewardCoins": 230,
     "description": "Respiro táctico",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_26",
@@ -231,7 +231,7 @@
     "pieces": 25,
     "rewardCoins": 231,
     "description": "Gran maestro I",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_27",
@@ -240,7 +240,7 @@
     "pieces": 25,
     "rewardCoins": 235,
     "description": "Ilusión óptica",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_28",
@@ -249,7 +249,7 @@
     "pieces": 25,
     "rewardCoins": 240,
     "description": "Simetría oculta",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_29",
@@ -258,7 +258,7 @@
     "pieces": 25,
     "rewardCoins": 244,
     "description": "Desafío de medianoche",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_30",
@@ -267,7 +267,7 @@
     "pieces": 25,
     "rewardCoins": 248,
     "description": "Laberinto mental",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_31",
@@ -276,7 +276,7 @@
     "pieces": 25,
     "rewardCoins": 253,
     "description": "Cerca del límite",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_32",
@@ -285,7 +285,7 @@
     "pieces": 25,
     "rewardCoins": 257,
     "description": "Espejismo total",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_33",
@@ -294,7 +294,7 @@
     "pieces": 25,
     "rewardCoins": 261,
     "description": "Claridad necesaria",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_34",
@@ -303,7 +303,7 @@
     "pieces": 25,
     "rewardCoins": 266,
     "description": "Prueba de fe",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_35",
@@ -312,7 +312,7 @@
     "pieces": 25,
     "rewardCoins": 270,
     "description": "El muro de cristal",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_36",
@@ -321,7 +321,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "El desafío definitivo",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_37",
@@ -330,7 +330,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Zona de guerra",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_38",
@@ -339,7 +339,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Sin margen de error",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_39",
@@ -348,7 +348,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Tensión máxima",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_40",
@@ -357,7 +357,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Punto de inflexión",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_41",
@@ -366,7 +366,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Mente de acero",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_42",
@@ -375,7 +375,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Noche sin luna",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_43",
@@ -384,7 +384,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Caos ordenado",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_44",
@@ -393,7 +393,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "El último bastión",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_45",
@@ -402,7 +402,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Visión de conjunto",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_46",
@@ -411,7 +411,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Trampa mortal",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_47",
@@ -420,7 +420,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Reflejos de luz",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_48",
@@ -429,7 +429,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Patrón invisible",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_49",
@@ -438,7 +438,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "La prueba suprema",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_50",
@@ -447,7 +447,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Hito legendario",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_51",
@@ -456,7 +456,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Más allá del límite",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_52",
@@ -465,7 +465,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Abismo visual",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_53",
@@ -474,7 +474,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Tormenta interior",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_54",
@@ -483,7 +483,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Sin retorno",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_55",
@@ -492,7 +492,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Maestría absoluta",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_56",
@@ -501,7 +501,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Fragmentos en llamas",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_57",
@@ -510,7 +510,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "El velo rasgado",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_58",
@@ -519,7 +519,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Profundidad extrema",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_59",
@@ -528,7 +528,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Horizonte perdido",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_60",
@@ -537,7 +537,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Sesenta y en pie",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_61",
@@ -546,7 +546,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Código roto",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_62",
@@ -555,7 +555,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "El gran espejo",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_63",
@@ -564,7 +564,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Umbral de sombras",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_64",
@@ -573,7 +573,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Leyenda viviente",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_65",
@@ -582,7 +582,7 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Penúltimo pulso",
-    "timeLimit": 350
+    "timeLimit": 0
   },
   {
     "id": "lvl_66",
@@ -591,6 +591,6 @@
     "pieces": 25,
     "rewardCoins": 200,
     "description": "Gloria eterna",
-    "timeLimit": 350
+    "timeLimit": 0
   }
 ]
