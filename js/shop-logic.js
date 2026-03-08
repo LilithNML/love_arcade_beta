@@ -1,8 +1,17 @@
 /**
- * shop-logic.js — Love Arcade v9.1
+ * shop-logic.js — Love Arcade v9.4
  * ─────────────────────────────────────────────────────────────────────────────
  * Contiene toda la lógica de la vista Tienda, extraída del script inline de
  * shop.html como parte de la migración a arquitectura SPA.
+ *
+ * NOVEDADES v9.4 (sincronización de versión con app.js):
+ *  - Eliminado will-change estático en tarjetas del catálogo y biblioteca.
+ *    El GPU-layer management ahora vive exclusivamente en CSS (hover :hover).
+ *  - handleExport() refactorizado para usar window.MailHelper.copyToClipboard()
+ *    en lugar de reimplementar el patrón navigator.clipboard + execCommand.
+ *  - _noCtxHandler movido a variable de cierre del módulo (ya no muta el DOM).
+ *  - btn-reset-filters escuchado vía JS en DOMContentLoaded (elimina onclick inline).
+ *  - lucide.createIcons() siempre scoped con { nodes: [...] } en renders parciales.
  *
  * NOVEDADES v9.1:
  *  - loadCatalog(): función encapsulada con manejo de errores y reintento.
@@ -15,7 +24,7 @@
  *    en app.js fue eliminado (corrección SPA) para evitar el cobro doble.
  *
  * DEPENDENCIAS (deben estar cargadas ANTES en el DOM):
- *  - js/app.js          → window.GameCenter, window.ECONOMY, window.debounce
+ *  - js/app.js          → window.GameCenter, window.ECONOMY, window.debounce, window.MailHelper
  *  - lucide             → window.lucide
  *  - canvas-confetti    → window.confetti
  *
@@ -25,6 +34,10 @@
  *  - La búsqueda usa window.debounce() para evitar sobrecargar el hilo principal.
  *  - Los toasts usan .remove() tras su animación de salida (limpieza del DOM).
  *  - El confetti solo se dispara cuando la pestaña está activa (document.hidden check).
+ *  - will-change en tarjetas: gestionado en CSS vía :hover, no en JS. Esto evita
+ *    promover N capas GPU simultáneas cuando el catálogo está estático.
+ *  - lucide.createIcons() siempre se invoca con { nodes: [container] } en renders
+ *    parciales para evitar el scan del DOM completo.
  *
  * NOTAS SPA:
  *  - Todos los event listeners se registran una sola vez en DOMContentLoaded.
@@ -38,6 +51,12 @@
 let allItems     = [];
 let activeFilter = 'Todos';
 let searchQuery  = '';
+
+// ── Handler de contextmenu para el mockup stage ──────────────────────────────
+// Guardado como variable de módulo (no como propiedad del nodo DOM) para evitar
+// la mutación de propiedades no-estándar en elementos del DOM y para poder
+// hacer removeEventListener correctamente al cerrar el modal.
+let _stageCtxHandler = null;
 
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
 let _modalResolve = null;
@@ -452,11 +471,15 @@ function openPreviewModal(itemOrId) {
     modal.style.willChange = 'opacity, transform';
 
     // ── Anti-extraction: contextmenu hardening ────────────────────────────────
-    // Stage-level listener (existing) blocks the overlay; slot-level oncontextmenu
-    // blocks directly on the art container to stop browser image menus.
+    // Guardado en variable de módulo (no en propiedad DOM) para poder hacer
+    // removeEventListener correctamente en closePreviewModal().
     const stage = document.getElementById('preview-mockup-stage');
-    stage._noCtxHandler = stage._noCtxHandler || function(e) { e.preventDefault(); };
-    stage.addEventListener('contextmenu', stage._noCtxHandler);
+    if (!_stageCtxHandler) {
+        _stageCtxHandler = (e) => { e.preventDefault(); };
+    }
+    // Eliminar listener previo antes de añadir, por si el modal se abrió sin cerrar
+    stage.removeEventListener('contextmenu', _stageCtxHandler);
+    stage.addEventListener('contextmenu', _stageCtxHandler);
 
     slot.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
 
@@ -553,7 +576,9 @@ function closePreviewModal(modal, stage) {
     if (_mockupClockInterval) { clearInterval(_mockupClockInterval); _mockupClockInterval = null; }
 
     // ── Stage contextmenu listener ────────────────────────────────────────────
-    if (s?._noCtxHandler) s.removeEventListener('contextmenu', s._noCtxHandler);
+    if (s && _stageCtxHandler) {
+        s.removeEventListener('contextmenu', _stageCtxHandler);
+    }
 }
 
 // Private alias kept for internal callers that pass explicit refs (unchanged API)
@@ -748,8 +773,8 @@ function renderShop(items) {
 
         const card = document.createElement('article');
         card.className = 'glass-panel shop-card';
-        // will-change en tarjetas para GPU-compositing del hover/transform
-        card.style.willChange = 'transform, opacity';
+        // will-change en tarjetas: gestionado en CSS vía .shop-card:hover { will-change: transform }
+        // NO se aplica aquí en JS para evitar promover N capas GPU mientras el catálogo está en reposo.
         card.innerHTML =
             `${!isOwned
                 ? `<button class="wishlist-btn ${isWished ? 'wishlist-btn--active' : ''}"
@@ -829,7 +854,7 @@ function renderLibrary(items) {
         const url  = GameCenter.getDownloadUrl(item.id, item.file);
         const card = document.createElement('article');
         card.className     = 'glass-panel shop-card';
-        card.style.willChange = 'transform, opacity';
+        // will-change gestionado por CSS (:hover), no en JS (ver renderShop)
 
         const actionsHTML = url
             ? `<div style="display:flex; gap:5px; width:100%; margin-top:8px;">
@@ -1056,19 +1081,9 @@ async function handleExport() {
 
     if (!code) { showMsg(msg, 'Error al generar el código.', 'var(--error)'); return; }
 
-    let clipboardOk = false;
-    try {
-        await navigator.clipboard.writeText(code);
-        clipboardOk = true;
-    } catch (_) {
-        try {
-            const ta = document.createElement('textarea');
-            ta.value = code;
-            Object.assign(ta.style, { position:'fixed', opacity:'0', top:'0', left:'0' });
-            document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-            document.body.removeChild(ta); clipboardOk = true;
-        } catch (_2) {}
-    }
+    // Usar la utilidad centralizada de portapapeles para evitar duplicar
+    // el patrón navigator.clipboard + fallback execCommand (ya existe en MailHelper).
+    const clipboardOk = await window.MailHelper.copyToClipboard(code);
 
     try {
         const blob = new Blob([code], { type: 'text/plain' });
@@ -1441,6 +1456,10 @@ document.addEventListener('DOMContentLoaded', () => {
         filterItems();
         searchInput.focus();
     });
+
+    // Botón "Ver todo el catálogo" en el estado vacío de filtros
+    // Reemplaza el onclick inline del HTML para respetar CSP y separación de responsabilidades.
+    document.getElementById('btn-reset-filters')?.addEventListener('click', () => resetFilters());
 
     // Filter pills
     document.querySelectorAll('.pill').forEach(pill => {
