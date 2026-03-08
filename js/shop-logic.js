@@ -71,6 +71,7 @@ function _closeModal(value) {
 //   (none)   → neutral 4:3 with watermark badge
 
 let _mockupClockInterval = null;   // Cleared on modal close to prevent leaks
+let _pendingHiResImg     = null;   // Tracks in-flight Image() load; cancelled on close
 
 /**
  * Returns the current time as "HH:MM" using the device locale.
@@ -316,9 +317,7 @@ function _buildMockupHTML(item) {
 
     return `
         <div class="mockup-container ${frameClass}">
-            <div class="mockup-layer-art"
-                 style="background-image: url('${imgUrl}');"
-                 aria-hidden="true"></div>
+            <div class="mockup-layer-art" aria-hidden="true"></div>
             <div class="mockup-layer-protection" aria-hidden="true"></div>
             <div class="mockup-layer-ui">
                 ${uiHTML}
@@ -367,14 +366,59 @@ function openPreviewModal(itemOrId) {
         return;
     }
 
-    // ── Inject mockup ─────────────────────────────────────────────────────────
+    // ── Inject mockup structure (art layer starts empty) ──────────────────────
     slot.innerHTML     = _buildMockupHTML(item);
     nameEl.textContent = item.name;
 
-    // ── Context-menu hardening on the mockup stage ────────────────────────────
+    // ── Double-layer progressive image load ───────────────────────────────────
+    //
+    // Phase 1 (instant): thumbnail already in browser cache from the catalog grid.
+    //   → shown immediately as blurred/scaled "ghost" to eliminate blank flash.
+    // Phase 2 (async):   full-resolution wallpaper loads in a background Image().
+    //   → swapped in with a 200ms opacity cross-fade once fully decoded.
+    //
+    const wallpaperPath = (window.CONFIG?.wallpapersPath ?? 'wallpapers/') + item.file;
+    const artEl         = slot.querySelector('.mockup-layer-art');
+
+    // Phase 1 — thumbnail as blurred placeholder
+    artEl.style.backgroundImage = `url('${item.image}')`;
+    artEl.classList.add('mockup-bg-loading');
+
+    // Cancel any stale load from a previous modal open
+    if (_pendingHiResImg) { _pendingHiResImg.onload = _pendingHiResImg.onerror = null; _pendingHiResImg = null; }
+
+    // Phase 2 — high-res load in background
+    const hiRes    = new Image();
+    _pendingHiResImg = hiRes;
+    hiRes.onload = () => {
+        if (_pendingHiResImg !== hiRes) return;    // Stale: modal was closed/re-opened
+        artEl.style.backgroundImage = `url('${wallpaperPath}')`;
+        artEl.classList.remove('mockup-bg-loading');
+        artEl.classList.add('mockup-bg-ready');
+        _pendingHiResImg = null;
+    };
+    hiRes.onerror = () => {
+        // Wallpaper file missing — keep thumbnail, remove loading state gracefully
+        if (_pendingHiResImg !== hiRes) return;
+        artEl.classList.remove('mockup-bg-loading');
+        artEl.classList.add('mockup-bg-ready');
+        _pendingHiResImg = null;
+    };
+    hiRes.src = wallpaperPath;
+
+    // ── will-change: active only while modal is open ──────────────────────────
+    // Applying will-change globally wastes GPU memory on composited layers that
+    // are never animated. We add it now and remove it in closePreviewModal().
+    modal.style.willChange = 'opacity, transform';
+
+    // ── Anti-extraction: contextmenu hardening ────────────────────────────────
+    // Stage-level listener (existing) blocks the overlay; slot-level oncontextmenu
+    // blocks directly on the art container to stop browser image menus.
     const stage = document.getElementById('preview-mockup-stage');
     stage._noCtxHandler = stage._noCtxHandler || function(e) { e.preventDefault(); };
     stage.addEventListener('contextmenu', stage._noCtxHandler);
+
+    slot.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
 
     // ── Live clock: update immediately, then every 30 s ───────────────────────
     if (_mockupClockInterval) clearInterval(_mockupClockInterval);
@@ -423,18 +467,52 @@ function openPreviewModal(itemOrId) {
 }
 
 /**
- * Closes the preview modal and cleans up clock interval + context-menu listener.
- * Public overload: can be called with no arguments (for onclick="closePreviewModal()")
- * or with explicit DOM refs (internal callers).
+ * Closes the preview modal and performs full resource cleanup:
+ *  - Cancels any in-flight high-res image load (prevents stale onload callbacks)
+ *  - Clears background-image on the art layer → frees GPU texture buffer
+ *  - Removes will-change from the modal element → releases compositor layer
+ *  - Clears the clock interval
+ *  - Removes the contextmenu blocker from the stage
+ *
+ * Public — no arguments needed (resolves DOM refs internally).
+ * Also accepts optional explicit refs for internal callers (unchanged API).
  *
  * @param {HTMLElement} [modal]  Defaults to #preview-modal.
  * @param {HTMLElement} [stage]  Defaults to #preview-mockup-stage.
  */
 function closePreviewModal(modal, stage) {
-    const m = modal || document.getElementById('preview-modal');
-    const s = stage || document.getElementById('preview-mockup-stage');
-    if (m) m.classList.add('hidden');
+    const m    = modal || document.getElementById('preview-modal');
+    const s    = stage || document.getElementById('preview-mockup-stage');
+    const slot = document.getElementById('mockup-slot');
+
+    // ── Cancel in-flight HiRes load ───────────────────────────────────────────
+    if (_pendingHiResImg) {
+        _pendingHiResImg.onload = _pendingHiResImg.onerror = null;
+        _pendingHiResImg = null;
+    }
+
+    // ── GPU memory flush: clear art layer background-image ────────────────────
+    // Setting to 'none' immediately releases the decoded texture from the GPU
+    // buffer, which is critical on <2GB RAM devices where large images stay
+    // resident as long as they are referenced in the DOM.
+    const artEl = slot?.querySelector('.mockup-layer-art');
+    if (artEl) {
+        artEl.style.backgroundImage = 'none';
+        artEl.classList.remove('mockup-bg-loading', 'mockup-bg-ready');
+    }
+
+    // ── Remove slot contextmenu blocker ───────────────────────────────────────
+    if (slot) slot.oncontextmenu = null;
+
+    // ── will-change cleanup ───────────────────────────────────────────────────
+    // Removing will-change after the modal is hidden tells the browser it can
+    // discard the promoted compositor layer, freeing GPU memory.
+    if (m) { m.style.willChange = 'auto'; m.classList.add('hidden'); }
+
+    // ── Clock interval ────────────────────────────────────────────────────────
     if (_mockupClockInterval) { clearInterval(_mockupClockInterval); _mockupClockInterval = null; }
+
+    // ── Stage contextmenu listener ────────────────────────────────────────────
     if (s?._noCtxHandler) s.removeEventListener('contextmenu', s._noCtxHandler);
 }
 
