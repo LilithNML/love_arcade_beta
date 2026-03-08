@@ -504,22 +504,30 @@ body {
 
 canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-.game-controls {
-    position: absolute;
-    bottom: 28px; right: 18px;
-    display: flex; flex-direction: column; gap: 12px;
-    z-index: 60;
+/* [v16] Action buttons live in the HUD — no longer floated over the canvas */
+.hud-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
-/* [v16] Mobile portrait: buttons lay horizontally to free up tray vertical space */
-@media (max-width: 519px) and (orientation: portrait) {
-    .game-controls {
-        flex-direction: row;
-        bottom: 16px;
-        right: 14px;
-        gap: 10px;
-    }
+.btn-hud-action {
+    width: 40px; height: 40px; min-height: 40px;
+    clip-path: var(--bevel-md);
+    border: none;
+    background: var(--bg-dark); color: var(--text-main);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+    touch-action: manipulation;
+    filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.8));
+    transition: background 0.08s;
+    flex-shrink: 0;
 }
+.btn-hud-action:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
+.btn-hud-action.gold { box-shadow: inset 0 0 0 1px var(--warning); color: var(--warning); }
+.btn-hud-action.gold:active { background: var(--warning); color: var(--bg-dark); }
 
 /* =========================================
    10. BUTTONS — clip-path beveled, no border-radius
@@ -579,22 +587,7 @@ canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 }
 .btn-icon:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
 
-/* Control buttons (Preview / Magnet) */
-.btn-circle {
-    width: 52px; height: 52px; min-height: 48px;
-    clip-path: var(--bevel-md);
-    border: none;
-    background: var(--bg-panel); color: var(--text-main);
-    box-shadow: inset 0 0 0 1px var(--accent);
-    cursor: pointer;
-    display: flex; justify-content: center; align-items: center;
-    pointer-events: auto; touch-action: manipulation;
-    filter: drop-shadow(2px 2px 0 #000000);
-    transition: background 0.08s;
-}
-.btn-circle:active { transform: scale3d(0.96, 0.96, 1); background: var(--accent); color: var(--bg-dark); }
-.btn-circle.gold { box-shadow: inset 0 0 0 1px var(--warning); color: var(--warning); }
-.btn-circle.gold:active { background: var(--warning); color: var(--bg-dark); }
+
 
 /* =========================================
    11. MODALS — bracket corners, hard shadow
