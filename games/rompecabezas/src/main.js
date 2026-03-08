@@ -532,11 +532,11 @@ window.addEventListener('resize', () => {
     resizeTimeout = setTimeout(() => { if (activeGame) activeGame.handleResize(); }, 100);
 }, { passive: true });
 
-/* ─── Service Worker ──────────────────────────────────────────────────────── */
+/* ─── Service Worker — unregister any previously installed instance ───────── */
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js')
-        .then(() => console.log('[Main] Service Worker registrado'))
-        .catch((err) => console.log('[Main] Fallo en SW:', err));
+    navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(r => r.unregister()))
+        .catch(() => {});
 }
 
 /* ─── Boot ────────────────────────────────────────────────────────────────── */
