@@ -50,6 +50,8 @@ Se encuentra en las primeras líneas de `app.js`, después de `CONFIG`:
 
 ```javascript
 // app.js — línea ~20
+// NOTA: el estado de isSaleActive en el código puede diferir del que se muestra
+// aquí como ejemplo. Verifica el archivo app.js para conocer el estado actual en producción.
 const ECONOMY = {
     isSaleActive:   false,    // ¿Hay oferta activa ahora mismo?
     saleMultiplier: 0.8,      // Factor de precio (0.8 = 20% de descuento)
@@ -58,7 +60,7 @@ const ECONOMY = {
 };
 ```
 
-Este objeto está también expuesto globalmente como `window.ECONOMY` para que `shop.html` pueda leerlo sin importaciones adicionales.
+Este objeto está también expuesto globalmente como `window.ECONOMY` para que `shop-logic.js` y cualquier módulo de la SPA pueda leerlo sin importaciones adicionales.
 
 ---
 
@@ -138,12 +140,12 @@ saleLabel: '2×1'              // Aunque no sea literalmente 2×1, queda bien vi
 El banner también construye su descripción automáticamente combinando el porcentaje calculado desde `saleMultiplier` con el `cashbackRate`:
 
 ```javascript
-// shop.html — función initSaleBanner()
+// shop-logic.js — función initSaleBanner()
 const discount = Math.round((1 - eco.saleMultiplier) * 100);
 // "20% de descuento en toda la tienda + 10% de cashback."
 ```
 
-Si quieres cambiar ese texto de descripción del banner, edita directamente `initSaleBanner()` en `shop.html`.
+Si quieres cambiar ese texto de descripción del banner, edita directamente `initSaleBanner()` en `shop-logic.js`.
 
 ---
 
@@ -349,4 +351,9 @@ const ECONOMY = {
 
 ---
 
-*Última actualización: Phase 2 — Love Arcade v7.2*
+*Última actualización: Phase 3 — Love Arcade v9.4*
+
+> **Nota de migración:** Antes de v9.0, `initSaleBanner()` y toda la lógica de la
+> tienda vivían en `shop.html`. Desde la migración SPA (v9.0), estas funciones
+> residen en `shop-logic.js`. Cualquier referencia a `shop.html` en el contexto
+> de la economía es obsoleta.
