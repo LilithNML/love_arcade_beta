@@ -750,6 +750,21 @@ body::before {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    animation: none; /* asegurar que el pulse se detiene cuando está desactivado */
+}
+
+/* Pulse sutil cuando el bono está disponible — llama la atención sin distraer.
+ * Se detiene automáticamente con :disabled (animation:none arriba).
+ * prefers-reduced-motion lo desactiva para usuarios sensibles al movimiento. */
+@keyframes dailyBtnPulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(251, 191, 36, 0.30); }
+    50%       { box-shadow: 0 4px 28px rgba(251, 191, 36, 0.60); }
+}
+.hud-daily-btn:not(:disabled) {
+    animation: dailyBtnPulse 2.4s ease-in-out infinite;
+}
+.hud-daily-btn:hover:not(:disabled) {
+    animation: none; /* parar pulse durante hover; la escala ya es suficiente feedback */
 }
 .hud-daily-reward {
     font-size: 1.05rem;
@@ -2877,5 +2892,66 @@ svg { stroke-width: 2; }
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
         background: rgba(8, 8, 18, 0.92) !important;
+    }
+}
+
+
+/* ================================================================
+   TOUCH TARGETS — WCAG 2.5.5
+   Los botones de acción de tarjeta (.shop-buy-btn, .shop-preview-btn)
+   tienen padding visual de 7px, resultando en ~30–32px de alto.
+   En dispositivos táctiles se extiende a 44px mínimo usando min-height,
+   sin alterar el diseño visual en pantallas con cursor (pointer:fine).
+   ================================================================ */
+@media (pointer: coarse) {
+    .shop-buy-btn,
+    .shop-preview-btn {
+        min-height: 44px;
+    }
+}
+
+/* ================================================================
+   PREFERS-REDUCED-MOTION
+   Usuarios que han activado "Reducir movimiento" en su sistema operativo
+   experimentarán animaciones minimizadas: sin pulsos, sin translateY,
+   sin shimmer, con transiciones reducidas a 0.01s (no 0 para evitar
+   que los cambios de display/visibility sean instantáneos y confusos).
+   GPU-only properties (opacity) se mantienen para no eliminar feedback.
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+
+    /* Deshabilitar todas las animaciones @keyframes */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+
+    /* Reducir transiciones a lo esencial (feedback visual mínimo) */
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+    }
+
+    /* Mantener transiciones de opacity para feedback de carga/reveal (Zero-Flicker) */
+    .coin-badge,
+    .player-hud,
+    .hud-avatar-wrap,
+    .toast {
+        transition-duration: 150ms !important;
+    }
+
+    /* Deshabilitar transform en hover de tarjetas y botones */
+    .shop-card:hover,
+    .btn-primary:hover,
+    .btn-ghost:hover {
+        transform: none !important;
+    }
+
+    /* Deshabilitar translateY en transiciones de vista SPA */
+    .view-section {
+        transform: none !important;
     }
 }
