@@ -9,13 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
 
-    <link rel="manifest" href="./manifest.json">
-    <meta name="color-scheme" content="dark">
-    <meta name="theme-color" content="#05070A">
-    <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -90,7 +83,6 @@
             <div class="levels-grid" id="levels-container"></div>
         </section>
 
-        <!-- ═══════════════════════════════ GAME ════════════════════════════════ -->
         <section id="screen-game" class="screen">
             <div class="hud">
                 <button class="btn-icon" id="btn-pause">
@@ -106,6 +98,15 @@
                         <span class="micro-label">SYS_CLOCK_UPDATE // SYNC_ON</span>
                         <span class="value timer-display" id="hud-timer">00:00</span>
                     </div>
+                </div>
+
+                <div class="hud-actions">
+                    <button id="btn-preview" class="btn-hud-action" title="Vista Previa (Mantener)">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                    <button id="btn-magnet" class="btn-hud-action gold" title="Imán Automático (10 Monedas)">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M19 12h-2a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2z"></path><path d="M8 12V7a4 4 0 0 1 8 0v5"></path></svg>
+                    </button>
                 </div>
             </div>
 
@@ -123,15 +124,6 @@
                 <!-- Canvas corner micro-data labels -->
                 <span class="canvas-corner-data top-left" id="canvas-pos-tl">POS_X: 000 // POS_Y: 000</span>
                 <span class="canvas-corner-data bottom-right" id="canvas-pos-br">RES: 000×000 // PCE: 00</span>
-
-                <div class="game-controls">
-                    <button id="btn-preview" class="btn-circle" title="Vista Previa (Mantener)">
-                        <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </button>
-                    <button id="btn-magnet" class="btn-circle gold" title="Imán Automático (10 Monedas)">
-                        <svg class="icon" viewBox="0 0 24 24"><path d="M19 12h-2a2 2 0 0 0-2-2h-6a2 2 0 0 0-2 2H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2z"></path><path d="M8 12V7a4 4 0 0 1 8 0v5"></path></svg>
-                    </button>
-                </div>
             </div>
         </section>
 
