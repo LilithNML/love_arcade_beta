@@ -83,9 +83,8 @@ export class PuzzleEngine {
 
         this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-        // [v16] Mobile portrait layout
+        // [v16] Mobile portrait flag — set by resizeCanvas, read by shufflePieces
         this.isMobilePortrait = false;
-        this.trayY = null; // canvas Y where the piece tray begins (mobile only)
 
         this.isLoopRunning = false;
         this._idleWakeCount = 0; // frames to keep loop alive for idle blink
@@ -184,36 +183,29 @@ export class PuzzleEngine {
         this.logicalWidth  = w;
         this.logicalHeight = h;
 
-        // [v16] Mobile portrait layout: wide board on top, piece tray below
+        // [v16] Mobile portrait: board fills nearly full width, anchored to top.
+        // Piece spawn area is the strip below the board.
         const isMobilePortrait = w < h && w < 520;
         this.isMobilePortrait  = isMobilePortrait;
 
         let cssW, cssH;
 
         if (isMobilePortrait) {
-            // Tray occupies bottom 40% of the canvas
-            const trayH     = Math.round(h * 0.40);
-            const boardAreaH = h - trayH;
-            this.trayY      = boardAreaH;
-
-            // Board fills 94% of screen width; constrained by the board area height
-            cssW = w * 0.94;
+            // 97% of screen width; cap at 68% of height so pieces always have room below
+            cssW = w * 0.97;
             cssH = cssW / imgRatio;
-            const maxBoardH = boardAreaH - 20; // 10px margin top + 10px bottom
-            if (cssH > maxBoardH) { cssH = maxBoardH; cssW = cssH * imgRatio; }
+            const maxH = h * 0.68;
+            if (cssH > maxH) { cssH = maxH; cssW = cssH * imgRatio; }
 
             this.boardWidth  = cssW;
             this.boardHeight = cssH;
             this.boardX      = Math.round((w - cssW) / 2);
-            this.boardY      = Math.round((boardAreaH - cssH) / 2);
+            this.boardY      = 8; // tight top margin
         } else {
-            // Original desktop / landscape / tablet layout
-            this.trayY = null;
+            // Original desktop / tablet / landscape layout
             cssW = w; cssH = w / imgRatio;
             if (cssH > h) { cssH = h; cssW = cssH * imgRatio; }
-            const workAreaScale = 0.65;
-            cssW *= workAreaScale;
-            cssH *= workAreaScale;
+            cssW *= 0.65; cssH *= 0.65;
 
             this.boardWidth  = cssW;
             this.boardHeight = cssH;
@@ -428,36 +420,6 @@ export class PuzzleEngine {
         ctx.lineWidth   = 1;
         ctx.strokeRect(bx, by, bw, bh);
 
-        // [v16] Mobile portrait: draw the piece tray zone below the board
-        if (this.isMobilePortrait && this.trayY !== null) {
-            const ty = this.trayY;
-
-            // Tray subtle background
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
-            ctx.fillRect(0, ty, this.logicalWidth, this.logicalHeight - ty);
-
-            // Dashed separator line
-            ctx.save();
-            ctx.strokeStyle = 'rgba(59, 130, 246, 0.20)';
-            ctx.lineWidth   = 1;
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.moveTo(0, ty);
-            ctx.lineTo(this.logicalWidth, ty);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.restore();
-
-            // Micro-label: "PIECES" centered at top of tray
-            ctx.save();
-            ctx.font      = '500 7px Rajdhani, sans-serif';
-            ctx.fillStyle = 'rgba(59,130,246,0.35)';
-            ctx.textAlign = 'center';
-            ctx.letterSpacing = '2px';
-            ctx.fillText('PIECES', this.logicalWidth / 2, ty + 12);
-            ctx.restore();
-        }
-
         // Locked pieces
         for (let i = 0; i < this.lockedPieces.length; i++) {
             this.renderPieceToContext(ctx, this.lockedPieces[i], false, true);
@@ -627,15 +589,16 @@ export class PuzzleEngine {
             }
         }
 
-        // [v16] Mobile portrait: pieces spawn exclusively in the bottom tray
+        const topSafe    = 80;
+        const bottomSafe = 20; // buttons are now in HUD — no bottom clearance needed
+
         let zones;
-        if (this.isMobilePortrait && this.trayY !== null) {
-            const trayYStart = this.trayY + 8;
-            const trayHeight = this.logicalHeight - trayYStart - 30;
-            zones = [{ x: 10, y: trayYStart, w: this.logicalWidth - 20, h: trayHeight }];
+        if (this.isMobilePortrait) {
+            // On mobile portrait the board fills ~97% width, so pieces live below it
+            const belowY = this.boardY + this.boardHeight + 10;
+            const belowH = this.logicalHeight - belowY - bottomSafe;
+            zones = [{ x: 4, y: belowY, w: this.logicalWidth - 8, h: Math.max(0, belowH) }];
         } else {
-            const topSafe    = 80;
-            const bottomSafe = 160;
             zones = [
                 { x: 10, y: topSafe, w: Math.max(0, this.boardX - 20), h: this.logicalHeight - topSafe - bottomSafe },
                 { x: this.boardX + this.boardWidth + 10, y: topSafe, w: Math.max(0, this.logicalWidth - (this.boardX + this.boardWidth) - 20), h: this.logicalHeight - topSafe - bottomSafe },
@@ -645,7 +608,8 @@ export class PuzzleEngine {
 
         const validZones = zones.filter(z => z.w > this.pieceWidth && z.h > this.pieceHeight);
         if (validZones.length === 0) {
-            validZones.push({ x: 10, y: topSafe, w: this.logicalWidth - 20, h: this.logicalHeight - topSafe - bottomSafe });
+            // Last-resort fallback: scatter anywhere except the very top bar
+            validZones.push({ x: 4, y: this.boardY + this.boardHeight + 4, w: this.logicalWidth - 8, h: Math.max(this.pieceHeight * 2, this.logicalHeight - (this.boardY + this.boardHeight) - 8) });
         }
 
         const placed = [];
@@ -672,26 +636,10 @@ export class PuzzleEngine {
     }
 
     /* ---- CLAMPING ---- */
-    isInRestrictedArea(x, y) {
-        // [v16] Mobile portrait: buttons are horizontal (130 × 80px) not vertical
-        if (this.isMobilePortrait) {
-            return (x > this.logicalWidth - 130) && (y > this.logicalHeight - 80);
-        }
-        return (x > this.logicalWidth - 90) && (y > this.logicalHeight - 160);
-    }
-
+    // [v16] Repulsion logic removed entirely — buttons are now in the HUD, not on the canvas.
     clampPosition(p) {
-        let x = Math.max(0, Math.min(p.currentX, this.logicalWidth  - this.pieceWidth));
-        let y = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
-        const distToCorrect  = Math.hypot(x - p.correctX, y - p.correctY);
-        const isTryingToSnap = distToCorrect < this.pieceWidth * 0.8;
-        if (!isTryingToSnap && this.isInRestrictedArea(x + this.pieceWidth / 2, y + this.pieceHeight / 2)) {
-            // [v16] mobile portrait: horizontal buttons are only 80px tall
-            const bottomClear = this.isMobilePortrait ? 90 : 170;
-            y = this.logicalHeight - bottomClear - this.pieceHeight;
-        }
-        p.currentX = x;
-        p.currentY = y;
+        p.currentX = Math.max(0, Math.min(p.currentX, this.logicalWidth  - this.pieceWidth));
+        p.currentY = Math.max(0, Math.min(p.currentY, this.logicalHeight - this.pieceHeight));
     }
 
     /* ---- TOPOLOGY ---- */
