@@ -85,6 +85,13 @@ El saldo de monedas reside **exclusivamente** en el objeto global `window.GameCe
 | **Permisos de Escritura** | Exclusivo para el núcleo de Love Arcade. |
 | **Permisos de Lectura** | Público — los juegos pueden consultar el saldo, pero no modificarlo. |
 
+> **💡 Disponibilidad de `window.GameCenter`:**
+>
+> `app.js` está posicionado al **final del `<body>`** en `index.html` y se ejecuta de forma síncrona.
+> Esto significa que `window.GameCenter` está disponible **antes** de que cualquier `DOMContentLoaded`
+> se dispare, incluido el de los juegos integrados que cargan después del hub.
+> No es necesario esperar ningún evento para acceder a la API desde un juego incrustado.
+
 > **⚠️ Conflictos:** Si un juego intenta modificar el `localStorage` o la variable de monedas directamente, el sistema sobrescribirá dicho cambio en el siguiente ciclo de sincronización. Cualquier intento de *bypass* será ignorado.
 
 ---
@@ -101,7 +108,7 @@ window.GameCenter.completeLevel(gameId, levelId, coins)
 
 | Propiedad | Valor |
 |---|---|
-| **Disponibilidad** | Global (inyectado por `app.js`) |
+| **Disponibilidad** | Global (`window.GameCenter`). Disponible de forma **síncrona** al final del `<body>`, antes del `DOMContentLoaded` de los juegos, gracias al INIT síncrono de `app.js`. Los juegos pueden accederlo desde su propio `DOMContentLoaded` con seguridad. |
 | **Momento de llamada** | Inmediatamente después de que el usuario cumple la condición de victoria/logro |
 
 ### 5.2 Parámetros del Payload
@@ -243,4 +250,4 @@ Antes de dar por finalizada la integración de un juego, verifica cada punto:
 
 ---
 
-*Documentación mantenida por el equipo de Love Arcade · v1.0.0*
+*Documentación mantenida por el equipo de Love Arcade · v1.1.0 — actualizada para Love Arcade v9.4*
