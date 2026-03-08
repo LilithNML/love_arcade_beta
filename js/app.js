@@ -56,6 +56,9 @@ const CONFIG = {
     dailyStreakStep: 5,    // Incremento por día de racha
     wallpapersPath: 'wallpapers/'
 };
+// Exponer globalmente para que shop-logic.js pueda acceder a CONFIG.wallpapersPath
+// sin depender del scope de cierre del bundle (resuelve fragilidad en módulos ES).
+window.CONFIG = CONFIG;
 
 // Salt para checksums de sincronización — mantener secreto
 const SYNC_SALT = 'love_arcade_v75_integrity_2026';
@@ -370,6 +373,22 @@ try {
 // =====================================================
 // ANIMACIÓN DE CONTADOR (requestAnimationFrame)
 // =====================================================
+
+/**
+ * Anima el contador de monedas de `start` a `end` en `duration` ms usando
+ * una curva ease-out cúbica, y escribe el valor en cada elemento del array.
+ *
+ * CONTRATO IMPORTANTE: esta función modifica `_displayedCoins` como efecto
+ * secundario al terminar la animación. Cualquier llamada a `syncUI()` antes
+ * de que termine la animación debe primero resetear `_displayedCoins` al
+ * valor actual del store para que `animateValue` arranque desde el valor
+ * correcto. Ver `GameCenter.syncUI()`.
+ *
+ * @param {HTMLElement[]} elements  Nodos cuyo `textContent` se actualiza en cada frame.
+ * @param {number}        start     Valor inicial de la animación.
+ * @param {number}        end       Valor final de la animación.
+ * @param {number}        [duration=650] Duración en milisegundos.
+ */
 let _displayedCoins = store.coins;
 
 function animateValue(elements, start, end, duration = 650) {
@@ -729,11 +748,17 @@ window.GameCenter = {
             // Fallback síncrono si el worker no está disponible
         }
         // Fallback: operación en hilo principal
+        // TextEncoder convierte el payload UTF-8 a bytes, luego btoa codifica en Base64.
+        // Reemplaza el patrón obsoleto btoa(unescape(encodeURIComponent())) que usa
+        // funciones deprecadas en motores modernos.
         const json     = JSON.stringify(store);
         const checksum = await sha256(json + SYNC_SALT);
         const payload  = JSON.stringify({ data: store, checksum });
-        try { return btoa(unescape(encodeURIComponent(payload))); }
-        catch { return null; }
+        try {
+            const bytes  = new TextEncoder().encode(payload);
+            const binary = Array.from(bytes, b => String.fromCharCode(b)).join('');
+            return btoa(binary);
+        } catch { return null; }
     },
 
     /**
@@ -754,8 +779,11 @@ window.GameCenter = {
                 }
                 data = result.data;
             } catch (_) {
-                // Fallback sin worker
-                const json    = decodeURIComponent(escape(atob(code.trim())));
+                // Fallback sin worker — operación en hilo principal con TextDecoder
+                // (reemplaza escape()/unescape() que están deprecados en todos los motores modernos)
+                const raw     = atob(code.trim());
+                const bytes   = Uint8Array.from(raw, c => c.charCodeAt(0));
+                const json    = new TextDecoder().decode(bytes);
                 const payload = JSON.parse(json);
                 if (payload.checksum && payload.data) {
                     const expected = await sha256(JSON.stringify(payload.data) + SYNC_SALT);
@@ -1073,7 +1101,10 @@ function applyTheme(key) {
 
     // ── Actualizar estado visual de los botones de tema ───────────────────────
     document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.classList.toggle('theme-btn--active', btn.dataset.theme === key);
+        const isActive = btn.dataset.theme === key;
+        btn.classList.toggle('theme-btn--active', isActive);
+        // aria-pressed comunica el estado seleccionado a lectores de pantalla (WCAG 4.1.2)
+        btn.setAttribute('aria-pressed', String(isActive));
     });
 }
 
@@ -1244,10 +1275,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refresco periódico cada 30 min por si la app permanece abierta mucho tiempo
     setInterval(_syncTimeBackground, 30 * 60 * 1000);
 
-    // Avatar upload
+    // Avatar upload — navbar (#avatar-upload)
     const avatarInput = document.getElementById('avatar-upload');
     if (avatarInput) {
         avatarInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                window.GameCenter.setAvatar(evt.target.result);
+                if (window.lucide) lucide.createIcons();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Avatar upload — HUD (#avatar-upload-hud)
+    // Este input está en el Player HUD (vista Home). Comparte el mismo handler
+    // que el de la navbar porque ambos llaman a GameCenter.setAvatar() y
+    // la imagen se aplica a todos los elementos de avatar simultáneamente.
+    const hudAvatarInput = document.getElementById('avatar-upload-hud');
+    if (hudAvatarInput) {
+        hudAvatarInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
