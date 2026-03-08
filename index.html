@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Love Arcade</title>
 
     <!-- ── Font preconnect: reduce FOIT/FOUT al pre-abrir la conexión con Google Fonts ── -->
@@ -76,7 +76,7 @@
          ══════════════════════════════════════════════════════════ -->
 
     <!-- ── TOP NAVBAR ── -->
-    <nav class="navbar glass-panel">
+    <nav class="navbar glass-panel" aria-label="Navegación principal">
         <div class="nav-brand">
             <i data-lucide="gamepad-2" size="26"></i>
             Love<span>Arcade</span>
@@ -97,7 +97,7 @@
                 <i data-lucide="star" size="15" fill="#fbbf24" stroke="none"></i>
                 <span class="coin-display">0</span>
             </div>
-            <label for="avatar-upload" class="avatar-container">
+            <label for="avatar-upload" class="avatar-container" aria-label="Cambiar foto de perfil">
                 <div class="avatar" id="user-avatar-display" style="background-image: url('assets/default_avatar.png');">
                     <i data-lucide="user" size="18"></i>
                 </div>
@@ -108,7 +108,7 @@
     </nav>
 
     <!-- ── BOTTOM NAV (mobile) ── -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Navegación rápida móvil">
         <a href="#" class="b-nav-item active" data-view="home">
             <i data-lucide="home" size="20"></i>
             <span>Inicio</span>
@@ -517,7 +517,7 @@
                 <div id="filter-empty" class="filter-empty hidden">
                     <i data-lucide="search-x" size="40"></i>
                     <p>Sin resultados para tu búsqueda.</p>
-                    <button class="btn-ghost" onclick="resetFilters()">Ver todo el catálogo</button>
+                    <button class="btn-ghost" id="btn-reset-filters">Ver todo el catálogo</button>
                 </div>
             </section>
 
