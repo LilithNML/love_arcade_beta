@@ -2585,39 +2585,43 @@ svg { stroke-width: 2; }
 /* ── PC UI ELEMENTS ── */
 
 /*
- * Desktop area: fills the space between the top of the frame and the taskbar.
- * A 3-column grid of labelled icon+text pairs (Windows-style) covers most of
- * the wallpaper, making any cropped screenshot obviously an OS desktop shot.
+ * Desktop area: the wallpaper is the star.
+ * A single narrow column of 6 small shortcut icons sits on the LEFT edge,
+ * exactly like a Windows 11 default desktop. 80%+ of the frame is clean
+ * wallpaper — the OS chrome signals "this is a live desktop" without hiding
+ * the art.
  */
 .mockup-desktop-area {
     flex: 1;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    padding: 4% 4% 1%;
+    padding: 3% 0 1% 3%;
     overflow: hidden;
+    /* pointer-events:none inherited from .mockup-layer-ui */
 }
 
-.mockup-desktop-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: clamp(4px, 2cqw, 10px);
-    width: 100%;
+/* Single column — fixed narrow width so icons never crowd the wallpaper */
+.mockup-desktop-shortcuts {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3px, 1.5cqw, 8px);
+    width: clamp(20px, 12cqw, 52px);
 }
 
-/* Individual desktop icon: square tile + label underneath */
+/* Individual shortcut: small square icon + tiny label */
 .mockup-desktop-icon {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(2px, 1cqw, 4px);
+    gap: clamp(1px, 0.6cqw, 3px);
 }
 
 .mockup-desktop-icon-img {
     width: 100%;
     aspect-ratio: 1;
-    border-radius: clamp(4px, 1.5cqw, 8px);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: clamp(3px, 1.2cqw, 6px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2625,39 +2629,27 @@ svg { stroke-width: 2; }
 }
 
 .mockup-desktop-icon-img svg {
-    width: 52%;
-    height: 52%;
+    width: 55%;
+    height: 55%;
     display: block;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.55));
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
 }
 
-/* Icon label — short text below each desktop icon */
 .mockup-desktop-label {
-    font-size: clamp(4px, 1.8cqw, 8px);
-    color: rgba(255, 255, 255, 0.88);
+    font-size: clamp(3px, 1.4cqw, 6px);
+    color: rgba(255, 255, 255, 0.9);
     text-align: center;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.6);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
     line-height: 1;
     font-family: var(--font-body, sans-serif);
-}
-
-/* Desktop glassmorphism opt-in — same pointer:fine guard as mobile icons */
-@supports (backdrop-filter: blur(6px)) {
-    @media (pointer: fine) {
-        .mockup-desktop-icon-img {
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
-    }
+    letter-spacing: -0.01em;
 }
 
 
-    justify-content: flex-end;
-}
 
 .mockup-taskbar {
     display: flex;
@@ -2667,6 +2659,7 @@ svg { stroke-width: 2; }
     height: clamp(22px, 7%, 38px);
     background: rgba(8, 8, 18, 0.78);
     border-top: 1px solid rgba(255, 255, 255, 0.07);
+    position: relative;
 }
 
 @supports (backdrop-filter: blur(4px)) {
@@ -2677,31 +2670,66 @@ svg { stroke-width: 2; }
     }
 }
 
+/* Left side: Start button + Search pill */
 .mockup-taskbar-left {
     display: flex;
     align-items: center;
-    gap: clamp(3px, 1.5cqw, 8px);
+    gap: clamp(3px, 1.5cqw, 7px);
+    z-index: 1;
 }
 
-.mockup-taskbar-icon {
-    width: clamp(12px, 4cqw, 20px);
-    height: clamp(12px, 4cqw, 20px);
-    border-radius: 4px;
-    background: rgba(155, 89, 255, 0.35);
-    border: 1px solid rgba(155, 89, 255, 0.5);
+/* Windows 11 Start button */
+.mockup-taskbar-start {
+    width: clamp(10px, 3.8cqw, 20px);
+    height: clamp(10px, 3.8cqw, 20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
-.mockup-taskbar-apps {
-    display: flex;
-    gap: clamp(2px, 1cqw, 6px);
+.mockup-taskbar-start svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
-.mockup-taskbar-app {
+/* Search pill */
+.mockup-taskbar-search {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 clamp(3px, 1cqw, 6px);
+    width: clamp(28px, 12cqw, 60px);
+    height: clamp(9px, 3.2cqw, 17px);
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.mockup-taskbar-search svg {
+    width: clamp(5px, 2cqw, 9px);
+    height: auto;
+    flex-shrink: 0;
+}
+
+/* Centre: pinned app icons — absolutely centred so left/right never push them */
+.mockup-taskbar-centre {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: clamp(2px, 1cqw, 5px);
+}
+
+.mockup-taskbar-pinned {
     width: clamp(10px, 3.5cqw, 18px);
     height: clamp(10px, 3.5cqw, 18px);
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: clamp(2px, 0.8cqw, 4px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2709,18 +2737,20 @@ svg { stroke-width: 2; }
     flex-shrink: 0;
 }
 
-.mockup-taskbar-app svg {
+.mockup-taskbar-pinned svg {
     width: 60%;
     height: 60%;
     display: block;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 
+/* Right side: system tray */
 .mockup-taskbar-right {
     display: flex;
     align-items: center;
     gap: clamp(4px, 1.5cqw, 8px);
     color: rgba(255, 255, 255, 0.8);
-    mix-blend-mode: difference;
+    z-index: 1;
 }
 
 .mockup-pc-clock {
@@ -2736,6 +2766,13 @@ svg { stroke-width: 2; }
     height: auto;
     display: block;
 }
+
+/* Unused legacy classes — kept for zero breaking changes */
+.mockup-taskbar-icon { display: none; }
+.mockup-taskbar-apps { display: none; }
+.mockup-taskbar-app  { display: none; }
+
+
 
 /* ── FALLBACK UI ── */
 .mockup-fallback-watermark {
@@ -2804,14 +2841,15 @@ svg { stroke-width: 2; }
  * .mockup-taskbar to enforce solid rendering on touch hardware.
  */
 @media (pointer: coarse) {
-    .mockup-app-icon {
+    .mockup-app-icon,
+    .mockup-desktop-icon-img,
+    .mockup-taskbar-pinned {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
     }
     .mockup-taskbar {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-        /* Compensate with higher solid opacity so the bar remains legible */
         background: rgba(8, 8, 18, 0.92) !important;
     }
 }
