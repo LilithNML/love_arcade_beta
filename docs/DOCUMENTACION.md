@@ -719,8 +719,9 @@ Cuando la transición `opacity 0→1` empieza, el scroll ya está en `top: 0`.
 
 ## 2j. Novedades en v10.2 — Preview 2.0 Sistema de Mockup Dinámico
 
-> **v10.2.2 — Hotfix:** Dos errores CSS de dimensionado causaban colapso visual del mockup a 0×0 px.
-> Un tercer hardening JS para la resolución de ID. Ver subsección "Correcciones v10.2.2".
+> **v10.2.3 — Performance & Security hardening:**
+> Carga progresiva con doble capa, flush de memoria GPU, will-change dinámico,
+> bloqueo anti-extracción reforzado, y restricción 90/10 backdrop-filter en mobile.
 
 ### Resumen
 
@@ -885,48 +886,103 @@ openPreviewModal('5');            // ID como string (atributo HTML)
 
 ---
 
-### Correcciones v10.2.2
+### Correcciones y mejoras v10.2.3
 
-**Causa raíz del mockup invisible:** dos errores de dimensionado CSS hacían que los contenedores se colapsaran a 0×0 px antes de que el JavaScript pudiera dibujar nada.
+#### A. Carga Progresiva — Doble Capa "Thumbnail de Sacrificio"
 
-| # | Archivo | Síntoma | Causa raíz | Solución |
-|---|---|---|---|---|
-| 1 | `styles.css` | Mockup invisible en todos los tags | `#mockup-slot` sin `width` → colapso a 0 | Añadido `width: 100%` a `#mockup-slot` |
-| 2 | `styles.css` | Frame Mobile (9:20) colapsado | `max-height` no puede inicializar `aspect-ratio`; se necesita una dimensión explícita | Cambiado a `height: min(58vh, 480px)` — el ancho deriva de la altura via `aspect-ratio` |
-| 3 | `shop-logic.js` | Fallo silencioso con IDs como string `"5"` | Comparación `parseInt(str, 10)` puede fallar si el JSON tiene IDs como float o hay coerción inesperada | Simplificado a `Number(itemOrId)` — convierte cualquier tipo de ID a número de forma fiable |
+Elimina el "pop-in" blanco en conexiones lentas. El sistema usa dos fases sin bloquear el hilo principal:
+
+```
+Fase 1 (inmediata, 0ms):   thumbnail en caché → blurred placeholder
+Fase 2 (async, cuando carga): wallpaper HiRes → swap con 400ms ease
+```
+
+```javascript
+// Fase 1 — placeholder visible al instante
+artEl.style.backgroundImage = `url('${item.image}')`;  // thumb ya en caché
+artEl.classList.add('mockup-bg-loading');               // blur(10px) + scale(1.1)
+
+// Fase 2 — HiRes en background
+const hiRes = new Image();
+hiRes.onload = () => {
+    artEl.style.backgroundImage = `url('${wallpaperPath}')`;
+    artEl.classList.remove('mockup-bg-loading');
+    artEl.classList.add('mockup-bg-ready');             // blur(0) + scale(1)
+};
+hiRes.src = wallpaperPath;
+```
+
+**Stale-load guard:** `_pendingHiResImg` almacena la referencia del `Image()` activo. Si el usuario cierra y reabre el modal antes de que cargue, el `onload` del objeto anterior comprueba `_pendingHiResImg !== hiRes` y se descarta sin ejecutar.
+
+| CSS class | filter | transform | Cuándo |
+|---|---|---|---|
+| `.mockup-bg-loading` | `blur(10px)` | `scale(1.1)` | Thumbnail mostrado |
+| `.mockup-bg-ready` | `blur(0)` | `scale(1)` | HiRes listo |
+| (sin clase) | — | — | Estado inicial / tras close |
 
 ---
 
-**Por qué `max-height` ≠ `height` para `aspect-ratio` (CSS spec §10.4):**
+#### B. Gestión de Memoria GPU (Memory Flush)
+
+`closePreviewModal()` realiza limpieza activa en este orden:
+
+1. **Cancela el `Image()` en vuelo** — anula `onload`/`onerror`, evita callbacks huérfanos
+2. **Flush GPU** — `artEl.style.backgroundImage = 'none'` libera el buffer de textura
+3. **Limpia clases de estado** — `classList.remove('mockup-bg-loading', 'mockup-bg-ready')`
+4. **Elimina `will-change`** — `modal.style.willChange = 'auto'` descarta la capa GPU del compositor
+5. **Oculta el modal** — `classList.add('hidden')`
+6. **Elimina contextmenu listeners** — stage + slot
+
+```javascript
+// Patrón correcto en closePreviewModal():
+artEl.style.backgroundImage = 'none';   // ← libera textura GPU inmediatamente
+modal.style.willChange = 'auto';        // ← descarta capa compositor
+```
+
+---
+
+#### C. `will-change` Dinámico (Solo Durante Uso)
+
+`will-change` en CSS global desperdicia memoria GPU en capas que nunca se animan. El sistema lo gestiona únicamente durante la vida del modal:
+
+```javascript
+// openPreviewModal():
+modal.style.willChange = 'opacity, transform';  // Promueve capa al abrir
+
+// closePreviewModal():
+modal.style.willChange = 'auto';                // La descarta al cerrar
+```
+
+`.mockup-container` usa `translate3d(0,0,0)` (sin `will-change`) para forzar la creación de capa GPU sólo en ese elemento, sin el coste de memoria de `will-change`.
+
+---
+
+#### D. Anti-Extracción Reforzado
+
+| Capa | Mecanismo |
+|---|---|
+| CSS `background-image` | El arte nunca es un `<img>` — no hay "Guardar imagen como…" |
+| `.mockup-layer-protection` | Overlay con ruido SVG `feTurbulence`, `pointer-events: none` |
+| `.mockup-layer-art::after` | Segunda capa de ruido a 3% opacidad directamente sobre el arte |
+| `stage.addEventListener('contextmenu')` | Bloquea el menú en toda la zona del mockup |
+| `slot.oncontextmenu = (e) => { e.preventDefault(); return false; }` | Bloqueo adicional directo sobre el slot |
+
+---
+
+#### E. Regla 90/10 — `backdrop-filter` Restringido en Mobile
+
+`backdrop-filter: blur()` consume GPU de forma intensiva. En hardware móvil (touch) causa caídas de fps:
 
 ```css
-/* ❌ ROTO — max-height es una restricción, no un valor de tamaño.
-   No puede "sembrar" el cálculo cuando todos los hijos son position:absolute
-   (cero tamaño intrínseco). Resultado: 0×0 px. */
-.mockup-mobile {
-    aspect-ratio: 9 / 20;
-    max-height: 58vh;
-    width: auto;
-}
-
-/* ✅ CORRECTO — height explícito → aspect-ratio calcula width = height × (9/20) */
-.mockup-mobile {
-    aspect-ratio: 9 / 20;
-    height: min(58vh, 480px);
-    width: auto;
+/* Detección: pointer: coarse = dispositivo táctil (móvil/tablet) */
+@media (pointer: coarse) {
+    .mockup-app-icon { backdrop-filter: none !important; }
+    .mockup-taskbar  { backdrop-filter: none !important;
+                       background: rgba(8,8,18,0.92) !important; }
 }
 ```
 
-**Por qué `#mockup-slot` necesita `width: 100%`:**
-
-```
-.preview-mockup-stage  ← display:flex; align-items:center; width:100%
-  └── #mockup-slot     ← flex item, align-items:center → auto-size al contenido
-        └── .mockup-mobile (position:relative, todos los hijos position:absolute)
-                         ← cero contenido intrínseco → colapso a 0
-```
-
-Con `align-items: center` en el padre, el flex item NO se estira. Sin `width:100%` explícito en `#mockup-slot`, `.mockup-pc { width: 100% }` resulta en `100% de 0 = 0`.
+`pointer: coarse` es más fiable que `max-width` para detectar hardware táctil — un iPad en horizontal tiene 1024px pero sigue siendo gama media. La mayor opacidad del taskbar compensa visualmente la ausencia de blur.
 
 ---
 
@@ -934,10 +990,10 @@ Con `align-items: center` en el padre, el flex item NO se estira. Sin `width:100
 
 | Archivo | Versión | Cambio |
 |---|---|---|
-| `shop-logic.js` | v9.1 → v10.2.2 | `openPreviewModal` refactorizado. Resolución de ID con `Number()`. Funciones públicas en `window`. |
-| `index.html` | — | Preview modal reemplazado con `#preview-mockup-stage` + `#mockup-slot`. |
-| `styles.css` | v3.1 → v3.2.2 | +130 líneas sistema mockup. `#mockup-slot { width:100% }`. `.mockup-mobile { height: min(...) }`. |
-| `DOCUMENTACION.md` | — | Sección 2j con hotfix v10.2.2. |
+| `shop-logic.js` | v9.1 → v10.2.3 | Carga progresiva, memory flush, will-change dinámico, contextmenu reforzado. |
+| `index.html` | — | Preview modal con `#preview-mockup-stage` + `#mockup-slot`. |
+| `styles.css` | v3.1 → v3.2.3 | `.mockup-bg-loading/ready`, `::after` noise en art layer, `backface-visibility` en overlay, `@media (pointer: coarse)`. |
+| `DOCUMENTACION.md` | — | Sección 2j v10.2.3. |
 
 Dentro de `#mockup-slot`, JS inyecta un `div.mockup-container` con tres capas superpuestas via `position: absolute; inset: 0`:
 
