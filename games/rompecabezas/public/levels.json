@@ -1,7 +1,7 @@
 [
   {
     "id": "lvl_1",
-    "image": "./assets/Nivel01.webp",
+    "image": "./assets/levels/Nivel01.webp",
     "thumbnail": "./assets/thumbnails/Nivel1_thumb.webp",
     "pieces": 16,
     "rewardCoins": 150,
@@ -10,7 +10,7 @@
   },
   {
     "id": "lvl_2",
-    "image": "./assets/Nivel02.webp",
+    "image": "./assets/levels/Nivel02.webp",
     "thumbnail": "./assets/thumbnails/Nivel2_thumb.webp",
     "pieces": 16,
     "rewardCoins": 153,
@@ -19,7 +19,7 @@
   },
   {
     "id": "lvl_3",
-    "image": "./assets/Nivel03.webp",
+    "image": "./assets/levels/Nivel03.webp",
     "thumbnail": "./assets/thumbnails/Nivel3_thumb.webp",
     "pieces": 16,
     "rewardCoins": 157,
@@ -28,7 +28,7 @@
   },
   {
     "id": "lvl_4",
-    "image": "./assets/Nivel04.webp",
+    "image": "./assets/levels/Nivel04.webp",
     "thumbnail": "./assets/thumbnails/Nivel4_thumb.webp",
     "pieces": 16,
     "rewardCoins": 160,
@@ -37,7 +37,7 @@
   },
   {
     "id": "lvl_5",
-    "image": "./assets/Nivel05.webp",
+    "image": "./assets/levels/Nivel05.webp",
     "thumbnail": "./assets/thumbnails/Nivel5_thumb.webp",
     "pieces": 16,
     "rewardCoins": 163,
@@ -46,7 +46,7 @@
   },
   {
     "id": "lvl_6",
-    "image": "./assets/Nivel06.webp",
+    "image": "./assets/levels/Nivel06.webp",
     "thumbnail": "./assets/thumbnails/Nivel6_thumb.webp",
     "pieces": 16,
     "rewardCoins": 167,
@@ -55,7 +55,7 @@
   },
   {
     "id": "lvl_7",
-    "image": "./assets/Nivel07.webp",
+    "image": "./assets/levels/Nivel07.webp",
     "thumbnail": "./assets/thumbnails/Nivel7_thumb.webp",
     "pieces": 16,
     "rewardCoins": 170,
@@ -64,7 +64,7 @@
   },
   {
     "id": "lvl_8",
-    "image": "./assets/Nivel08.webp",
+    "image": "./assets/levels/Nivel08.webp",
     "thumbnail": "./assets/thumbnails/Nivel8_thumb.webp",
     "pieces": 16,
     "rewardCoins": 173,
@@ -73,7 +73,7 @@
   },
   {
     "id": "lvl_9",
-    "image": "./assets/Nivel09.webp",
+    "image": "./assets/levels/Nivel09.webp",
     "thumbnail": "./assets/thumbnails/Nivel9_thumb.webp",
     "pieces": 16,
     "rewardCoins": 177,
@@ -82,7 +82,7 @@
   },
   {
     "id": "lvl_10",
-    "image": "./assets/Nivel10.webp",
+    "image": "./assets/levels/Nivel10.webp",
     "thumbnail": "./assets/thumbnails/Nivel10_thumb.webp",
     "pieces": 16,
     "rewardCoins": 180,
@@ -91,7 +91,7 @@
   },
   {
     "id": "lvl_11",
-    "image": "./assets/Nivel11.webp",
+    "image": "./assets/levels/Nivel11.webp",
     "thumbnail": "./assets/thumbnails/Nivel11_thumb.webp",
     "pieces": 16,
     "rewardCoins": 181,
@@ -100,7 +100,7 @@
   },
   {
     "id": "lvl_12",
-    "image": "./assets/Nivel12.webp",
+    "image": "./assets/levels/Nivel12.webp",
     "thumbnail": "./assets/thumbnails/Nivel12_thumb.webp",
     "pieces": 25,
     "rewardCoins": 184,
@@ -109,7 +109,7 @@
   },
   {
     "id": "lvl_13",
-    "image": "./assets/Nivel13.webp",
+    "image": "./assets/levels/Nivel13.webp",
     "thumbnail": "./assets/thumbnails/Nivel13_thumb.webp",
     "pieces": 16,
     "rewardCoins": 188,
@@ -118,7 +118,7 @@
   },
   {
     "id": "lvl_14",
-    "image": "./assets/Nivel14.webp",
+    "image": "./assets/levels/Nivel14.webp",
     "thumbnail": "./assets/thumbnails/Nivel14_thumb.webp",
     "pieces": 25,
     "rewardCoins": 192,
@@ -127,7 +127,7 @@
   },
   {
     "id": "lvl_15",
-    "image": "./assets/Nivel15.webp",
+    "image": "./assets/levels/Nivel15.webp",
     "thumbnail": "./assets/thumbnails/Nivel15_thumb.webp",
     "pieces": 16,
     "rewardCoins": 195,
@@ -136,7 +136,7 @@
   },
   {
     "id": "lvl_16",
-    "image": "./assets/Nivel16.webp",
+    "image": "./assets/levels/Nivel16.webp",
     "thumbnail": "./assets/thumbnails/Nivel16_thumb.webp",
     "pieces": 25,
     "rewardCoins": 198,
@@ -145,7 +145,7 @@
   },
   {
     "id": "lvl_17",
-    "image": "./assets/Nivel17.webp",
+    "image": "./assets/levels/Nivel17.webp",
     "thumbnail": "./assets/thumbnails/Nivel17_thumb.webp",
     "pieces": 16,
     "rewardCoins": 202,
@@ -154,7 +154,7 @@
   },
   {
     "id": "lvl_18",
-    "image": "./assets/Nivel18.webp",
+    "image": "./assets/levels/Nivel18.webp",
     "thumbnail": "./assets/thumbnails/Nivel18_thumb.webp",
     "pieces": 25,
     "rewardCoins": 206,
@@ -163,7 +163,7 @@
   },
   {
     "id": "lvl_19",
-    "image": "./assets/Nivel19.webp",
+    "image": "./assets/levels/Nivel19.webp",
     "thumbnail": "./assets/thumbnails/Nivel19_thumb.webp",
     "pieces": 16,
     "rewardCoins": 209,
@@ -172,7 +172,7 @@
   },
   {
     "id": "lvl_20",
-    "image": "./assets/Nivel20.webp",
+    "image": "./assets/levels/Nivel20.webp",
     "thumbnail": "./assets/thumbnails/Nivel20_thumb.webp",
     "pieces": 25,
     "rewardCoins": 212,
@@ -181,7 +181,7 @@
   },
   {
     "id": "lvl_21",
-    "image": "./assets/Nivel21.webp",
+    "image": "./assets/levels/Nivel21.webp",
     "thumbnail": "./assets/thumbnails/Nivel21_thumb.webp",
     "pieces": 16,
     "rewardCoins": 216,
@@ -190,7 +190,7 @@
   },
   {
     "id": "lvl_22",
-    "image": "./assets/Nivel22.webp",
+    "image": "./assets/levels/Nivel22.webp",
     "thumbnail": "./assets/thumbnails/Nivel22_thumb.webp",
     "pieces": 25,
     "rewardCoins": 220,
@@ -199,7 +199,7 @@
   },
   {
     "id": "lvl_23",
-    "image": "./assets/Nivel23.webp",
+    "image": "./assets/levels/Nivel23.webp",
     "thumbnail": "./assets/thumbnails/Nivel23_thumb.webp",
     "pieces": 16,
     "rewardCoins": 223,
@@ -208,7 +208,7 @@
   },
   {
     "id": "lvl_24",
-    "image": "./assets/Nivel24.webp",
+    "image": "./assets/levels/Nivel24.webp",
     "thumbnail": "./assets/thumbnails/Nivel24_thumb.webp",
     "pieces": 25,
     "rewardCoins": 226,
@@ -217,7 +217,7 @@
   },
   {
     "id": "lvl_25",
-    "image": "./assets/Nivel25.webp",
+    "image": "./assets/levels/Nivel25.webp",
     "thumbnail": "./assets/thumbnails/Nivel25_thumb.webp",
     "pieces": 16,
     "rewardCoins": 230,
@@ -226,7 +226,7 @@
   },
   {
     "id": "lvl_26",
-    "image": "./assets/Nivel26.webp",
+    "image": "./assets/levels/Nivel26.webp",
     "thumbnail": "./assets/thumbnails/Nivel26_thumb.webp",
     "pieces": 25,
     "rewardCoins": 231,
@@ -235,7 +235,7 @@
   },
   {
     "id": "lvl_27",
-    "image": "./assets/Nivel27.webp",
+    "image": "./assets/levels/Nivel27.webp",
     "thumbnail": "./assets/thumbnails/Nivel27_thumb.webp",
     "pieces": 25,
     "rewardCoins": 235,
@@ -244,7 +244,7 @@
   },
   {
     "id": "lvl_28",
-    "image": "./assets/Nivel28.webp",
+    "image": "./assets/levels/Nivel28.webp",
     "thumbnail": "./assets/thumbnails/Nivel28_thumb.webp",
     "pieces": 25,
     "rewardCoins": 240,
@@ -253,7 +253,7 @@
   },
   {
     "id": "lvl_29",
-    "image": "./assets/Nivel29.webp",
+    "image": "./assets/levels/Nivel29.webp",
     "thumbnail": "./assets/thumbnails/Nivel29_thumb.webp",
     "pieces": 25,
     "rewardCoins": 244,
@@ -262,7 +262,7 @@
   },
   {
     "id": "lvl_30",
-    "image": "./assets/Nivel30.webp",
+    "image": "./assets/levels/Nivel30.webp",
     "thumbnail": "./assets/thumbnails/Nivel30_thumb.webp",
     "pieces": 25,
     "rewardCoins": 248,
@@ -271,7 +271,7 @@
   },
   {
     "id": "lvl_31",
-    "image": "./assets/Nivel31.webp",
+    "image": "./assets/levels/Nivel31.webp",
     "thumbnail": "./assets/thumbnails/Nivel31_thumb.webp",
     "pieces": 25,
     "rewardCoins": 253,
@@ -280,7 +280,7 @@
   },
   {
     "id": "lvl_32",
-    "image": "./assets/Nivel32.webp",
+    "image": "./assets/levels/Nivel32.webp",
     "thumbnail": "./assets/thumbnails/Nivel32_thumb.webp",
     "pieces": 25,
     "rewardCoins": 257,
@@ -289,7 +289,7 @@
   },
   {
     "id": "lvl_33",
-    "image": "./assets/Nivel33.webp",
+    "image": "./assets/levels/Nivel33.webp",
     "thumbnail": "./assets/thumbnails/Nivel33_thumb.webp",
     "pieces": 25,
     "rewardCoins": 261,
@@ -298,7 +298,7 @@
   },
   {
     "id": "lvl_34",
-    "image": "./assets/Nivel34.webp",
+    "image": "./assets/levels/Nivel34.webp",
     "thumbnail": "./assets/thumbnails/Nivel34_thumb.webp",
     "pieces": 25,
     "rewardCoins": 266,
@@ -307,7 +307,7 @@
   },
   {
     "id": "lvl_35",
-    "image": "./assets/Nivel35.webp",
+    "image": "./assets/levels/Nivel35.webp",
     "thumbnail": "./assets/thumbnails/Nivel35_thumb.webp",
     "pieces": 25,
     "rewardCoins": 270,
@@ -316,7 +316,7 @@
   },
   {
     "id": "lvl_36",
-    "image": "./assets/Nivel36.webp",
+    "image": "./assets/levels/Nivel36.webp",
     "thumbnail": "./assets/thumbnails/Nivel36_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -325,7 +325,7 @@
   },
   {
     "id": "lvl_37",
-    "image": "./assets/Nivel37.webp",
+    "image": "./assets/levels/Nivel37.webp",
     "thumbnail": "./assets/thumbnails/Nivel37_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -334,7 +334,7 @@
   },
   {
     "id": "lvl_38",
-    "image": "./assets/Nivel38.webp",
+    "image": "./assets/levels/Nivel38.webp",
     "thumbnail": "./assets/thumbnails/Nivel38_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -343,7 +343,7 @@
   },
   {
     "id": "lvl_39",
-    "image": "./assets/Nivel39.webp",
+    "image": "./assets/levels/Nivel39.webp",
     "thumbnail": "./assets/thumbnails/Nivel39_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -352,7 +352,7 @@
   },
   {
     "id": "lvl_40",
-    "image": "./assets/Nivel40.webp",
+    "image": "./assets/levels/Nivel40.webp",
     "thumbnail": "./assets/thumbnails/Nivel40_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -361,7 +361,7 @@
   },
   {
     "id": "lvl_41",
-    "image": "./assets/Nivel41.webp",
+    "image": "./assets/levels/Nivel41.webp",
     "thumbnail": "./assets/thumbnails/Nivel41_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -370,7 +370,7 @@
   },
   {
     "id": "lvl_42",
-    "image": "./assets/Nivel42.webp",
+    "image": "./assets/levels/Nivel42.webp",
     "thumbnail": "./assets/thumbnails/Nivel42_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -379,7 +379,7 @@
   },
   {
     "id": "lvl_43",
-    "image": "./assets/Nivel43.webp",
+    "image": "./assets/levels/Nivel43.webp",
     "thumbnail": "./assets/thumbnails/Nivel43_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -388,7 +388,7 @@
   },
   {
     "id": "lvl_44",
-    "image": "./assets/Nivel44.webp",
+    "image": "./assets/levels/Nivel44.webp",
     "thumbnail": "./assets/thumbnails/Nivel44_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -397,7 +397,7 @@
   },
   {
     "id": "lvl_45",
-    "image": "./assets/Nivel45.webp",
+    "image": "./assets/levels/Nivel45.webp",
     "thumbnail": "./assets/thumbnails/Nivel45_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -406,7 +406,7 @@
   },
   {
     "id": "lvl_46",
-    "image": "./assets/Nivel46.webp",
+    "image": "./assets/levels/Nivel46.webp",
     "thumbnail": "./assets/thumbnails/Nivel46_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -415,7 +415,7 @@
   },
   {
     "id": "lvl_47",
-    "image": "./assets/Nivel47.webp",
+    "image": "./assets/levels/Nivel47.webp",
     "thumbnail": "./assets/thumbnails/Nivel47_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -424,7 +424,7 @@
   },
   {
     "id": "lvl_48",
-    "image": "./assets/Nivel48.webp",
+    "image": "./assets/levels/Nivel48.webp",
     "thumbnail": "./assets/thumbnails/Nivel48_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -433,7 +433,7 @@
   },
   {
     "id": "lvl_49",
-    "image": "./assets/Nivel49.webp",
+    "image": "./assets/levels/Nivel49.webp",
     "thumbnail": "./assets/thumbnails/Nivel49_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -442,7 +442,7 @@
   },
   {
     "id": "lvl_50",
-    "image": "./assets/Nivel50.webp",
+    "image": "./assets/levels/Nivel50.webp",
     "thumbnail": "./assets/thumbnails/Nivel50_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -451,7 +451,7 @@
   },
   {
     "id": "lvl_51",
-    "image": "./assets/Nivel51.webp",
+    "image": "./assets/levels/Nivel51.webp",
     "thumbnail": "./assets/thumbnails/Nivel51_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -460,7 +460,7 @@
   },
   {
     "id": "lvl_52",
-    "image": "./assets/Nivel52.webp",
+    "image": "./assets/levels/Nivel52.webp",
     "thumbnail": "./assets/thumbnails/Nivel52_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -469,7 +469,7 @@
   },
   {
     "id": "lvl_53",
-    "image": "./assets/Nivel53.webp",
+    "image": "./assets/levels/Nivel53.webp",
     "thumbnail": "./assets/thumbnails/Nivel53_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -478,7 +478,7 @@
   },
   {
     "id": "lvl_54",
-    "image": "./assets/Nivel54.webp",
+    "image": "./assets/levels/Nivel54.webp",
     "thumbnail": "./assets/thumbnails/Nivel54_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -487,7 +487,7 @@
   },
   {
     "id": "lvl_55",
-    "image": "./assets/Nivel55.webp",
+    "image": "./assets/levels/Nivel55.webp",
     "thumbnail": "./assets/thumbnails/Nivel55_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -496,7 +496,7 @@
   },
   {
     "id": "lvl_56",
-    "image": "./assets/Nivel56.webp",
+    "image": "./assets/levels/Nivel56.webp",
     "thumbnail": "./assets/thumbnails/Nivel56_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -505,7 +505,7 @@
   },
   {
     "id": "lvl_57",
-    "image": "./assets/Nivel57.webp",
+    "image": "./assets/levels/Nivel57.webp",
     "thumbnail": "./assets/thumbnails/Nivel57_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -514,7 +514,7 @@
   },
   {
     "id": "lvl_58",
-    "image": "./assets/Nivel58.webp",
+    "image": "./assets/levels/Nivel58.webp",
     "thumbnail": "./assets/thumbnails/Nivel58_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -523,7 +523,7 @@
   },
   {
     "id": "lvl_59",
-    "image": "./assets/Nivel59.webp",
+    "image": "./assets/levels/Nivel59.webp",
     "thumbnail": "./assets/thumbnails/Nivel59_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -532,7 +532,7 @@
   },
   {
     "id": "lvl_60",
-    "image": "./assets/Nivel60.webp",
+    "image": "./assets/levels/Nivel60.webp",
     "thumbnail": "./assets/thumbnails/Nivel60_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -541,7 +541,7 @@
   },
   {
     "id": "lvl_61",
-    "image": "./assets/Nivel61.webp",
+    "image": "./assets/levels/Nivel61.webp",
     "thumbnail": "./assets/thumbnails/Nivel61_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -550,7 +550,7 @@
   },
   {
     "id": "lvl_62",
-    "image": "./assets/Nivel62.webp",
+    "image": "./assets/levels/Nivel62.webp",
     "thumbnail": "./assets/thumbnails/Nivel62_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -559,7 +559,7 @@
   },
   {
     "id": "lvl_63",
-    "image": "./assets/Nivel63.webp",
+    "image": "./assets/levels/Nivel63.webp",
     "thumbnail": "./assets/thumbnails/Nivel63_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -568,7 +568,7 @@
   },
   {
     "id": "lvl_64",
-    "image": "./assets/Nivel64.webp",
+    "image": "./assets/levels/Nivel64.webp",
     "thumbnail": "./assets/thumbnails/Nivel64_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -577,7 +577,7 @@
   },
   {
     "id": "lvl_65",
-    "image": "./assets/Nivel65.webp",
+    "image": "./assets/levels/Nivel65.webp",
     "thumbnail": "./assets/thumbnails/Nivel65_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
@@ -586,7 +586,7 @@
   },
   {
     "id": "lvl_66",
-    "image": "./assets/Nivel66.webp",
+    "image": "./assets/levels/Nivel66.webp",
     "thumbnail": "./assets/thumbnails/Nivel66_thumb.webp",
     "pieces": 25,
     "rewardCoins": 200,
