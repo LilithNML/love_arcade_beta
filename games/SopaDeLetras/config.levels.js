@@ -722,6 +722,359 @@ window.LA_WS_LEVELS = [
         gridSize: 12,
         words: ["EPICO", "MAXIMO", "LOGRO", "CAMPEON", "VICTORIA", "FINAL", "NIVEL", "RECORD", "MAESTRO", "TROFEO", "CROWN", "LEGEND"],
         rewardCoins: 250 // HITO nivel 100 + Maestra: 12x12, 12 palabras → máxima recompensa
+    },
+
+    // ─── BLOQUE 101-150: Anime, Series, Cultura, Ciencia y Naturaleza ────────────
+
+    {
+        id: "lvl_101",
+        title: "One Piece",
+        gridSize: 12,
+        words: ["LUFFY", "ZORO", "NAMI", "SANJI", "USOPP", "BROOK", "CHOPPER", "ROBIN"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_102",
+        title: "Naruto",
+        gridSize: 11,
+        words: ["NARUTO", "SASUKE", "SAKURA", "KAKASHI", "JIRAIYA", "ITACHI", "GAARA"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_103",
+        title: "Attack on Titan",
+        gridSize: 12,
+        words: ["EREN", "MIKASA", "ARMIN", "LEVI", "TITAN", "REINER", "BERTOLT", "HISTORIA"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_104",
+        title: "My Hero Academia",
+        gridSize: 11,
+        words: ["DEKU", "BAKUGO", "OCHAKO", "TODOROKI", "TOKOYAMI", "MINETA", "TSUYU"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_105",
+        title: "Death Note",
+        gridSize: 10,
+        words: ["LIGHT", "RYUK", "KIRA", "MISA", "NEAR", "SHINIGAMI"],
+        rewardCoins: 145 // Básica: 10x10, 6 palabras + SHINIGAMI (9 chars) → 125+20
+    },
+    {
+        id: "lvl_106",
+        title: "Pokémon Kanto",
+        gridSize: 12,
+        words: ["PIKACHU", "CHARIZARD", "MEWTWO", "BLASTOISE", "GENGAR", "SNORLAX", "EEVEE", "ARCANINE"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + CHARIZARD (9) y BLASTOISE (9) → 180+20
+    },
+    {
+        id: "lvl_107",
+        title: "The Last of Us",
+        gridSize: 11,
+        words: ["JOEL", "ELLIE", "TESS", "TOMMY", "MARLENE", "CLICKER", "HUNTER"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_108",
+        title: "Dark Souls",
+        gridSize: 12,
+        words: ["SOLAIRE", "GWYN", "ARTORIAS", "SEATH", "ORNSTEIN", "FRAMPT", "GWYNDOLIN", "CROSSBREED"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + CROSSBREED (10 chars) → 180+20
+    },
+    {
+        id: "lvl_109",
+        title: "Stardew Valley",
+        gridSize: 10,
+        words: ["PIERRE", "LEAH", "PENNY", "EMILY", "ROBIN", "MARNIE"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_110",
+        title: "Avatar: The Last Airbender",
+        gridSize: 12,
+        words: ["AANG", "KATARA", "ZUKO", "TOPH", "SOKKA", "IROH", "AZULA", "OZAI", "SUKI", "APPA"],
+        rewardCoins: 250 // HITO nivel 110 → máxima recompensa
+    },
+    {
+        id: "lvl_111",
+        title: "Breaking Bad",
+        gridSize: 11,
+        words: ["WALTER", "JESSE", "HEISENBERG", "HANK", "SAUL", "SKYLER", "GALE"],
+        rewardCoins: 170 // Media: 11x11, 7 palabras + HEISENBERG (10 chars) → 150+20
+    },
+    {
+        id: "lvl_112",
+        title: "Game of Thrones",
+        gridSize: 12,
+        words: ["DAENERYS", "CERSEI", "TYRION", "JAIME", "SANSA", "ARYA", "JON", "BRAN"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_113",
+        title: "Stranger Things",
+        gridSize: 10,
+        words: ["ELEVEN", "HOPPER", "MIKE", "DUSTIN", "MAX", "DEMOGORGON"],
+        rewardCoins: 145 // Básica: 10x10, 6 palabras + DEMOGORGON (10 chars) → 125+20
+    },
+    {
+        id: "lvl_114",
+        title: "Los Simpsons",
+        gridSize: 11,
+        words: ["HOMER", "MARGE", "BART", "LISA", "MAGGIE", "BURNS"],
+        rewardCoins: 130 // Media: 11x11, 6 palabras
+    },
+    {
+        id: "lvl_115",
+        title: "Cocina Italiana",
+        gridSize: 10,
+        words: ["PASTA", "PIZZA", "RISOTTO", "GELATO", "BRUSCHETTA"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_116",
+        title: "Cocina Japonesa",
+        gridSize: 11,
+        words: ["SUSHI", "RAMEN", "UDON", "TEMPURA", "MISO", "SASHIMI"],
+        rewardCoins: 130 // Media: 11x11, 6 palabras
+    },
+    {
+        id: "lvl_117",
+        title: "Instrumentos Musicales",
+        gridSize: 12,
+        words: ["VIOLIN", "FLAUTA", "TROMPETA", "CLARINETE", "CELLO", "OBOE", "TIMBAL", "ARPA"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + CLARINETE (9 chars) → 180+20
+    },
+    {
+        id: "lvl_118",
+        title: "Deportes de Agua",
+        gridSize: 11,
+        words: ["NATACION", "POLO", "CANOA", "KAYAK", "REMO", "BUCEO", "SURF"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_119",
+        title: "García Márquez",
+        gridSize: 12,
+        words: ["MACONDO", "SOLEDAD", "AURELIANO", "REALISMO", "MAGIA", "BUENDIA", "REMEDIOS", "URSULA"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + AURELIANO (9 chars) → 180+20
+    },
+    {
+        id: "lvl_120",
+        title: "Matemáticas",
+        gridSize: 12,
+        words: ["ALGEBRA", "CALCULO", "GEOMETRIA", "FRACCION", "INTEGRAL", "VECTOR", "MATRIZ", "LIMITE", "FUNCION", "DERIVADA"],
+        rewardCoins: 250 // HITO nivel 120 + temática técnica + GEOMETRIA (9 chars) → máxima recompensa
+    },
+    {
+        id: "lvl_121",
+        title: "Inteligencia Artificial",
+        gridSize: 12,
+        words: ["NEURONA", "ALGORITMO", "MODELO", "TENSOR", "GRADIENTE", "INFERENCIA", "CAPAS", "PESOS", "DATOS", "ENTRENA"],
+        rewardCoins: 250 // Maestra: 12x12, 10 palabras + técnica + ALGORITMO (9) e INFERENCIA (10) → máxima recompensa
+    },
+    {
+        id: "lvl_122",
+        title: "Redes y Networking",
+        gridSize: 12,
+        words: ["ROUTER", "SWITCH", "PROTOCOLO", "LATENCIA", "PAQUETE", "FIREWALL", "SERVIDOR", "CLIENTE"],
+        rewardCoins: 220 // Avanzada: 12x12, 8 palabras + temática técnica + PROTOCOLO (9 chars) → rango técnico
+    },
+    {
+        id: "lvl_123",
+        title: "Ecosistemas Terrestres",
+        gridSize: 10,
+        words: ["TAIGA", "TUNDRA", "SELVA", "SABANA", "PANTANO"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_124",
+        title: "Mitología Japonesa",
+        gridSize: 11,
+        words: ["AMATERASU", "SUSANOO", "IZANAGI", "KITSUNE", "ONI", "TANUKI", "RYUJIN"],
+        rewardCoins: 170 // Media: 11x11, 7 palabras + AMATERASU (9 chars) → 150+20
+    },
+    {
+        id: "lvl_125",
+        title: "Mitología Azteca",
+        gridSize: 12,
+        words: ["QUETZAL", "TLALOC", "XOCHITL", "COATL", "AZTECA", "TEPEU", "ITZAMNA"],
+        rewardCoins: 200 // Avanzada: 12x12, 7 palabras + temática filosófica/mitológica → rango técnico
+    },
+    {
+        id: "lvl_126",
+        title: "América Latina",
+        gridSize: 10,
+        words: ["MEXICO", "BRASIL", "CHILE", "PERU", "CUBA", "COLOMBIA"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_127",
+        title: "Capitales Europeas",
+        gridSize: 11,
+        words: ["PARIS", "ROMA", "BERLIN", "MADRID", "VIENA", "ATENAS", "LISBOA"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_128",
+        title: "Océanos y Mares",
+        gridSize: 10,
+        words: ["PACIFICO", "ATLANTICO", "ARTICO", "INDICO", "CASPIO"],
+        rewardCoins: 120 // Básica: 10x10, 5 palabras + ATLANTICO (9 chars) → 100+20
+    },
+    {
+        id: "lvl_129",
+        title: "Artes Marciales",
+        gridSize: 11,
+        words: ["KARATE", "JUDO", "TAEKWONDO", "KENDO", "AIKIDO", "KUNGFU", "CAPOEIRA"],
+        rewardCoins: 170 // Media: 11x11, 7 palabras + TAEKWONDO (9 chars) → 150+20
+    },
+    {
+        id: "lvl_130",
+        title: "Hades: Olimpo",
+        gridSize: 12,
+        words: ["ZAGREUS", "NYX", "HYPNOS", "THANATOS", "CERBERUS", "ARES", "ARTEMIS", "CHAOS", "DIONISO", "POSEIDON"],
+        rewardCoins: 250 // HITO nivel 130 → máxima recompensa
+    },
+    {
+        id: "lvl_131",
+        title: "Hollow Knight",
+        gridSize: 12,
+        words: ["HORNET", "QUIRREL", "GRIMM", "ZOTE", "CORNIFER", "GHOST", "DEEPNEST", "HALLOWNEST"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + HALLOWNEST (10 chars) → 180+20
+    },
+    {
+        id: "lvl_132",
+        title: "Fortnite: Armas",
+        gridSize: 10,
+        words: ["ESCOPETA", "RIFLE", "PISTOLA", "GRANADA", "LANZADOR", "TRAMPA"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_133",
+        title: "Among Us",
+        gridSize: 10,
+        words: ["IMPOSTOR", "TAREA", "SABOTAJE", "VENT", "EXPULSAR", "MAPA"],
+        rewardCoins: 125 // Básica: 10x10, 6 palabras (tope de rango)
+    },
+    {
+        id: "lvl_134",
+        title: "Doctor Who",
+        gridSize: 11,
+        words: ["TARDIS", "DALEK", "TIMELORD", "CYBERMAN", "SONIC", "MASTER", "COMPANIONS"],
+        rewardCoins: 170 // Media: 11x11, 7 palabras + COMPANIONS (10 chars) → 150+20
+    },
+    {
+        id: "lvl_135",
+        title: "Sherlock Holmes",
+        gridSize: 10,
+        words: ["WATSON", "MORIARTY", "BAKER", "IRENE", "LESTRADE"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_136",
+        title: "Bebidas del Mundo",
+        gridSize: 11,
+        words: ["SAKE", "WHISKY", "VODKA", "TEQUILA", "COGNAC", "CERVEZA"],
+        rewardCoins: 130 // Media: 11x11, 6 palabras
+    },
+    {
+        id: "lvl_137",
+        title: "Red Dead Redemption",
+        gridSize: 12,
+        words: ["ARTHUR", "DUTCH", "JOHN", "ABIGAIL", "HOSEA", "JAVIER", "MARSTON", "MICAH"],
+        rewardCoins: 180 // Avanzada: 12x12, 8 palabras
+    },
+    {
+        id: "lvl_138",
+        title: "The Office",
+        gridSize: 10,
+        words: ["MICHAEL", "DWIGHT", "JIM", "PAM", "ANDY", "KEVIN", "RYAN"],
+        rewardCoins: 130 // 10x10, 7 palabras → sobre rango básico
+    },
+    {
+        id: "lvl_139",
+        title: "Ballet y Danza",
+        gridSize: 10,
+        words: ["POINTE", "PLIE", "ARABESQUE", "JETE", "FOUETTE", "PIROUETTE"],
+        rewardCoins: 145 // Básica: 10x10, 6 palabras + ARABESQUE (9) y PIROUETTE (9) → 125+20
+    },
+    {
+        id: "lvl_140",
+        title: "Medicina y Ciencia",
+        gridSize: 12,
+        words: ["CELULA", "TEJIDO", "ANATOMIA", "FARMACO", "CIRUGIA", "VACUNA", "DIAGNOSTICO", "NERVIO", "MUSCULO", "ORGANO"],
+        rewardCoins: 250 // HITO nivel 140 + temática técnica + DIAGNOSTICO (11 chars) → máxima recompensa
+    },
+    {
+        id: "lvl_141",
+        title: "Shakespeare",
+        gridSize: 12,
+        words: ["HAMLET", "OTHELLO", "MACBETH", "ROMEO", "JULIETA", "FALSTAFF", "PROSPERO", "CALIBAN"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + temática literaria clásica
+    },
+    {
+        id: "lvl_142",
+        title: "Black Mirror",
+        gridSize: 11,
+        words: ["NOSEDIVE", "COOKIE", "ARKANGEL", "METALHEAD", "CROCODILE", "BANDERSNATCH"],
+        rewardCoins: 150 // Media: 11x11, 6 palabras + BANDERSNATCH (12 chars) → 130+20
+    },
+    {
+        id: "lvl_143",
+        title: "Reptiles del Mundo",
+        gridSize: 10,
+        words: ["IGUANA", "COBRA", "GECKO", "CAIMAN", "MAMBA"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_144",
+        title: "Mitología Celta",
+        gridSize: 11,
+        words: ["DAGDA", "LUGH", "CERNUNNOS", "BRIGID", "MORRIGAN", "NUADA", "TUATHA"],
+        rewardCoins: 170 // Media: 11x11, 7 palabras + CERNUNNOS (9 chars) → 150+20
+    },
+    {
+        id: "lvl_145",
+        title: "Pokémon Johto",
+        gridSize: 12,
+        words: ["TOTODILE", "CHIKORITA", "CYNDAQUIL", "LUGIA", "ESPEON", "UMBREON", "AMPHAROS", "SCIZOR"],
+        rewardCoins: 200 // Avanzada: 12x12, 8 palabras + CHIKORITA (9) y CYNDAQUIL (9) → 180+20
+    },
+    {
+        id: "lvl_146",
+        title: "Montañas del Mundo",
+        gridSize: 10,
+        words: ["EVEREST", "HIMALAYA", "ANDINO", "ROCOSAS", "ALPES"],
+        rewardCoins: 100 // Básica: 10x10, 5 palabras
+    },
+    {
+        id: "lvl_147",
+        title: "Insectos",
+        gridSize: 10,
+        words: ["HORMIGA", "ABEJA", "ESCARABAJO", "MARIPOSA", "CIGARRA", "MOSQUITO"],
+        rewardCoins: 145 // Básica: 10x10, 6 palabras + ESCARABAJO (10 chars) → 125+20
+    },
+    {
+        id: "lvl_148",
+        title: "Atletismo Olímpico",
+        gridSize: 11,
+        words: ["SPRINT", "MARATON", "SALTO", "JABALINA", "DISCO", "MARTILLO", "VALLAS"],
+        rewardCoins: 150 // Media: 11x11, 7 palabras
+    },
+    {
+        id: "lvl_149",
+        title: "Celeste",
+        gridSize: 10,
+        words: ["MADELEINE", "BADELINE", "RESORT", "SUMMIT", "CUERVO", "EVEREST"],
+        rewardCoins: 145 // Básica: 10x10, 6 palabras + MADELEINE (9 chars) → 125+20
+    },
+    {
+        id: "lvl_150",
+        title: "Tecnología del Futuro",
+        gridSize: 12,
+        words: ["BLOCKCHAIN", "METAVERSO", "CUANTICO", "NANOBOT", "ROBOTICA", "HOLOGRAMA", "FUSION", "SATELITE", "BITCOIN", "QUANTUM"],
+        rewardCoins: 250 // HITO nivel 150 + Maestra: 12x12, 10 palabras + técnica + BLOCKCHAIN (10) → máxima recompensa
     }
 ];
 
