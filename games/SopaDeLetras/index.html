@@ -2,21 +2,70 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--
+        AUDIT FIX #1 — Compatibilidad móvil: viewport-fit=cover habilita las
+        safe areas en dispositivos con notch (iPhone X+) o barra de gestos de
+        Android. Sin esto, el contenido puede quedar oculto bajo el área del sensor.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Word Hunt – juego de sopa de letras arcade neo-retro. Parte del ecosistema LoveArcade.">
+
     <title>Word Hunt - LoveArcade</title>
+
+    <!--
+        AUDIT FIX #2 — Rendimiento crítico: preconnect para Google Fonts.
+        Establece la conexión TCP/TLS antes de que el parser llegue al <link>,
+        reduciendo la latencia de carga de la tipografía hasta ~200 ms en redes lentas.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!--
+        AUDIT FIX #3 — Rendimiento crítico: se reemplaza el @import de CSS con un
+        <link> aquí en el <head>. El @import en una hoja de estilos es bloqueante
+        y serializa las descargas (descarga styles.css → parsea → descarga la fuente).
+        Un <link> en el <head> permite descargas en paralelo.
+        font-display=swap en la URL evita el FOIT (flash of invisible text) mientras
+        la fuente carga — el fallback monospace se muestra de inmediato.
+    -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Chakra+Petch:wght@400;600;700&display=swap">
+
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Partículas de fondo -->
-    <canvas id="la_ws_particles"></canvas>
+    <!--
+        AUDIT FIX #4 — Accesibilidad: mensaje noscript.
+        Informa al usuario si JavaScript está deshabilitado, en lugar de
+        mostrar una pantalla en blanco sin explicación.
+    -->
+    <noscript>
+        <p style="padding:2rem;text-align:center;font-family:sans-serif;color:#fff;background:#0a0e1a">
+            Word Hunt requiere JavaScript para funcionar. Por favor, actívalo en tu navegador.
+        </p>
+    </noscript>
 
-    <!-- Pantalla Principal -->
-    <div id="la_ws_mainScreen" class="la-ws-screen la-ws-screen--active">
+    <!-- Canvas de partículas — puramente decorativo, ocultado a lectores de pantalla -->
+    <canvas id="la_ws_particles" aria-hidden="true"></canvas>
+
+    <!-- =====================================================
+         PANTALLA PRINCIPAL
+         ===================================================== -->
+    <div id="la_ws_mainScreen"
+         class="la-ws-screen la-ws-screen--active"
+         role="main"
+         aria-label="Pantalla principal de Word Hunt">
         <div class="la-ws-container">
-            <!-- Logo del juego -->
-            <div class="la-ws-logo">
-                <svg class="la-ws-logo__icon" viewBox="0 0 100 100" fill="none">
-                    <path d="M10 20 L30 50 L10 80 M30 50 L50 20 M30 50 L50 80 M50 20 L70 50 L50 80 M70 50 L90 20 M70 50 L90 80" 
+
+            <!--
+                AUDIT FIX #5 — Accesibilidad: aria-hidden="true" en el bloque del logo.
+                El logo es decorativo; el título del documento y el <h1> ya comunican
+                la identidad de la app. Sin aria-hidden el lector anuncia el SVG
+                junto con el texto redundantemente.
+            -->
+            <div class="la-ws-logo" aria-hidden="true">
+                <svg class="la-ws-logo__icon" viewBox="0 0 100 100" fill="none" focusable="false">
+                    <path d="M10 20 L30 50 L10 80 M30 50 L50 20 M30 50 L50 80 M50 20 L70 50 L50 80 M70 50 L90 20 M70 50 L90 80"
                           stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
                 </svg>
@@ -27,9 +76,15 @@
             </div>
 
             <!-- Botones principales -->
-            <div class="la-ws-menu">
-                <button id="la_ws_btnLevels" class="la-ws-btn la-ws-btn--primary">
-                    <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none">
+            <nav class="la-ws-menu" aria-label="Menú principal">
+                <!--
+                    AUDIT FIX #6 — Semántica HTML: type="button" en todos los botones
+                    que no son de envío de formulario. Evita comportamiento de submit
+                    inesperado si alguna vez se envuelve en un <form>.
+                -->
+                <button id="la_ws_btnLevels" class="la-ws-btn la-ws-btn--primary" type="button">
+                    <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
                         <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                         <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                         <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
@@ -39,118 +94,224 @@
                 </button>
 
                 <a href="../../index.html" class="la-ws-btn la-ws-btn--secondary">
-                    <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none">
+                    <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
                         <path d="M9 19 L3 12 L9 5 M3 12 L21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                     <span>SALIR</span>
                 </a>
-            </div>
+            </nav>
 
-            <!-- Stats -->
-            <div class="la-ws-stats">
+            <!-- Estadísticas de progreso -->
+            <section class="la-ws-stats" aria-label="Estadísticas de progreso">
                 <div class="la-ws-stat">
-                    <svg class="la-ws-stat__icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2 L15 8 L22 9 L17 14 L18 21 L12 18 L6 21 L7 14 L2 9 L9 8 Z" 
+                    <svg class="la-ws-stat__icon" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
+                        <path d="M12 2 L15 8 L22 9 L17 14 L18 21 L12 18 L6 21 L7 14 L2 9 L9 8 Z"
                               stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
                     </svg>
                     <div>
-                        <div class="la-ws-stat__value" id="la_ws_completedCount">0</div>
-                        <div class="la-ws-stat__label">COMPLETADOS</div>
+                        <!--
+                            AUDIT FIX #7 — Accesibilidad: aria-live="polite" para que
+                            los lectores de pantalla anuncien las actualizaciones de
+                            contador sin interrumpir al usuario.
+                        -->
+                        <div class="la-ws-stat__value"
+                             id="la_ws_completedCount"
+                             aria-live="polite"
+                             aria-label="Niveles completados: 0">0</div>
+                        <div class="la-ws-stat__label" aria-hidden="true">COMPLETADOS</div>
                     </div>
                 </div>
                 <div class="la-ws-stat">
-                    <svg class="la-ws-stat__icon" viewBox="0 0 24 24" fill="none">
+                    <svg class="la-ws-stat__icon" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
                         <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
                         <path d="M12 7 L12 12 L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                     <div>
                         <div class="la-ws-stat__value" id="la_ws_totalLevels">0</div>
-                        <div class="la-ws-stat__label">NIVELES</div>
+                        <div class="la-ws-stat__label" aria-hidden="true">NIVELES</div>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 
-    <!-- Pantalla de Niveles -->
-    <div id="la_ws_levelsScreen" class="la-ws-screen">
+    <!-- =====================================================
+         PANTALLA DE NIVELES
+         ===================================================== -->
+    <div id="la_ws_levelsScreen"
+         class="la-ws-screen"
+         role="region"
+         aria-label="Selección de nivel"
+         aria-hidden="true">
         <div class="la-ws-container">
             <div class="la-ws-header">
-                <button id="la_ws_btnBack" class="la-ws-btn-icon">
-                    <svg viewBox="0 0 24 24" fill="none">
+                <!--
+                    AUDIT FIX #8 — Accesibilidad crítica: aria-label en botones de
+                    solo icono. Sin texto visible ni aria-label, el lector de pantalla
+                    no puede comunicar la función del control al usuario.
+                -->
+                <button id="la_ws_btnBack"
+                        class="la-ws-btn-icon"
+                        type="button"
+                        aria-label="Volver al menú principal">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
                         <path d="M15 18 L9 12 L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
                 <h2 class="la-ws-header__title">SELECCIONA NIVEL</h2>
             </div>
 
-            <div id="la_ws_levelsList" class="la-ws-levels-grid"></div>
+            <!--
+                Las tarjetas de nivel se generan dinámicamente en game.js
+                como elementos <button> para garantizar navegabilidad por teclado.
+                role="list" + role="listitem" (en los hijos) se usa porque el grid
+                comunica una colección de ítems al árbol de accesibilidad.
+            -->
+            <div id="la_ws_levelsList"
+                 class="la-ws-levels-grid"
+                 role="list"
+                 aria-label="Lista de niveles disponibles"></div>
         </div>
     </div>
 
-    <!-- Pantalla de Juego -->
-    <div id="la_ws_gameScreen" class="la-ws-screen">
+    <!-- =====================================================
+         PANTALLA DE JUEGO
+         ===================================================== -->
+    <div id="la_ws_gameScreen"
+         class="la-ws-screen"
+         role="region"
+         aria-label="Área de juego"
+         aria-hidden="true">
         <div class="la-ws-game-container">
-            <!-- Header del juego -->
-            <div class="la-ws-game-header">
-                <button id="la_ws_btnExitGame" class="la-ws-btn-icon">
-                    <svg viewBox="0 0 24 24" fill="none">
+
+            <!-- Encabezado del juego -->
+            <header class="la-ws-game-header">
+                <button id="la_ws_btnExitGame"
+                        class="la-ws-btn-icon"
+                        type="button"
+                        aria-label="Salir al selector de niveles">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
                         <path d="M18 6 L6 18 M6 6 L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
-                <div class="la-ws-game-title" id="la_ws_currentLevelTitle">NIVEL 1</div>
-                <div class="la-ws-game-progress">
+                <div class="la-ws-game-title"
+                     id="la_ws_currentLevelTitle"
+                     aria-live="polite"
+                     aria-label="Nivel actual">NIVEL 1</div>
+                <!--
+                    AUDIT FIX #9 — Accesibilidad: aria-live en el contador de progreso.
+                    Cada vez que se encuentra una palabra, el lector de pantalla lo
+                    anunciará de forma no intrusiva.
+                -->
+                <div class="la-ws-game-progress"
+                     aria-live="polite"
+                     aria-label="Progreso de palabras encontradas">
                     <span id="la_ws_wordsFound">0</span>/<span id="la_ws_wordsTotal">0</span>
                 </div>
-            </div>
+            </header>
 
-            <!-- Grid de juego -->
+            <!-- Contenido del juego -->
             <div class="la-ws-game-content">
-                <canvas id="la_ws_gameCanvas" class="la-ws-canvas"></canvas>
-                
-                <!-- Lista de palabras (colapsable en móvil) -->
-                <div class="la-ws-words-panel">
-                    <button id="la_ws_btnToggleWords" class="la-ws-words-toggle">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M4 6 L20 6 M4 12 L20 12 M4 18 L20 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <!--
+                    AUDIT FIX #10 — Accesibilidad: role="img" + aria-label en el canvas.
+                    El elemento <canvas> es opaco a los lectores de pantalla. role="img"
+                    con aria-label proporciona contexto descriptivo mínimo.
+                    Para accesibilidad completa del gameplay se requeriría un modo
+                    de entrada por teclado adicional (fuera del alcance de esta auditoría).
+                -->
+                <canvas id="la_ws_gameCanvas"
+                        class="la-ws-canvas"
+                        role="img"
+                        aria-label="Cuadrícula del juego de sopa de letras. Toca y arrastra para seleccionar palabras.">
+                </canvas>
+
+                <!-- Panel de palabras — colapsable en móvil -->
+                <aside class="la-ws-words-panel" aria-label="Lista de palabras a encontrar">
+                    <button id="la_ws_btnToggleWords"
+                            class="la-ws-words-toggle"
+                            type="button"
+                            aria-expanded="true"
+                            aria-controls="la_ws_wordsList">
+                        <!--
+                            AUDIT FIX #11 — El SVG del toggle debe ser aria-hidden.
+                            La etiqueta la provee el texto de texto "PALABRAS" más
+                            el atributo aria-expanded que comunica el estado abierto/cerrado.
+                        -->
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                            <path d="M4 6 L20 6 M4 12 L20 12 M4 18 L20 18"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
                         <span>PALABRAS</span>
                     </button>
-                    <div id="la_ws_wordsList" class="la-ws-words-list"></div>
-                </div>
+                    <div id="la_ws_wordsList"
+                         class="la-ws-words-list"
+                         role="list"
+                         aria-label="Palabras del nivel"></div>
+                </aside>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Victoria -->
-    <div id="la_ws_victoryModal" class="la-ws-modal">
+    <!-- =====================================================
+         MODAL DE VICTORIA
+         ===================================================== -->
+    <!--
+        AUDIT FIX #12 — Accesibilidad crítica: role="dialog", aria-modal="true",
+        aria-labelledby y aria-hidden inicial.
+        Sin estos atributos los lectores de pantalla no reconocen el overlay como
+        diálogo modal, no atrapan el foco y pueden leer contenido del fondo.
+        aria-hidden="true" en el estado inactivo evita que el lector anuncie
+        el modal mientras el usuario está en otras pantallas.
+    -->
+    <div id="la_ws_victoryModal"
+         class="la-ws-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="la_ws_victoryTitle"
+         aria-hidden="true">
         <div class="la-ws-modal__content">
-            <div class="la-ws-victory-animation">
-                <svg class="la-ws-victory-icon" viewBox="0 0 100 100" fill="none">
-                    <circle cx="50" cy="50" r="48" stroke="currentColor" stroke-width="3" class="la-ws-victory-circle"/>
-                    <path d="M30 50 L45 65 L70 35" stroke="currentColor" stroke-width="4" 
-                          stroke-linecap="round" stroke-linejoin="round" class="la-ws-victory-check"/>
+            <div class="la-ws-victory-animation" aria-hidden="true">
+                <svg class="la-ws-victory-icon" viewBox="0 0 100 100" fill="none" focusable="false">
+                    <circle cx="50" cy="50" r="48" stroke="currentColor" stroke-width="3"
+                            class="la-ws-victory-circle"/>
+                    <path d="M30 50 L45 65 L70 35" stroke="currentColor" stroke-width="4"
+                          stroke-linecap="round" stroke-linejoin="round"
+                          class="la-ws-victory-check"/>
                 </svg>
             </div>
-            <h3 class="la-ws-modal__title">¡NIVEL COMPLETADO!</h3>
-            <div class="la-ws-modal__reward" id="la_ws_rewardDisplay">+0 MONEDAS</div>
+            <h3 id="la_ws_victoryTitle" class="la-ws-modal__title">¡NIVEL COMPLETADO!</h3>
+            <div class="la-ws-modal__reward"
+                 id="la_ws_rewardDisplay"
+                 aria-live="polite">+0 MONEDAS</div>
             <div class="la-ws-modal__buttons">
-                <button id="la_ws_btnNextLevel" class="la-ws-btn la-ws-btn--primary">
+                <button id="la_ws_btnNextLevel" class="la-ws-btn la-ws-btn--primary" type="button">
                     SIGUIENTE NIVEL
-                    <svg class="la-ws-btn__icon-right" viewBox="0 0 24 24" fill="none">
+                    <svg class="la-ws-btn__icon-right" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
                         <path d="M9 6 L15 12 L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
-                <button id="la_ws_btnBackToLevels" class="la-ws-btn la-ws-btn--secondary">
+                <button id="la_ws_btnBackToLevels"
+                        class="la-ws-btn la-ws-btn--secondary"
+                        type="button">
                     VER NIVELES
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts: dependencias globales → configuración de niveles → lógica del juego -->
     <script src="../../js/app.js"></script>
-    <script src="config.levels.js"></script>
+    <!--
+        AUDIT FIX #13 — Bug crítico de carga: el archivo fuente se llama
+        config_levels.js (guión bajo), no config.levels.js (punto) como
+        estaba referenciado. Esta discrepancia provocaba un error 404 silencioso
+        que dejaba window.LA_WS_LEVELS como undefined y rompía el juego completo.
+    -->
+    <script src="config_levels.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
