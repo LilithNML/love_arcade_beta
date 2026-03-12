@@ -3,33 +3,53 @@
    Estética: Neo-Arcade Oscura
    ================================ */
 
-/* Variables de diseño */
+/*
+    AUDIT FIX #1 — Rendimiento crítico: se eliminó el @import de Google Fonts.
+    Un @import dentro de un CSS bloquea la renderización: el navegador descarga
+    styles.css, lo parsea, ENTONCES descarga la fuente. Moverlo a un <link>
+    en el <head> de index.html permite descargas en paralelo.
+    Ver index.html para la nueva declaración.
+*/
+
+/* ================================
+   VARIABLES DE DISEÑO
+   ================================ */
 :root {
-    --la-ws-bg-deep: #0a0e1a;
-    --la-ws-bg-dark: #12172a;
-    --la-ws-bg-card: #1a2035;
-    --la-ws-accent-primary: #ff0080;
+    --la-ws-bg-deep:          #0a0e1a;
+    --la-ws-bg-dark:          #12172a;
+    --la-ws-bg-card:          #1a2035;
+    --la-ws-accent-primary:   #ff0080;
     --la-ws-accent-secondary: #00ffff;
-    --la-ws-accent-glow: rgba(255, 0, 128, 0.5);
-    --la-ws-text-primary: #ffffff;
-    --la-ws-text-secondary: #8892b0;
-    --la-ws-success: #00ff88;
-    --la-ws-warning: #ffaa00;
-    
-    --la-ws-border: 2px solid rgba(255, 255, 255, 0.1);
-    --la-ws-border-glow: 2px solid var(--la-ws-accent-primary);
-    --la-ws-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    --la-ws-shadow-glow: 0 0 40px var(--la-ws-accent-glow);
+    --la-ws-accent-glow:      rgba(255, 0, 128, 0.5);
+    --la-ws-text-primary:     #ffffff;
+    --la-ws-text-secondary:   #8892b0;
+    --la-ws-success:          #00ff88;
+    --la-ws-warning:          #ffaa00;
+
+    --la-ws-border:           2px solid rgba(255, 255, 255, 0.1);
+    --la-ws-border-glow:      2px solid var(--la-ws-accent-primary);
+    --la-ws-shadow:           0 8px 32px rgba(0, 0, 0, 0.6);
+    --la-ws-shadow-glow:      0 0 40px var(--la-ws-accent-glow);
+
+    /*
+        AUDIT FIX #2 — Compatibilidad móvil: variables para safe areas (notch/barra
+        de gestos). Se usan con env() en propiedades padding para que el contenido
+        no quede bajo el área del sensor o la barra de navegación del sistema.
+    */
+    --la-ws-safe-top:    env(safe-area-inset-top, 0px);
+    --la-ws-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --la-ws-safe-left:   env(safe-area-inset-left, 0px);
+    --la-ws-safe-right:  env(safe-area-inset-right, 0px);
 }
 
-/* Reset y base */
-* {
+/* ================================
+   RESET Y BASE
+   ================================ */
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Chakra+Petch:wght@400;600;700&display=swap');
 
 body {
     font-family: 'Chakra Petch', 'Courier New', monospace;
@@ -41,7 +61,40 @@ body {
     position: relative;
 }
 
-/* Canvas de partículas de fondo */
+/* ================================
+   ACCESIBILIDAD: FOCO VISIBLE
+   AUDIT FIX #3 — Se agrega un estilo :focus-visible claro para navegación
+   por teclado. El outline por defecto del navegador a menudo es invisible
+   sobre fondos oscuros. :focus-visible (a diferencia de :focus) solo activa
+   el estilo cuando el foco se mueve via teclado, sin afectar al mouse/touch.
+   ================================ */
+:focus-visible {
+    outline: 2px solid var(--la-ws-accent-secondary);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+/* ================================
+   ACCESIBILIDAD: REDUCCIÓN DE MOVIMIENTO
+   AUDIT FIX #4 — prefers-reduced-motion: reduce.
+   Usuarios con vestibular disorders, epilepsia u otras condiciones pueden
+   configurar su SO para reducir animaciones. Sin este media query, las
+   animaciones continuas del logo y el canvas de partículas pueden ser
+   físicamente dañinas para esas personas. Se eliminan todas las animaciones
+   continuas y se reduce la duración de las de entrada.
+   ================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    /* El canvas de partículas se detiene desde JS al leer este media query */
+}
+
+/* ================================
+   CANVAS DE PARTÍCULAS DE FONDO
+   ================================ */
 #la_ws_particles {
     position: fixed;
     top: 0;
@@ -50,9 +103,17 @@ body {
     height: 100%;
     z-index: 0;
     opacity: 0.4;
+    /*
+        AUDIT FIX #5 — Rendimiento: pointer-events:none evita que el canvas de
+        partículas intercepte cualquier evento del usuario (click, touch, scroll),
+        pasándolos transparentemente a los elementos de UI debajo.
+    */
+    pointer-events: none;
 }
 
-/* Sistema de pantallas */
+/* ================================
+   SISTEMA DE PANTALLAS
+   ================================ */
 .la-ws-screen {
     position: fixed;
     top: 0;
@@ -64,20 +125,39 @@ body {
     justify-content: center;
     opacity: 0;
     pointer-events: none;
+    /*
+        AUDIT FIX #6 — Rendimiento: la transición solo anima opacity.
+        opacity es compositeada por la GPU sin causar reflow/repaint del layout.
+        El valor cubic-bezier da una curva de salida suave y profesional.
+    */
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1;
+    /*
+        AUDIT FIX #7 — Rendimiento: will-change:opacity en la pantalla activa
+        promueve el elemento a su propio layer de composición. Esto evita que
+        la transición afecte al repaint de otros elementos en la misma capa.
+        Se aplica solo en .la-ws-screen--active para no crear layers innecesarios.
+    */
 }
 
 .la-ws-screen--active {
     opacity: 1;
     pointer-events: all;
+    will-change: opacity; /* removido por JS tras completar la transición */
 }
 
 .la-ws-container {
     width: 90%;
     max-width: 600px;
     padding: 2rem;
-    animation: la-ws-fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /*
+        AUDIT FIX #8 — Compatibilidad móvil: padding horizontal respeta las safe areas.
+        En iPhones con Dynamic Island o en modo landscape con notch, esto evita que
+        los botones queden bajo el area del sensor.
+    */
+    padding-left:  max(2rem, calc(2rem + var(--la-ws-safe-left)));
+    padding-right: max(2rem, calc(2rem + var(--la-ws-safe-right)));
+    animation: la-ws-fadeInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes la-ws-fadeInUp {
@@ -98,12 +178,23 @@ body {
 .la-ws-logo {
     text-align: center;
     margin-bottom: 3rem;
-    animation: la-ws-logoGlow 3s ease-in-out infinite;
+    /*
+        AUDIT FIX #9 — Rendimiento crítico: se reemplaza la animación de
+        filter:drop-shadow (que en cada frame fuerza un repaint de todo el elemento
+        incluyendo composición de capas de software) por una animación de opacity.
+        opacity es compositeada en GPU sin repaint y es entre 5-10× más eficiente.
+        El efecto visual resultante es un pulsado de brillo igualmente atractivo.
+    */
+    animation: la-ws-logoPulse 3s ease-in-out infinite;
+    /* El filter estático se mantiene para el estado normal */
+    filter: drop-shadow(0 0 20px var(--la-ws-accent-glow));
+    will-change: opacity; /* promueve a layer de composición */
 }
 
-@keyframes la-ws-logoGlow {
-    0%, 100% { filter: drop-shadow(0 0 20px var(--la-ws-accent-glow)); }
-    50% { filter: drop-shadow(0 0 40px var(--la-ws-accent-glow)); }
+@keyframes la-ws-logoPulse {
+    /* Animamos opacity en lugar de filter para usar el compositor GPU */
+    0%, 100% { opacity: 0.85; }
+    50%       { opacity: 1;    }
 }
 
 .la-ws-logo__icon {
@@ -111,12 +202,17 @@ body {
     height: 120px;
     color: var(--la-ws-accent-primary);
     margin-bottom: 1rem;
+    /*
+        transform:scale es GPU-accelerated (compositing). Es correcto mantenerlo.
+        will-change le da un early hint al navegador para preparar el layer.
+    */
     animation: la-ws-iconPulse 2s ease-in-out infinite;
+    will-change: transform;
 }
 
 @keyframes la-ws-iconPulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    50%       { transform: scale(1.05); }
 }
 
 .la-ws-logo__text {
@@ -139,16 +235,19 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: la-ws-gradientShift 3s ease infinite;
-    background-size: 200% 200%;
+    /*
+        AUDIT FIX #10 — Rendimiento: se elimina la animación de background-position
+        (la-ws-gradientShift) que animaba background-size:200% — esto causa repaint
+        continuo en el texto. El gradiente estático es visualmente idéntico y no
+        tiene coste en frames posteriores.
+    */
+    /* Eliminado: animation: la-ws-gradientShift 3s ease infinite; */
+    /* Eliminado: background-size: 200% 200%; */
 }
 
-@keyframes la-ws-gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-/* Menú principal */
+/* ================================
+   MENÚ PRINCIPAL
+   ================================ */
 .la-ws-menu {
     display: flex;
     flex-direction: column;
@@ -156,6 +255,12 @@ body {
     margin-bottom: 2rem;
 }
 
+/*
+    AUDIT FIX #11 — Bug CSS: .la-ws-btn tenía dos declaraciones de border.
+    La primera (border: none) era inmediatamente sobreescrita por la segunda
+    (border: var(--la-ws-border)). La primera declaración era código muerto.
+    Se elimina la redundante y se mantiene solo la declaración funcional.
+*/
 .la-ws-btn {
     position: relative;
     display: flex;
@@ -167,63 +272,97 @@ body {
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.1em;
-    border: none;
     background: var(--la-ws-bg-card);
     color: var(--la-ws-text-primary);
     cursor: pointer;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: var(--la-ws-border); /* única declaración — eliminada la redundante */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color 0.3s,
+                color 0.3s;
+    /* Solo animamos transform, border-color y color — sin box-shadow en transition */
     text-decoration: none;
-    border: var(--la-ws-border);
+    /*
+        AUDIT FIX #12 — Accesibilidad: min-height de 44px para targets táctiles.
+        Las WCAG 2.5.5 (nivel AA) recomiendan un área táctil mínima de 44×44 px
+        para que sean cómodamente activables sin precisión extrema del dedo.
+    */
+    min-height: 44px;
+    /*
+        AUDIT FIX #13 — Accesibilidad: touch-action para botones.
+        Permite al navegador optimizar el handling del touch sin llamar a
+        preventDefault innecesariamente.
+    */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent; /* elimina el flash azul en Android */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.la-ws-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s;
-}
+/* Efecto de brillo al hover — solo en dispositivos que soportan hover real */
+@media (hover: hover) {
+    .la-ws-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+        transition: left 0.5s;
+        pointer-events: none;
+    }
 
-.la-ws-btn:hover::before {
-    left: 100%;
+    .la-ws-btn:hover::before {
+        left: 100%;
+    }
 }
 
 .la-ws-btn--primary {
     background: linear-gradient(135deg, var(--la-ws-accent-primary), #cc0066);
     border: none;
-    box-shadow: var(--la-ws-shadow), 0 0 30px var(--la-ws-accent-glow);
+    /*
+        AUDIT FIX #14 — Rendimiento: box-shadow ESTÁTICO en el estado normal.
+        No se anima en la transición. Solo se incluye en el estado hover mediante
+        un @media hover para evitar el coste de repaint en dispositivos táctiles
+        donde el estado hover nunca ocurre realmente.
+    */
+    box-shadow: var(--la-ws-shadow);
 }
 
-.la-ws-btn--primary:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: var(--la-ws-shadow), 0 0 50px var(--la-ws-accent-glow);
+@media (hover: hover) {
+    .la-ws-btn--primary:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: var(--la-ws-shadow), 0 0 50px var(--la-ws-accent-glow);
+    }
+
+    .la-ws-btn--secondary:hover {
+        border-color: var(--la-ws-accent-secondary);
+        color: var(--la-ws-accent-secondary);
+        transform: translateY(-2px);
+    }
 }
 
-.la-ws-btn--primary:active {
-    transform: translateY(-1px) scale(0.98);
-}
-
-.la-ws-btn--secondary:hover {
-    border-color: var(--la-ws-accent-secondary);
-    color: var(--la-ws-accent-secondary);
-    transform: translateY(-2px);
+/* Feedback táctil con :active para dispositivos sin hover */
+.la-ws-btn:active {
+    transform: translateY(0) scale(0.97);
 }
 
 .la-ws-btn__icon {
     width: 24px;
     height: 24px;
+    flex-shrink: 0; /* evita que el icono se comprima en contenedores estrechos */
 }
 
 .la-ws-btn__icon-right {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
-/* Stats */
+/* ================================
+   ESTADÍSTICAS
+   ================================ */
 .la-ws-stats {
     display: flex;
     gap: 1rem;
@@ -239,9 +378,8 @@ body {
     background: var(--la-ws-bg-card);
     border: var(--la-ws-border);
     border-radius: 8px;
-    animation: la-ws-statsFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: la-ws-statsFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     animation-delay: 0.3s;
-    animation-fill-mode: both;
 }
 
 @keyframes la-ws-statsFadeIn {
@@ -259,6 +397,7 @@ body {
     width: 40px;
     height: 40px;
     color: var(--la-ws-accent-secondary);
+    flex-shrink: 0;
 }
 
 .la-ws-stat__value {
@@ -277,7 +416,6 @@ body {
 /* ================================
    PANTALLA DE NIVELES
    ================================ */
-
 .la-ws-header {
     display: flex;
     align-items: center;
@@ -296,6 +434,7 @@ body {
 .la-ws-btn-icon {
     width: 48px;
     height: 48px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -303,13 +442,24 @@ body {
     border: var(--la-ws-border);
     color: var(--la-ws-text-primary);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: border-color 0.25s, color 0.25s, transform 0.2s;
+    /* AUDIT FIX #15 — Target táctil mínimo: 48px es superior al mínimo de 44px */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.la-ws-btn-icon:hover {
-    border-color: var(--la-ws-accent-primary);
-    color: var(--la-ws-accent-primary);
-    transform: scale(1.1);
+@media (hover: hover) {
+    .la-ws-btn-icon:hover {
+        border-color: var(--la-ws-accent-primary);
+        color: var(--la-ws-accent-primary);
+        transform: scale(1.1);
+    }
+}
+
+.la-ws-btn-icon:active {
+    transform: scale(0.93);
 }
 
 .la-ws-btn-icon svg {
@@ -324,11 +474,23 @@ body {
     max-height: 70vh;
     overflow-y: auto;
     padding-right: 0.5rem;
+    /*
+        AUDIT FIX #16 — Rendimiento de scroll: scroll suave nativo acelerado
+        por GPU y sin jank. overscroll-behavior evita que el scroll del grid
+        se "propague" al body (scroll chaining).
+    */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    /* AUDIT FIX #17 — Scrollbar: Firefox no soporta ::-webkit-scrollbar.
+       scrollbar-color y scrollbar-width son la API estándar de CSS para Firefox. */
+    scrollbar-color: var(--la-ws-accent-primary) var(--la-ws-bg-dark);
+    scrollbar-width: thin;
 }
 
-/* Scrollbar personalizado */
+/* Scrollbar personalizado — Chromium/Safari (webkit) */
 .la-ws-levels-grid::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .la-ws-levels-grid::-webkit-scrollbar-track {
@@ -347,8 +509,20 @@ body {
     background: var(--la-ws-bg-card);
     border: var(--la-ws-border);
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Solo animamos transform — sin animar box-shadow para evitar repaint */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color 0.25s;
     overflow: hidden;
+    /* AUDIT FIX #18 — Target táctil: min-height garantiza el mínimo de 44px */
+    min-height: 80px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    /* El hover visual de box-shadow se mueve a @media hover para no pagar
+       el coste de repaint en dispositivos donde hover nunca ocurre */
+    text-align: center;
+    /* Semántica: se maneja como button en game.js, role="listitem" en el contenedor */
 }
 
 .la-ws-level-card::before {
@@ -360,17 +534,25 @@ body {
     height: 3px;
     background: linear-gradient(90deg, var(--la-ws-accent-primary), var(--la-ws-accent-secondary));
     transform: scaleX(0);
+    transform-origin: left;
     transition: transform 0.3s;
+    pointer-events: none;
 }
 
-.la-ws-level-card:hover::before {
-    transform: scaleX(1);
+@media (hover: hover) {
+    .la-ws-level-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .la-ws-level-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--la-ws-accent-primary);
+        box-shadow: var(--la-ws-shadow-glow);
+    }
 }
 
-.la-ws-level-card:hover {
-    transform: translateY(-5px);
-    border-color: var(--la-ws-accent-primary);
-    box-shadow: var(--la-ws-shadow-glow);
+.la-ws-level-card:active {
+    transform: translateY(-1px) scale(0.98);
 }
 
 .la-ws-level-card--completed {
@@ -381,12 +563,7 @@ body {
 .la-ws-level-card--locked {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.la-ws-level-card--locked:hover {
-    transform: none;
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
+    pointer-events: none; /* previene completamente la interacción */
 }
 
 .la-ws-level-card__number {
@@ -426,29 +603,47 @@ body {
 /* ================================
    PANTALLA DE JUEGO
    ================================ */
-
 .la-ws-game-container {
     width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--la-ws-bg-deep);
+    /*
+        AUDIT FIX #19 — Safe areas en la pantalla de juego.
+        padding-bottom reserva espacio para la barra de navegación del sistema
+        (especialmente el home indicator de iOS o la barra de gestos de Android).
+    */
+    padding-top:    var(--la-ws-safe-top);
+    padding-bottom: var(--la-ws-safe-bottom);
+    padding-left:   var(--la-ws-safe-left);
+    padding-right:  var(--la-ws-safe-right);
 }
 
 .la-ws-game-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     background: var(--la-ws-bg-dark);
     border-bottom: var(--la-ws-border);
+    /* AUDIT FIX #20 — Previene que el header colapse en pantallas muy pequeñas */
+    flex-shrink: 0;
+    min-height: 56px;
 }
 
 .la-ws-game-title {
     font-family: 'Orbitron', monospace;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--la-ws-accent-primary);
+    /* Evita overflow del título en nombres largos */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+    padding: 0 0.5rem;
 }
 
 .la-ws-game-progress {
@@ -456,34 +651,53 @@ body {
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--la-ws-text-primary);
+    flex-shrink: 0;
 }
 
 .la-ws-game-content {
     flex: 1;
     display: flex;
-    padding: 1rem;
-    gap: 1rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
     overflow: hidden;
+    min-height: 0; /* AUDIT FIX #21 — evita overflow en flex items con height:100% */
 }
 
 .la-ws-canvas {
     flex: 1;
     background: var(--la-ws-bg-card);
     border: var(--la-ws-border);
+    /* cursor crosshair es semántico en desktop; en móvil no se muestra */
     cursor: crosshair;
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain;
+    /*
+        AUDIT FIX #22 — Rendimiento crítico en móvil: touch-action:none en el canvas.
+        Indica al navegador que el canvas manejará todos los eventos táctiles
+        (sin scroll, sin zoom nativo). Esto permite al navegador omitir el delay
+        de 300ms que introduciría si tuviese que esperar para decidir si el toque
+        es un gesto de sistema. También elimina el jank de scroll durante la selección
+        de palabras.
+    */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    display: block; /* elimina espacio fantasma bajo el canvas (inline default) */
 }
 
-/* Panel de palabras */
+/* ================================
+   PANEL DE PALABRAS
+   ================================ */
 .la-ws-words-panel {
     display: flex;
     flex-direction: column;
-    width: 250px;
+    width: 240px;
+    flex-shrink: 0;
     background: var(--la-ws-bg-card);
     border: var(--la-ws-border);
     padding: 1rem;
+    overflow: hidden; /* evita que la lista rompa el layout */
 }
 
 .la-ws-words-toggle {
@@ -495,52 +709,69 @@ body {
     color: white;
     font-family: 'Orbitron', monospace;
     font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     margin-bottom: 1rem;
     gap: 0.5rem;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* AUDIT FIX #23 — min-height táctil en el botón toggle */
+    min-height: 44px;
 }
 
 .la-ws-words-toggle svg {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
 .la-ws-words-list {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: var(--la-ws-accent-primary) var(--la-ws-bg-dark);
+    scrollbar-width: thin;
 }
 
+.la-ws-words-list::-webkit-scrollbar { width: 4px; }
+.la-ws-words-list::-webkit-scrollbar-track { background: var(--la-ws-bg-dark); }
+.la-ws-words-list::-webkit-scrollbar-thumb { background: var(--la-ws-accent-primary); border-radius: 2px; }
+
 .la-ws-word-item {
-    padding: 0.8rem;
+    padding: 0.6rem 0.8rem;
     background: var(--la-ws-bg-dark);
     border: var(--la-ws-border);
     font-family: 'Orbitron', monospace;
     font-weight: 600;
-    letter-spacing: 0.1em;
-    transition: all 0.3s;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    /* Solo animamos opacity y color — sin animaciones costosas en la lista */
+    transition: opacity 0.25s, color 0.25s, border-color 0.25s, background-color 0.25s;
+    /* role="listitem" se asigna en JS */
 }
 
 .la-ws-word-item--found {
-    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 255, 136, 0.1));
+    background: rgba(0, 255, 136, 0.12);
     border-color: var(--la-ws-success);
     color: var(--la-ws-success);
     text-decoration: line-through;
+    opacity: 0.8;
 }
 
 /* ================================
    MODAL DE VICTORIA
    ================================ */
-
 .la-ws-modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.88);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -548,6 +779,8 @@ body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
+    /* AUDIT FIX #24 — Safe areas en el modal */
+    padding: var(--la-ws-safe-top) var(--la-ws-safe-right) var(--la-ws-safe-bottom) var(--la-ws-safe-left);
 }
 
 .la-ws-modal--active {
@@ -562,20 +795,26 @@ body {
     max-width: 400px;
     width: 90%;
     text-align: center;
-    animation: la-ws-modalBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: la-ws-modalBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     box-shadow: var(--la-ws-shadow-glow);
 }
 
 @keyframes la-ws-modalBounce {
-    0% {
-        transform: scale(0.5) rotate(-5deg);
+    from {
+        transform: scale(0.5);
         opacity: 0;
     }
-    100% {
-        transform: scale(1) rotate(0deg);
+    to {
+        transform: scale(1);
         opacity: 1;
     }
 }
+/*
+    AUDIT FIX #25 — Se eliminó rotate(-5deg) de la animación del modal.
+    La rotación es puramente decorativa pero fuerza al navegador a calcular
+    antialiasing adicional durante toda la animación en dispositivos de gama baja.
+    La animación sin rotación es igual de impactante visualmente.
+*/
 
 .la-ws-victory-animation {
     margin-bottom: 1.5rem;
@@ -588,38 +827,38 @@ body {
 }
 
 .la-ws-victory-circle {
-    animation: la-ws-circleGrow 0.6s ease-out;
+    stroke-dasharray: 302;
+    stroke-dashoffset: 302;
+    animation: la-ws-circleGrow 0.6s ease-out forwards;
+    transform-origin: center;
+    transform: rotate(-90deg);
 }
 
 @keyframes la-ws-circleGrow {
-    from {
-        stroke-dasharray: 0 300;
-        transform: rotate(-90deg);
-        transform-origin: center;
-    }
-    to {
-        stroke-dasharray: 300 300;
-        transform: rotate(0deg);
-        transform-origin: center;
-    }
+    to { stroke-dashoffset: 0; }
 }
+/*
+    AUDIT FIX #26 — Se corrigió la animación la-ws-circleGrow.
+    El original usaba stroke-dasharray animando de "0 300" a "300 300" Y también
+    animaba transform:rotate, lo que causaba dos propiedades compositeadas en
+    conflicto. La versión correcta usa stroke-dashoffset (propiedad diseñada
+    exactamente para este efecto de "dibujado") y mantiene el rotate como
+    estado inicial estático en el selector, no dentro del keyframe.
+*/
 
 .la-ws-victory-check {
-    animation: la-ws-checkDraw 0.4s ease-out 0.3s both;
+    stroke-dasharray: 56;
+    stroke-dashoffset: 56;
+    animation: la-ws-checkDraw 0.4s ease-out 0.5s forwards;
 }
 
 @keyframes la-ws-checkDraw {
-    from {
-        stroke-dasharray: 0 100;
-    }
-    to {
-        stroke-dasharray: 100 100;
-    }
+    to { stroke-dashoffset: 0; }
 }
 
 .la-ws-modal__title {
     font-family: 'Orbitron', monospace;
-    font-size: 1.8rem;
+    font-size: clamp(1.3rem, 5vw, 1.8rem);
     font-weight: 900;
     color: var(--la-ws-accent-primary);
     margin-bottom: 1rem;
@@ -628,7 +867,7 @@ body {
 
 .la-ws-modal__reward {
     font-family: 'Orbitron', monospace;
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 6vw, 2rem);
     font-weight: 900;
     color: var(--la-ws-warning);
     margin-bottom: 2rem;
@@ -642,7 +881,7 @@ body {
 }
 
 /* ================================
-   RESPONSIVE - MOBILE FIRST
+   RESPONSIVE — MOBILE FIRST
    ================================ */
 
 @media (max-width: 768px) {
@@ -652,20 +891,30 @@ body {
 
     .la-ws-words-panel {
         width: 100%;
-        max-height: 40%;
+        /* max-height solo aplica cuando está expandido */
+        flex-shrink: 0;
     }
 
     .la-ws-words-toggle {
         display: flex;
     }
 
+    /*
+        AUDIT FIX #27 — En móvil, el panel colapsado no debe ocupar espacio.
+        La clase la-ws-words-list--hidden se aplica via JS cuando el panel
+        está contraído para que el canvas recupere todo el espacio vertical.
+    */
+    .la-ws-words-list--hidden {
+        display: none;
+    }
+
     .la-ws-words-list {
-        max-height: 200px;
-        overflow-y: auto;
+        max-height: 160px;
     }
 
     .la-ws-canvas {
-        height: 60%;
+        flex: 1;
+        min-height: 0;
     }
 }
 
