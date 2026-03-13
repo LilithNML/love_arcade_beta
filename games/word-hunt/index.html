@@ -2,43 +2,23 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!--
-        Viewport con viewport-fit=cover para safe areas en dispositivos con
-        notch (iPhone X+) o barra de gestos de Android.
-    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Word Hunt – juego de sopa de letras ciber-vibrante. Parte del ecosistema LoveArcade.">
+    <title>Word Hunt - LoveArcade</title>
 
-    <title>Word Hunt</title>
-
-    <!--
-        preconnect para Google Fonts: establece la conexión TCP/TLS antes de
-        que el parser llegue al <link>, reduciendo la latencia de carga de
-        tipografía hasta ~200 ms en redes lentas.
-    -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <!--
-        Tipografía principal: Archivo (variable font, pesos 400/700/900).
-        Reemplaza Orbitron + Chakra Petch para reducir carga cognitiva y
-        la cantidad de datos de fuente descargados.
-        font-display=swap evita FOIT: el fallback sans-serif se muestra
-        de inmediato mientras Archivo carga.
-    -->
     <link rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&display=swap">
-
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <noscript>
         <p style="padding:2rem;text-align:center;font-family:sans-serif;color:#fff;background:#08090D">
-            Word Hunt requiere JavaScript para funcionar. Por favor, actívalo en tu navegador.
+            Word Hunt requiere JavaScript. Por favor, actívalo en tu navegador.
         </p>
     </noscript>
 
-    <!-- Canvas de partículas — puramente decorativo, ocultado a lectores de pantalla -->
     <canvas id="la_ws_particles" aria-hidden="true"></canvas>
 
     <!-- =====================================================
@@ -50,7 +30,6 @@
          aria-label="Pantalla principal de Word Hunt">
         <div class="la-ws-container">
 
-            <!-- Logo decorativo — aria-hidden para evitar anuncio redundante -->
             <div class="la-ws-logo" aria-hidden="true">
                 <svg class="la-ws-logo__icon" viewBox="0 0 100 100" fill="none" focusable="false">
                     <path d="M10 20 L30 50 L10 80 M30 50 L50 20 M30 50 L50 80 M50 20 L70 50 L50 80 M70 50 L90 20 M70 50 L90 80"
@@ -63,10 +42,24 @@
                 </h1>
             </div>
 
-            <!-- Botones principales -->
-            <nav class="la-ws-menu" aria-label="Menú principal">
-                <button id="la_ws_btnLevels" class="la-ws-btn la-ws-btn--primary" type="button">
-                    <!-- Inline SVG: sin petición HTTP adicional -->
+            <nav class="la-ws-menu" aria-label="Menu principal">
+                <!--
+                    CONTINUAR: salta al primer nivel no completado.
+                    Oculto por defecto; JS lo muestra cuando hay progreso.
+                -->
+                <button id="la_ws_btnContinue"
+                        class="la-ws-btn la-ws-btn--primary"
+                        type="button"
+                        style="display:none">
+                    <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none"
+                         aria-hidden="true" focusable="false">
+                        <polygon points="5,3 19,12 5,21" fill="currentColor"/>
+                    </svg>
+                    <span>CONTINUAR</span>
+                    <span id="la_ws_continueBadge" class="la-ws-btn__badge"></span>
+                </button>
+
+                <button id="la_ws_btnLevels" class="la-ws-btn la-ws-btn--secondary" type="button">
                     <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none"
                          aria-hidden="true" focusable="false">
                         <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/>
@@ -74,10 +67,10 @@
                         <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                         <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    <span>NIVELES</span>
+                    <span>TODOS LOS NIVELES</span>
                 </button>
 
-                <a href="../../index.html" class="la-ws-btn la-ws-btn--secondary">
+                <a href="../../index.html" class="la-ws-btn la-ws-btn--ghost">
                     <svg class="la-ws-btn__icon" viewBox="0 0 24 24" fill="none"
                          aria-hidden="true" focusable="false">
                         <path d="M9 19 L3 12 L9 5 M3 12 L21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -86,8 +79,7 @@
                 </a>
             </nav>
 
-            <!-- Estadísticas de progreso -->
-            <section class="la-ws-stats" aria-label="Estadísticas de progreso">
+            <section class="la-ws-stats" aria-label="Estadisticas">
                 <div class="la-ws-stat">
                     <svg class="la-ws-stat__icon" viewBox="0 0 24 24" fill="none"
                          aria-hidden="true" focusable="false">
@@ -97,8 +89,7 @@
                     <div>
                         <div class="la-ws-stat__value"
                              id="la_ws_completedCount"
-                             aria-live="polite"
-                             aria-label="Niveles completados: 0">0</div>
+                             aria-live="polite">0</div>
                         <div class="la-ws-stat__label" aria-hidden="true">COMPLETADOS</div>
                     </div>
                 </div>
@@ -123,29 +114,24 @@
     <div id="la_ws_levelsScreen"
          class="la-ws-screen"
          role="region"
-         aria-label="Selección de nivel"
+         aria-label="Seleccion de nivel"
          aria-hidden="true">
         <div class="la-ws-container">
             <div class="la-ws-header">
                 <button id="la_ws_btnBack"
                         class="la-ws-btn-icon"
                         type="button"
-                        aria-label="Volver al menú principal">
+                        aria-label="Volver al menu principal">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
                         <path d="M15 18 L9 12 L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
-                <h2 class="la-ws-header__title">SELECCIONA NIVEL</h2>
+                <h2 class="la-ws-header__title">NIVELES</h2>
             </div>
-
-            <!--
-                Tarjetas de nivel generadas dinámicamente en game.js como <button>
-                para garantizar navegabilidad por teclado nativa.
-            -->
             <div id="la_ws_levelsList"
                  class="la-ws-levels-grid"
                  role="list"
-                 aria-label="Lista de niveles disponibles"></div>
+                 aria-label="Lista de niveles"></div>
         </div>
     </div>
 
@@ -155,21 +141,16 @@
     <div id="la_ws_gameScreen"
          class="la-ws-screen"
          role="region"
-         aria-label="Área de juego"
+         aria-label="Area de juego"
          aria-hidden="true">
         <div class="la-ws-game-container">
 
-            <!--
-                Barra de progreso lineal en el tope de la pantalla.
-                Línea sólida de 4px que se llena con --color-primary
-                proporcionalmente a las palabras encontradas.
-                aria-hidden: información redundante con el contador.
-            -->
+            <!-- Barra de progreso: linea solida de 4px en el tope -->
             <div class="la-ws-progress-bar" aria-hidden="true">
                 <div id="la_ws_progressBarFill" class="la-ws-progress-bar__fill"></div>
             </div>
 
-            <!-- Encabezado del juego -->
+            <!-- Header -->
             <header class="la-ws-game-header">
                 <button id="la_ws_btnExitGame"
                         class="la-ws-btn-icon"
@@ -181,52 +162,54 @@
                 </button>
                 <div class="la-ws-game-title"
                      id="la_ws_currentLevelTitle"
-                     aria-live="polite"
-                     aria-label="Nivel actual">NIVEL 1</div>
+                     aria-live="polite">NIVEL 1</div>
                 <div class="la-ws-game-progress"
                      aria-live="polite"
-                     aria-label="Progreso de palabras encontradas">
+                     aria-label="Palabras encontradas">
                     <span id="la_ws_wordsFound">0</span>/<span id="la_ws_wordsTotal">0</span>
                 </div>
             </header>
 
-            <!-- Canvas del juego -->
-            <div class="la-ws-game-content">
-                <canvas id="la_ws_gameCanvas"
-                        class="la-ws-canvas"
-                        role="img"
-                        aria-label="Cuadrícula del juego de sopa de letras. Toca y arrastra para seleccionar palabras.">
-                </canvas>
-            </div>
-
             <!--
-                Panel de palabras.
-                Desktop: sidebar vertical a la derecha del canvas.
-                Móvil: carousel horizontal scrollable en la base de la pantalla
-                       para maximizar el área del canvas en pantallas pequeñas.
+                la-ws-game-main: flex row en desktop, flex column en movil.
+                Contiene el canvas y el panel de palabras como hermanos en el
+                mismo flujo — sin position:absolute para que el layout sea
+                predecible en todos los tamanos de pantalla.
             -->
-            <aside class="la-ws-words-panel" aria-label="Lista de palabras a encontrar">
+            <div class="la-ws-game-main">
+
+                <div class="la-ws-game-content">
+                    <canvas id="la_ws_gameCanvas"
+                            class="la-ws-canvas"
+                            role="img"
+                            aria-label="Cuadricula del juego. Toca y arrastra para seleccionar palabras.">
+                    </canvas>
+                </div>
+
                 <!--
-                    El toggle solo se muestra en desktop (por si el usuario
-                    quiere contraer el panel lateral). En móvil el carousel
-                    siempre es visible y no necesita toggle.
+                    Desktop: sidebar vertical a la derecha del canvas.
+                    Movil (<=600px): carousel horizontal scrollable en la base.
+                    El toggle se muestra solo en desktop para colapsar el sidebar.
                 -->
-                <button id="la_ws_btnToggleWords"
-                        class="la-ws-words-toggle"
-                        type="button"
-                        aria-expanded="true"
-                        aria-controls="la_ws_wordsList">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                        <path d="M4 6 L20 6 M4 12 L20 12 M4 18 L20 18"
-                              stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <span>PALABRAS</span>
-                </button>
-                <div id="la_ws_wordsList"
-                     class="la-ws-words-list"
-                     role="list"
-                     aria-label="Palabras del nivel"></div>
-            </aside>
+                <aside class="la-ws-words-panel" aria-label="Lista de palabras a encontrar">
+                    <button id="la_ws_btnToggleWords"
+                            class="la-ws-words-toggle"
+                            type="button"
+                            aria-expanded="true"
+                            aria-controls="la_ws_wordsList">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                            <path d="M4 6 L20 6 M4 12 L20 12 M4 18 L20 18"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span>PALABRAS</span>
+                    </button>
+                    <div id="la_ws_wordsList"
+                         class="la-ws-words-list"
+                         role="list"
+                         aria-label="Palabras del nivel"></div>
+                </aside>
+
+            </div>
         </div>
     </div>
 
@@ -249,7 +232,7 @@
                           class="la-ws-victory-check"/>
                 </svg>
             </div>
-            <h3 id="la_ws_victoryTitle" class="la-ws-modal__title">¡NIVEL COMPLETADO!</h3>
+            <h3 id="la_ws_victoryTitle" class="la-ws-modal__title">NIVEL COMPLETADO</h3>
             <div class="la-ws-modal__reward"
                  id="la_ws_rewardDisplay"
                  aria-live="polite">+0 MONEDAS</div>
@@ -270,12 +253,7 @@
         </div>
     </div>
 
-    <!-- Scripts: dependencias globales → configuración de niveles → lógica del juego -->
     <script src="../../js/app.js"></script>
-    <!--
-        config_levels.js (guión bajo) expone window.LA_WS_LEVELS.
-        Debe cargarse antes de game.js.
-    -->
     <script src="config_levels.js"></script>
     <script src="game.js"></script>
 </body>
