@@ -628,5 +628,55 @@
     "tags": [
       "PC"
     ]
+  },
+  {
+    "id": 64,
+    "name": "Jane Doe Chibi",
+    "price": 0,
+    "image": "assets/product-thumbs/jane_doe_chibi_2825e27f_thumbs.webp",
+    "file": "jane_doe_chibi_2825e27f_thumbs.jpg",
+    "tags": [
+      "Mobile"
+    ]
+  },
+  {
+    "id": 65,
+    "name": "Mitsuri",
+    "price": 0,
+    "image": "assets/product-thumbs/mitsuri_c03d99bc_thumbs.webp",
+    "file": "mitsuri_c03d99bc.jpg",
+    "tags": [
+      "Mobile"
+    ]
+  },
+  {
+    "id": 66,
+    "name": "Furina",
+    "price": 0,
+    "image": "assets/product-thumbs/furina_2d5569da_thumbs.webp",
+    "file": "furina_2d5569da.jpg",
+    "tags": [
+      "Mobile"
+    ]
+  },
+  {
+    "id": 67,
+    "name": "Hielaguisantes",
+    "price": 0,
+    "image": "assets/product-thumbs/hielaguisantes_dfe630b4_thumbs.webp",
+    "file": "hielaguisantes_dfe630b4.jpg",
+    "tags": [
+      "Mobile"
+    ]
+  },
+  {
+    "id": 68,
+    "name": "Hu Tao",
+    "price": 0,
+    "image": "assets/product-thumbs/hu_tao_11bb943c_thumbs.webp",
+    "file": "hu_tao_11bb943c.jpg",
+    "tags": [
+      "Mobile"
+    ]
   }
 ]
